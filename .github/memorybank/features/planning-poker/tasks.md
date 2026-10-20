@@ -1,5 +1,23 @@
 # Implementation Plan
 
+## GitHub Issues
+
+Work is delivered through these issues, in order, with `@story /start <issue#>`. Merge each PR before starting the next.
+
+| Issue | Story | Tasks below |
+| --- | --- | --- |
+| [#1](https://github.com/sthirion/axon/issues/1) | Project setup: workspaces, walking skeleton and CI | 1 |
+| [#2](https://github.com/sthirion/axon/issues/2) | Create a game and join it with a link and a name | 2, 3 (partly), 4.1, 5.1–5.4, 6 |
+| [#3](https://github.com/sthirion/axon/issues/3) | Set the story and vote with hidden cards | 3.2–3.4, 7.2, 7.3 |
+| [#4](https://github.com/sthirion/axon/issues/4) | Reveal votes with distribution, average, consensus and outliers | 3.1, 7.4, 7.7 |
+| [#5](https://github.com/sthirion/axon/issues/5) | Re-vote, record the final estimate and keep a session summary | 7.5, 7.6, 8.1 |
+| [#6](https://github.com/sthirion/axon/issues/6) | Facilitator reconnect and removing players | 7.1, 7.5, 8.2 |
+| [#7](https://github.com/sthirion/axon/issues/7) | Game lifetime: clean up empty games and handle server restarts | 4.2–4.4 |
+| [#8](https://github.com/sthirion/axon/issues/8) | Light/dark theme and accessibility pass | 6.2, 7.7, 8.3 |
+| [#9](https://github.com/sthirion/axon/issues/9) | Rate limiting, Docker image and load smoke test | 5.2, 5.5, 9 |
+
+## Task Breakdown
+
 - [ ] 1. Project setup
   - [ ] 1.1 npm workspaces: `src/axon` (server), `src/axon.Frontend` (React), `src/axon.Shared` (Zod schemas, `Card`, event types), `src/axon.E2ETests` (Playwright)
   - [ ] 1.2 TypeScript strict, ESLint, Prettier, Vitest in server, shared and frontend
