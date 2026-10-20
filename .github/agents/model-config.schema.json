@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentModelConfig",
+  "description": "Schema for .github/agents/model-config.json — defines approved models, tier mappings, and per-agent model assignments.",
+  "type": "object",
+  "required": [
+    "approvedModels",
+    "tiers",
+    "agents"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference URI."
+    },
+    "_comment": {
+      "type": "string",
+      "description": "Human-readable comment; not processed by tooling."
+    },
+    "approvedModels": {
+      "type": "array",
+      "description": "List of model names approved for use in this organisation. Must be kept in sync with GitHub Settings → Copilot → Models.",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "tiers": {
+      "type": "object",
+      "description": "Named tiers that map to concrete model strings. Each agent references a tier key rather than a model name directly.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "agents": {
+      "type": "array",
+      "description": "Per-agent model assignments.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "primary"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Agent identifier; must match the basename of the corresponding {name}.agent.md file (without extension)."
+          },
+          "primary": {
+            "type": "string",
+            "description": "Key of the tier (defined in 'tiers') to use as the primary model for this agent."
+          },
+          "thinkingEffort": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Optional thinking-effort hint written to agent frontmatter alongside the model."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Free-text description of this agent's role. Not written to agent files."
+          }
+        }
+      }
+    }
+  }
+}

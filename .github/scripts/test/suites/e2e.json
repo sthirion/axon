@@ -1,0 +1,9 @@
+{
+  "runner": "playwright",
+  "project": "src/axon.E2ETests",
+  "testFileGlobs": [
+    "src/axon.E2ETests/**/*.spec.ts"
+  ],
+  "sourceGlobs": [],
+  "timeoutSeconds": 900
+}

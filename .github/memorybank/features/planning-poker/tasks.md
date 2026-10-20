@@ -1,0 +1,54 @@
+# Implementation Plan
+
+- [ ] 1. Project setup
+  - [ ] 1.1 npm workspaces: `src/axon` (server), `src/axon.Frontend` (React), `src/axon.Shared` (Zod schemas, `Card`, event types), `src/axon.E2ETests` (Playwright)
+  - [ ] 1.2 TypeScript strict, ESLint, Prettier, Vitest in server, shared and frontend
+  - [x] 1.3 Test runner suites `unit` and `integration` in `.github/scripts/test/suites/`
+  - [ ] 1.4 CI pipeline: lint, type check, unit, integration, frontend, E2E
+  - [x] 1.5 Fill in [project-config.md](../../../project-config.md) (structure, commands, local dev, authorization model)
+- [ ] 2. Shared contract — _Req 2, 3, 4, 6_
+  - [ ] 2.1 Deck and `Card` type; `isNumericCard`
+  - [ ] 2.2 Zod schemas: name, story (title, `http`/`https` URL), every client → server event payload
+  - [ ] 2.3 `PublicGameState`, `RoundStats` and error code types
+- [ ] 3. Domain logic (pure, no I/O) — _Req 3–6, 8_
+  - [ ] 3.1 `calculateStats`: distribution, average, consensus, outliers, suggested estimate (table in design)
+  - [ ] 3.2 `Game` state machine: set story, vote / change / withdraw, reveal, re-vote, finish or skip, remove player
+  - [ ] 3.3 Guards: role, phase, facilitator connected, at least one vote, banned token
+  - [ ] 3.4 `toPublicState`: leave out vote values unless revealed
+  - [ ] 3.5 Unit tests for 3.1–3.4
+- [ ] 4. Game store and lifetime — _Req 1, 9_
+  - [ ] 4.1 In-memory `GameStore` (`Map`), ID and token generation, token hashing, constant-time compare
+  - [ ] 4.2 Sweeper: delete games empty for 2 minutes; 12-hour cap
+  - [ ] 4.3 `SIGTERM` handling: send `game:ended` and exit
+  - [ ] 4.4 Unit tests with fake timers
+- [ ] 5. Server — _Req 1, 2, 8; NFR security_
+  - [ ] 5.1 Express app: `POST /api/games`, `GET /api/games/:id/exists`, `GET /healthz`
+  - [ ] 5.2 helmet, CORS, `express-rate-limit`, structured logging without names, stories or tokens
+  - [ ] 5.3 Socket.IO gateway: `game:join` (new player, reconnect, banned), room per game, connection status
+  - [ ] 5.4 Event handlers that call the domain and broadcast `game:state`; acks with error codes
+  - [ ] 5.5 Socket rate limiting (token bucket per socket, connections per IP)
+  - [ ] 5.6 Integration tests with `socket.io-client`: event contract, no vote values before reveal, facilitator-only actions, reconnect, removal
+- [ ] 6. Front end: create and join — _Req 1, 2, 10_
+  - [ ] 6.1 App shell, React Router (`/`, `/g/:gameId`, not found), Tailwind, shadcn/ui
+  - [ ] 6.2 Theme toggle: OS default, saved in `localStorage`
+  - [ ] 6.3 Create game page; copy join link
+  - [ ] 6.4 Join page: name prompt, validation messages, "game not found", "removed" states
+  - [ ] 6.5 Socket client and Zustand store; token per game in `localStorage`; automatic rejoin on reconnect
+- [ ] 7. Front end: the table — _Req 3–8_
+  - [ ] 7.1 `PokerTable`: voters with voted and offline badges; facilitator offline banner
+  - [ ] 7.2 `StoryPanel`: form for the facilitator, read-only title and link for voters
+  - [ ] 7.3 `CardDeck`: radio group, keyboard support, change or withdraw vote
+  - [ ] 7.4 `ResultsPanel`: cards per voter, distribution bars, average, consensus and outlier highlights
+  - [ ] 7.5 `FacilitatorControls`: reveal, re-vote, final estimate (pre-filled), skip, remove player
+  - [ ] 7.6 `SessionSummary`: stories, estimates, total, copy as text
+  - [ ] 7.7 `aria-live` announcements for votes, reveal and consensus
+  - [ ] 7.8 Component tests for 7.3–7.6
+- [ ] 8. End-to-end and accessibility — _all Req; NFR_
+  - [ ] 8.1 Playwright: facilitator plus 3 voters play a full round, re-vote, record an estimate, check the summary
+  - [ ] 8.2 Playwright: facilitator reload restores the role; removed voter can't rejoin; unknown game shows "not found"
+  - [ ] 8.3 `@axe-core/playwright` on join, voting and revealed views in light and dark themes
+- [ ] 9. Deployment
+  - [ ] 9.1 Dockerfile (server serves the built front end); single instance; HTTPS at the proxy
+  - [ ] 9.2 Smoke test: 100 games × 20 sockets on one instance stay under 1 second (p95)
+- [ ] 10. Azure DevOps integration (later) — _Req 11_
+  - [ ] 10.1 Refine requirements: authentication, which field holds story points, write-back rules

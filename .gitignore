@@ -1,0 +1,25 @@
+.github/scratch/
+
+# @story / @requirements / @pr-create scratch files (never committed)
+.github/memorybank/stories/*/context.md
+.github/memorybank/stories/*/pr-body.md
+.github/memorybank/stories/*/tracker-*
+.github/memorybank/stories/new/
+
+# Dependencies and build output
+node_modules/
+dist/
+
+# Test and coverage output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+StrykerOutput/
+.stryker-tmp/
+reports/
+
+# Local environment
+.env
+.env.*
+.DS_Store

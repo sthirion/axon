@@ -1,0 +1,15 @@
+{
+  "runner": "vitest",
+  "project": "src/axon.Frontend",
+  "testFileGlobs": [
+    "src/axon.Frontend/**/*.test.ts",
+    "src/axon.Frontend/**/*.test.tsx",
+    "src/axon.Frontend/**/*.spec.ts",
+    "src/axon.Frontend/**/*.spec.tsx"
+  ],
+  "sourceGlobs": [
+    "src/axon.Frontend/src/**/*.ts",
+    "src/axon.Frontend/src/**/*.tsx"
+  ],
+  "timeoutSeconds": 600
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "./model-config.schema.json",
+  "_comment": "After editing, run `node .github/scripts/agents/set-agent-models.mjs --set` to apply changes to agent files.",
+  "approvedModels": [
+    "Claude Opus 5.5",
+    "Claude Sonnet 5.5",
+    "Claude Haiku 5.4",
+    "GPT-5.6 Sol",
+    "GPT-5.6 Terra",
+    "GPT-5.6 Luna"
+  ],
+  "tiers": {
+    "strategic": "Claude Opus 5.5",
+    "standard": "Claude Sonnet 5.5",
+    "lightweight": "Claude Haiku 5.4",
+    "review": "GPT-5.6 Sol"
+  },
+  "agents": [
+    {
+      "name": "requirements-review",
+      "primary": "review",
+      "notes": "Requirements quality gate; different model family from @requirements"
+    },
+    {
+      "name": "test-review",
+      "primary": "review",
+      "notes": "Test adequacy gate (unit and integration/E2E); different model family from the implementers"
+    },
+    {
+      "name": "code-backend",
+      "primary": "standard",
+      "notes": "Backend implementation"
+    },
+    {
+      "name": "code-frontend",
+      "primary": "standard",
+      "notes": "Frontend implementation"
+    },
+    {
+      "name": "code-review",
+      "primary": "review",
+      "notes": "Code quality gate + regression check; different model family from the implementers"
+    },
+    {
+      "name": "feature",
+      "primary": "strategic",
+      "notes": "Feature lifecycle orchestrator"
+    },
+    {
+      "name": "plan",
+      "primary": "strategic",
+      "notes": "Planning agent"
+    },
+    {
+      "name": "pr-create",
+      "primary": "lightweight",
+      "notes": "Pull request creation"
+    },
+    {
+      "name": "requirements",
+      "primary": "strategic",
+      "notes": "Requirements analyst"
+    },
+    {
+      "name": "assistant",
+      "primary": "standard",
+      "notes": "General-purpose fallback agent"
+    },
+    {
+      "name": "drift",
+      "primary": "standard",
+      "notes": "Pattern and library drift detection; registry upkeep and deprecation stories"
+    },
+    {
+      "name": "story",
+      "primary": "strategic",
+      "thinkingEffort": "high",
+      "notes": "User story orchestrator"
+    },
+    {
+      "name": "test-api",
+      "primary": "standard",
+      "notes": "API integration test writer"
+    },
+    {
+      "name": "test-e2e",
+      "primary": "standard",
+      "notes": "Playwright E2E test writer"
+    }
+  ]
+}
