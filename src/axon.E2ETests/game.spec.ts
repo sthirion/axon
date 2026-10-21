@@ -131,8 +131,9 @@ test.describe('Create and join a game @TEST', () => {
     await expect(facilitatorRegion(facilitator.page)).toContainText('Sven');
     await expect(facilitatorRegion(facilitator.page)).toContainText('online');
     await expect(joinLinkRegion.getByText(`${baseURL}/g/${gameId}`)).toBeVisible();
-    await expect(facilitator.page.getByText('No voters yet. Share the link to invite your team.'))
-      .toBeVisible();
+    await expect(
+      facilitator.page.getByText('No voters yet. Share the link to invite your team.'),
+    ).toBeVisible();
   });
 
   test('two voters join in separate browsers and all three see each other', async ({ browser }) => {
@@ -271,7 +272,9 @@ test.describe('Create and join a game @TEST', () => {
     await facilitator.page.reload();
 
     // Then
-    await expect(facilitator.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await expect(
+      facilitator.page.getByRole('heading', { level: 1, name: 'Game table' }),
+    ).toBeVisible();
     await expect(facilitatorRegion(facilitator.page)).toContainText('Sven');
     await expect(facilitatorRegion(facilitator.page)).toContainText('online');
     await expect(voterRows(facilitator.page)).toHaveCount(0);
@@ -313,7 +316,9 @@ test.describe('Create and join a game @TEST', () => {
     await facilitator.page.getByRole('button', { name: 'Copy link' }).click();
 
     // Then
-    await expect(facilitator.page.getByRole('status').filter({ hasText: 'Link copied' })).toBeVisible();
+    await expect(
+      facilitator.page.getByRole('status').filter({ hasText: 'Link copied' }),
+    ).toBeVisible();
     const clipboard = await facilitator.page.evaluate(() => navigator.clipboard.readText());
     expect(clipboard).toBe(`${baseURL}/g/${gameId}`);
   });
@@ -399,7 +404,9 @@ test.describe('Create and join a game @TEST', () => {
     await visitor.page.goto('/g/AAAAAAAAAAAAAAAAAAAAAA');
 
     // Then
-    await expect(visitor.page.getByRole('heading', { level: 1, name: 'Game not found' })).toBeVisible();
+    await expect(
+      visitor.page.getByRole('heading', { level: 1, name: 'Game not found' }),
+    ).toBeVisible();
     await expect(visitor.page.getByText('This game does not exist or has ended.')).toBeVisible();
     await expect(visitor.page.getByRole('link', { name: 'Create a new game' })).toHaveAttribute(
       'href',
@@ -450,9 +457,7 @@ test.describe('Create and join a game @TEST', () => {
 
       // Then
       await expect(copyButton).toBeFocused();
-      await expect
-        .poll(() => page.evaluate(() => navigator.clipboard.readText()))
-        .toBe(link);
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(link);
       await expect(copiedStatus(page)).toBeVisible();
     });
 

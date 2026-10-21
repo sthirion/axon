@@ -402,19 +402,63 @@ describe('game join over Socket.IO', () => {
       { label: 'null', payload: () => null, code: 'INVALID_PAYLOAD' },
       { label: 'undefined', payload: () => undefined, code: 'INVALID_PAYLOAD' },
       { label: 'an array', payload: () => [], code: 'INVALID_PAYLOAD' },
-      { label: 'a numeric gameId', payload: () => ({ gameId: 123, name: 'Anna' }), code: 'INVALID_PAYLOAD' },
+      {
+        label: 'a numeric gameId',
+        payload: () => ({ gameId: 123, name: 'Anna' }),
+        code: 'INVALID_PAYLOAD',
+      },
       { label: 'a missing gameId', payload: () => ({ name: 'Anna' }), code: 'INVALID_PAYLOAD' },
-      { label: 'a short gameId', payload: () => ({ gameId: 'abc', name: 'Anna' }), code: 'GAME_NOT_FOUND' },
-      { label: 'an empty gameId', payload: () => ({ gameId: '', name: 'Anna' }), code: 'GAME_NOT_FOUND' },
-      { label: 'a script gameId', payload: () => ({ gameId: '<script>', name: 'Anna' }), code: 'GAME_NOT_FOUND' },
-      { label: 'an unknown 22-char gameId', payload: () => ({ gameId: UNKNOWN_GAME_ID, name: 'Anna' }), code: 'GAME_NOT_FOUND' },
-      { label: 'a numeric token', payload: (gameId) => ({ gameId, token: 5 }), code: 'INVALID_TOKEN' },
-      { label: 'a null token', payload: (gameId) => ({ gameId, token: null }), code: 'INVALID_TOKEN' },
-      { label: 'a short token', payload: (gameId) => ({ gameId, token: 'short' }), code: 'INVALID_TOKEN' },
-      { label: 'a token with illegal characters', payload: (gameId) => ({ gameId, token: '!'.repeat(43) }), code: 'INVALID_TOKEN' },
-      { label: 'a well-formed unknown token', payload: (gameId) => ({ gameId, token: WELL_FORMED_RANDOM_TOKEN }), code: 'INVALID_TOKEN' },
+      {
+        label: 'a short gameId',
+        payload: () => ({ gameId: 'abc', name: 'Anna' }),
+        code: 'GAME_NOT_FOUND',
+      },
+      {
+        label: 'an empty gameId',
+        payload: () => ({ gameId: '', name: 'Anna' }),
+        code: 'GAME_NOT_FOUND',
+      },
+      {
+        label: 'a script gameId',
+        payload: () => ({ gameId: '<script>', name: 'Anna' }),
+        code: 'GAME_NOT_FOUND',
+      },
+      {
+        label: 'an unknown 22-char gameId',
+        payload: () => ({ gameId: UNKNOWN_GAME_ID, name: 'Anna' }),
+        code: 'GAME_NOT_FOUND',
+      },
+      {
+        label: 'a numeric token',
+        payload: (gameId) => ({ gameId, token: 5 }),
+        code: 'INVALID_TOKEN',
+      },
+      {
+        label: 'a null token',
+        payload: (gameId) => ({ gameId, token: null }),
+        code: 'INVALID_TOKEN',
+      },
+      {
+        label: 'a short token',
+        payload: (gameId) => ({ gameId, token: 'short' }),
+        code: 'INVALID_TOKEN',
+      },
+      {
+        label: 'a token with illegal characters',
+        payload: (gameId) => ({ gameId, token: '!'.repeat(43) }),
+        code: 'INVALID_TOKEN',
+      },
+      {
+        label: 'a well-formed unknown token',
+        payload: (gameId) => ({ gameId, token: WELL_FORMED_RANDOM_TOKEN }),
+        code: 'INVALID_TOKEN',
+      },
       { label: 'neither token nor name', payload: (gameId) => ({ gameId }), code: 'INVALID_NAME' },
-      { label: 'a bad token and a valid name', payload: (gameId) => ({ gameId, token: 5, name: 'Anna' }), code: 'INVALID_TOKEN' },
+      {
+        label: 'a bad token and a valid name',
+        payload: (gameId) => ({ gameId, token: 5, name: 'Anna' }),
+        code: 'INVALID_TOKEN',
+      },
     ];
 
     it.each(rows)(
@@ -819,7 +863,9 @@ describe('game join over Socket.IO', () => {
       const ack = await second.join({ gameId, token: first.token });
       const secondJoined = await second.when(() => second.joined[0]);
       await second.when(() => second.states[0]);
-      await facilitator.when(() => (facilitator.states.length > statesBeforeSecond ? true : undefined));
+      await facilitator.when(() =>
+        facilitator.states.length > statesBeforeSecond ? true : undefined,
+      );
       const socketsBefore = server.io.of('/').sockets.size;
       const mark = facilitator.states.length;
       first.client.socket.disconnect();
@@ -978,7 +1024,10 @@ describe('game join over Socket.IO', () => {
       await rejected.join('Mallory M');
       anna.client.socket.disconnect();
       await facilitator.stateWhere(hasVoter('Zelda Zed', false));
-      await request(server.baseUrl).post('/api/games').send('{not json Mallory M').set('Content-Type', 'application/json');
+      await request(server.baseUrl)
+        .post('/api/games')
+        .send('{not json Mallory M')
+        .set('Content-Type', 'application/json');
       const output = logged.join('\n');
 
       // Then

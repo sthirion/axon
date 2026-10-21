@@ -44,7 +44,9 @@ describe('GameTable', () => {
   it('shows the empty state when there are no voters', () => {
     renderTable(gameState() as Game);
 
-    expect(within(screen.getByRole('region', { name: 'Voters' })).getByText(NO_VOTERS_MESSAGE)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Voters' })).getByText(NO_VOTERS_MESSAGE),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
