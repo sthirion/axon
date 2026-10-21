@@ -59,12 +59,25 @@ test.describe('App shell smoke @TEST', () => {
     expect(results.violations).toEqual([]);
   });
 
-  test('deep link to an unknown game shows the not-found view', async ({ page }) => {
+  test('deep link to an unknown game shows the game-not-found view', async ({ page }) => {
+    // Given
+    const heading = page.getByRole('heading', { level: 1 });
+    const createLink = page.getByRole('link', { name: 'Create a new game' });
+
+    // When
+    await page.goto('/g/abc123');
+
+    // Then
+    await expect(heading).toHaveText('Game not found');
+    await expect(createLink).toHaveAttribute('href', '/');
+  });
+
+  test('unknown route shows the page-not-found view', async ({ page }) => {
     // Given
     const heading = page.getByRole('heading', { level: 1 });
 
     // When
-    await page.goto('/g/abc123');
+    await page.goto('/does-not-exist');
 
     // Then
     await expect(heading).toHaveText('Page not found');

@@ -259,6 +259,15 @@ Paths follow the source paths in [project-config.md](../../../project-config.md)
 
 - Error codes: `GAME_NOT_FOUND`, `NAME_TAKEN`, `INVALID_NAME`, `INVALID_STORY`,
   `INVALID_CARD`, `WRONG_PHASE`, `FORBIDDEN`, `REMOVED`, `RATE_LIMITED`.
+- Added by story #2 (all share one enum in `@axon/shared`):
+  - Socket (`game:join` ack): `INVALID_TOKEN` (the token does not match a player of that
+    game), `INVALID_PAYLOAD` (the payload is not an object or `gameId` is not a string) and
+    `ALREADY_JOINED` (the socket has already joined a game).
+  - REST (`{code, message}` body): `INVALID_REQUEST` (400, the body is not a JSON object)
+    and `PAYLOAD_TOO_LARGE` (413, the body is over 1 kB).
+  - Check order on `game:join`: payload shape, `ALREADY_JOINED`, `gameId` format and
+    existence (`GAME_NOT_FOUND`), then the token (`INVALID_TOKEN`) or the name
+    (`INVALID_NAME`, `NAME_TAKEN`). An unknown game wins over a bad name.
 - The client shows a friendly message for each code; unknown errors show a generic message.
 - Socket.IO reconnects automatically; on reconnect the client sends `game:join` again with
   its token and gets the full `game:state`, so missed updates don't matter.

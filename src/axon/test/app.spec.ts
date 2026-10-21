@@ -10,6 +10,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/http/app.js';
 import { attachSocketIo } from '../src/realtime/socketServer.js';
+import { GameStore } from '../src/store/gameStore.js';
 
 const INDEX_HTML =
   '<!doctype html><html lang="en"><head><title>Axon</title></head><body><h1>Axon</h1></body></html>';
@@ -53,8 +54,10 @@ describe('app', () => {
 
   beforeAll(async () => {
     staticDir = aStaticFixture();
+    const store = new GameStore();
     const app = createApp({
       staticDir,
+      store,
       extendRoutes: (instance) => {
         instance.get('/__test/throw', () => {
           throw new Error('boom at /Users/secret/path/server.ts');
@@ -62,7 +65,7 @@ describe('app', () => {
       },
     });
     httpServer = http.createServer(app);
-    io = attachSocketIo(httpServer);
+    io = attachSocketIo(httpServer, store);
     await new Promise<void>((resolve) => httpServer.listen(0, '127.0.0.1', resolve));
     baseUrl = `http://127.0.0.1:${(httpServer.address() as AddressInfo).port}`;
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -145,7 +148,10 @@ describe('app', () => {
 
     it('GET / without a static folder returns 404 JSON and /healthz still returns 200', async () => {
       // Given
-      const app = createApp({ staticDir: path.join(staticDir, 'does-not-exist') });
+      const app = createApp({
+        staticDir: path.join(staticDir, 'does-not-exist'),
+        store: new GameStore(),
+      });
 
       // When
       const health = await request(app).get('/healthz');
@@ -311,7 +317,7 @@ describe('app', () => {
       expect(message).toBe('Invalid namespace');
     });
 
-    it('registers no application connection listeners', () => {
+    it('registers only the game gateway connection listener', () => {
       // Given
       const mainNamespace = io.of('/');
 
@@ -320,8 +326,8 @@ describe('app', () => {
       const serverListeners = io.listenerCount('connection');
 
       // Then
-      expect(namespaceListeners).toBe(0);
-      expect(serverListeners).toBe(0);
+      expect(namespaceListeners).toBe(1);
+      expect(serverListeners).toBe(1);
     });
   });
 });
