@@ -167,6 +167,7 @@ Document your project's authorization rules so agents apply them consistently.
 - **Install**: `npm ci` (root)
 - **Build**: `npm run build` (root; builds shared, server and frontend)
 - **Lint / type check**: `npm run lint`, `npm run typecheck`
+- **Formatting**: `npm run format` fixes formatting; `npm run lint` fails on unformatted files.
 - **Tests**: run through the test runner, never with a stack command:
   `node .github/scripts/test/test.mjs <suite> --scope created|related` with the suites `unit`, `integration`,
   `frontend`, `e2e` defined in `.github/scripts/test/suites/*.json` (edit those files to match your test

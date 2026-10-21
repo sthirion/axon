@@ -67,44 +67,48 @@ async function stopDev() {
   }
 }
 
-describe('npm run dev', { skip: isWindows ? 'process-group handling is POSIX only' : false }, () => {
-  before(async () => {
-    await assertPortFree(3000);
-    await assertPortFree(5173);
-    child = spawn('npm', ['run', 'dev'], {
-      detached: true,
-      stdio: 'ignore',
-      env: { ...process.env, PORT: '3000' },
+describe(
+  'npm run dev',
+  { skip: isWindows ? 'process-group handling is POSIX only' : false },
+  () => {
+    before(async () => {
+      await assertPortFree(3000);
+      await assertPortFree(5173);
+      child = spawn('npm', ['run', 'dev'], {
+        detached: true,
+        stdio: 'ignore',
+        env: { ...process.env, PORT: '3000' },
+      });
+      child.on('exit', () => {
+        exited = true;
+      });
+      child.on('error', () => {
+        exited = true;
+      });
+      await waitUntilReady();
     });
-    child.on('exit', () => {
-      exited = true;
+
+    after(stopDev);
+
+    it('proxies /healthz to the server', async () => {
+      const res = await probe('/healthz');
+
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { status: 'ok' });
     });
-    child.on('error', () => {
-      exited = true;
+
+    it('proxies /api to the server 404 JSON', async () => {
+      const res = await probe('/api/does-not-exist');
+
+      assert.equal(res.status, 404);
+      assert.deepEqual(await res.json(), { code: 'NOT_FOUND', message: 'Not found' });
     });
-    await waitUntilReady();
-  });
 
-  after(stopDev);
+    it('proxies /socket.io polling to Socket.IO, not the SPA', async () => {
+      const res = await probe('/socket.io/?EIO=4&transport=polling');
 
-  it('proxies /healthz to the server', async () => {
-    const res = await probe('/healthz');
-
-    assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), { status: 'ok' });
-  });
-
-  it('proxies /api to the server 404 JSON', async () => {
-    const res = await probe('/api/does-not-exist');
-
-    assert.equal(res.status, 404);
-    assert.deepEqual(await res.json(), { code: 'NOT_FOUND', message: 'Not found' });
-  });
-
-  it('proxies /socket.io polling to Socket.IO, not the SPA', async () => {
-    const res = await probe('/socket.io/?EIO=4&transport=polling');
-
-    assert.equal(res.status, 200);
-    assert.doesNotMatch(res.headers.get('content-type') ?? '', /text\/html/);
-  });
-});
+      assert.equal(res.status, 200);
+      assert.doesNotMatch(res.headers.get('content-type') ?? '', /text\/html/);
+    });
+  },
+);

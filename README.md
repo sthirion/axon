@@ -20,12 +20,12 @@ Planned later: Azure DevOps integration.
 
 ## Tech Stack
 
-| Part | Technology |
-| --- | --- |
-| Server | Node.js 20, TypeScript, Express, Socket.IO |
-| Client | React 19, TypeScript, Vite, Tailwind CSS, Zustand |
-| Shared contract | Zod schemas and types used by server and client |
-| Tests | Vitest, `socket.io-client`, Playwright, axe-core |
+| Part            | Technology                                        |
+| --------------- | ------------------------------------------------- |
+| Server          | Node.js 20, TypeScript, Express, Socket.IO        |
+| Client          | React 19, TypeScript, Vite, Tailwind CSS, Zustand |
+| Shared contract | Zod schemas and types used by server and client   |
+| Tests           | Vitest, `socket.io-client`, Playwright, axe-core  |
 
 ## Project Structure
 

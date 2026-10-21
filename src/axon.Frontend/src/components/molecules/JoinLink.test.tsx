@@ -40,7 +40,9 @@ describe('JoinLink', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(LINK_COPY_FAILED_MESSAGE));
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(LINK_COPY_FAILED_MESSAGE),
+    );
     expect(screen.getByText(LINK)).toBeVisible();
     expect(screen.queryByText(LINK_COPIED_MESSAGE)).not.toBeInTheDocument();
   });
@@ -50,7 +52,9 @@ describe('JoinLink', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(LINK_COPY_FAILED_MESSAGE));
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(LINK_COPY_FAILED_MESSAGE),
+    );
     expect(screen.getByText(LINK)).toBeVisible();
   });
 });

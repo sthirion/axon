@@ -91,19 +91,27 @@ describe('NameForm', () => {
   });
 
   it('shows a server field error, links it to the field and moves focus there', () => {
-    const { input } = renderForm({ fieldError: 'That name is already taken in this game. Choose another.' });
+    const { input } = renderForm({
+      fieldError: 'That name is already taken in this game. Choose another.',
+    });
 
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(input).toHaveAccessibleDescription('That name is already taken in this game. Choose another.');
+    expect(input).toHaveAccessibleDescription(
+      'That name is already taken in this game. Choose another.',
+    );
     expect(input).toHaveFocus();
   });
 
   it('keeps the entered value when a field error arrives', () => {
     const onSubmit = vi.fn();
-    const { rerender } = render(<NameForm submitLabel="Join" submitting={false} onSubmit={onSubmit} />);
+    const { rerender } = render(
+      <NameForm submitLabel="Join" submitting={false} onSubmit={onSubmit} />,
+    );
     type(screen.getByLabelText('Your name') as HTMLInputElement, 'anna');
 
-    rerender(<NameForm submitLabel="Join" submitting={false} onSubmit={onSubmit} fieldError="Taken" />);
+    rerender(
+      <NameForm submitLabel="Join" submitting={false} onSubmit={onSubmit} fieldError="Taken" />,
+    );
 
     expect(screen.getByLabelText('Your name')).toHaveValue('anna');
   });

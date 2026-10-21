@@ -39,7 +39,9 @@ function renderGame(path = `/g/${GAME_ID}`) {
 
 function LocationProbe() {
   const { pathname, search, hash, state } = useLocation();
-  return <output data-testid="location">{JSON.stringify({ pathname, search, hash, state })}</output>;
+  return (
+    <output data-testid="location">{JSON.stringify({ pathname, search, hash, state })}</output>
+  );
 }
 
 function GoToOtherGame() {
@@ -215,7 +217,9 @@ describe('GamePage', () => {
 
       renderGame();
 
-      expect(await screen.findByRole('heading', { level: 1, name: 'Join game' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Join game' }),
+      ).toBeInTheDocument();
       expect(screen.getByLabelText('Your name')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Join' })).toBeInTheDocument();
       expect(socket.joins()).toHaveLength(0);
@@ -312,7 +316,9 @@ describe('GamePage', () => {
 
       await serverAck(failAck('SOMETHING_NEW'));
 
-      expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Something went wrong. Try again.',
+      );
       expect(screen.getByLabelText('Your name')).toHaveValue('Anna');
     });
 
@@ -429,13 +435,15 @@ describe('GamePage', () => {
     it('opens the table as facilitator in the same tab after create, and asks for a name after a reload', async () => {
       vi.stubGlobal(
         'fetch',
-        vi.fn().mockImplementation((_url: string, init?: RequestInit) =>
-          Promise.resolve(
-            init?.method === 'POST'
-              ? new Response(JSON.stringify({ gameId: GAME_ID, token: TOKEN }), { status: 201 })
-              : new Response(JSON.stringify({ exists: true }), { status: 200 }),
+        vi
+          .fn()
+          .mockImplementation((_url: string, init?: RequestInit) =>
+            Promise.resolve(
+              init?.method === 'POST'
+                ? new Response(JSON.stringify({ gameId: GAME_ID, token: TOKEN }), { status: 201 })
+                : new Response(JSON.stringify({ exists: true }), { status: 200 }),
+            ),
           ),
-        ),
       );
       vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
         throw new Error('denied');
@@ -555,7 +563,10 @@ describe('GamePage', () => {
         otherSocket.serverEmit('game:joined', { playerId: 'p2', role: 'voter' });
         otherSocket.serverEmit(
           'game:state',
-          gameState({ gameId: OTHER_GAME_ID, voters: [{ id: 'p2', name: 'Bob', connected: true }] }),
+          gameState({
+            gameId: OTHER_GAME_ID,
+            voters: [{ id: 'p2', name: 'Bob', connected: true }],
+          }),
         );
       });
       expect(await screen.findByRole('region', { name: 'Voters' })).toHaveTextContent('Bob');
