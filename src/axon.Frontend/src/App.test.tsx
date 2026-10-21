@@ -19,18 +19,25 @@ describe('App', () => {
     expect(screen.getAllByRole('heading')).toHaveLength(1);
   });
 
-  it('renders no game controls on the home route', () => {
+  it('offers the create-game form on the home route', () => {
     renderAt('/');
 
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Your name' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create game' })).toBeInTheDocument();
   });
 
-  it('shows "Page not found" on an unknown route', () => {
+  it('shows the game-not-found view for a malformed game id', () => {
     renderAt('/g/abc123');
+
+    expect(screen.getByRole('heading', { name: 'Game not found' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Create a new game' })).toHaveAttribute('href', '/');
+  });
+
+  it.each(['/does-not-exist', '/g', '/g/x/y'])('shows "Page not found" on %s', (path) => {
+    renderAt(path);
 
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Axon' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Game not found' })).not.toBeInTheDocument();
   });
 });

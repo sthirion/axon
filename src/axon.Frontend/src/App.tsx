@@ -1,26 +1,14 @@
 import { Route, Routes } from 'react-router';
-
-function Home() {
-  return (
-    <main className="p-6">
-      <h1 className="text-3xl font-semibold">Axon</h1>
-    </main>
-  );
-}
-
-function NotFound() {
-  return (
-    <main className="p-6">
-      <h1 className="text-3xl font-semibold">Page not found</h1>
-    </main>
-  );
-}
+import { CreateGamePage } from './pages/CreateGamePage';
+import { GamePage } from './pages/GamePage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="*" element={<NotFound />} />
+      <Route path="/" element={<CreateGamePage />} />
+      <Route path="/g/:gameId" element={<GamePage />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
