@@ -1,0 +1,44 @@
+name: CI
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: npm
+            - run: npm ci
+            - run: npm run lint
+            - run: npm run typecheck
+            - run: npm run build
+            - run: test -z "$(git status --porcelain)"
+            - run: npm run test:unit
+            - run: npm run test:integration
+            - run: npm run test:frontend
+            - run: npm run test:dev-smoke
+            - run: npx playwright install --with-deps chromium
+              working-directory: src/axon.E2ETests
+            - run: npm run test:e2e
+            - uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: playwright-artifacts
+                  path: |
+                      src/axon.E2ETests/playwright-report/
+                      src/axon.E2ETests/test-results/
+                  if-no-files-found: ignore

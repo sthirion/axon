@@ -23,3 +23,6 @@ reports/
 .env
 .env.*
 .DS_Store
+
+# Test runner output
+.github/memorybank/test-runs/

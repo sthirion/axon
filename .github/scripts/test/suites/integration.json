@@ -1,6 +1,7 @@
 {
   "runner": "vitest",
   "project": "src/axon",
+  "bin": "scripts/vitest-integration.mjs",
   "testFileGlobs": [
     "src/axon/test/**/*.spec.ts"
   ],
