@@ -1,6 +1,8 @@
 {
   "runner": "playwright",
   "project": "src/axon.E2ETests",
+  "bin": "../../node_modules/@playwright/test/cli.js",
+  "playwrightProject": "chromium",
   "testFileGlobs": [
     "src/axon.E2ETests/**/*.spec.ts"
   ],

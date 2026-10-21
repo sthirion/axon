@@ -1,0 +1,38 @@
+{
+  "name": "axon",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Real-time Planning Poker for agile teams",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "src/axon.Shared",
+    "src/axon",
+    "src/axon.Frontend",
+    "src/axon.E2ETests"
+  ],
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names server,frontend \"npm run dev -w src/axon\" \"npm run dev -w src/axon.Frontend\"",
+    "build": "npm run build -w src/axon.Shared && npm run build -w src/axon && npm run build -w src/axon.Frontend",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:unit": "npm run test:unit -w src/axon",
+    "test:integration": "npm run test:integration -w src/axon",
+    "test:frontend": "npm run test -w src/axon.Frontend",
+    "test:e2e": "npm run test -w src/axon.E2ETests",
+    "test:dev-smoke": "node --test scripts/dev-smoke.test.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^20.19.0",
+    "concurrently": "^9.2.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}

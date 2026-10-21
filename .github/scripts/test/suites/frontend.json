@@ -1,6 +1,7 @@
 {
   "runner": "vitest",
   "project": "src/axon.Frontend",
+  "bin": "../../node_modules/vitest/vitest.mjs",
   "testFileGlobs": [
     "src/axon.Frontend/**/*.test.ts",
     "src/axon.Frontend/**/*.test.tsx",
