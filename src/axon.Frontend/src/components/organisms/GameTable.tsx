@@ -13,6 +13,7 @@ import { PlayerRow } from '../molecules/PlayerRow';
 import { ReconnectingBanner } from '../molecules/ReconnectingBanner';
 import { FacilitatorOfflineBanner } from '../molecules/FacilitatorOfflineBanner';
 import { FacilitatorControls } from '../molecules/FacilitatorControls';
+import { MakeFacilitatorButton } from '../molecules/MakeFacilitatorButton';
 import { RemovePlayerButton } from '../molecules/RemovePlayerButton';
 import { RevealButton } from '../molecules/RevealButton';
 import { CardDeck } from './CardDeck';
@@ -34,6 +35,7 @@ interface GameTableProps {
   readonly onRevote: () => Promise<ActionResult>;
   readonly onFinish: (payload: RoundFinishPayload) => Promise<ActionResult>;
   readonly onRemovePlayer: (playerId: string) => Promise<ActionResult>;
+  readonly onTransferFacilitator: (playerId: string) => Promise<ActionResult>;
 }
 
 export function GameTable({
@@ -48,6 +50,7 @@ export function GameTable({
   onRevote,
   onFinish,
   onRemovePlayer,
+  onTransferFacilitator,
 }: GameTableProps) {
   const joinLink = `${window.location.origin}/g/${game.gameId}`;
   const voting = game.phase === 'voting';
@@ -134,11 +137,20 @@ export function GameTable({
                       outlier={outlierIds.has(voter.id)}
                       action={
                         role === 'facilitator' ? (
-                          <RemovePlayerButton
-                            name={voter.name}
-                            disabled={reconnecting}
-                            onRemove={() => onRemovePlayer(voter.id)}
-                          />
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            {voter.connected && (
+                              <MakeFacilitatorButton
+                                name={voter.name}
+                                disabled={reconnecting}
+                                onHandOver={() => onTransferFacilitator(voter.id)}
+                              />
+                            )}
+                            <RemovePlayerButton
+                              name={voter.name}
+                              disabled={reconnecting}
+                              onRemove={() => onRemovePlayer(voter.id)}
+                            />
+                          </div>
                         ) : undefined
                       }
                     />

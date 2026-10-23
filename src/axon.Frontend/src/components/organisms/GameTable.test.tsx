@@ -16,6 +16,7 @@ const IDLE = {
   onRevote: () => Promise.resolve({ ok: true as const }),
   onFinish: () => Promise.resolve({ ok: true as const }),
   onRemovePlayer: () => Promise.resolve({ ok: true as const }),
+  onTransferFacilitator: () => Promise.resolve({ ok: true as const }),
 } as const;
 
 function renderTable(game: Game, reconnecting = false) {
@@ -501,6 +502,50 @@ describe('GameTable facilitator offline and removing players', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Confirm remove' }));
 
     expect(onRemovePlayer).toHaveBeenCalledWith('v2');
+  });
+
+  it('offers "Make facilitator" only to the facilitator, only for connected voters', () => {
+    const table = {
+      ...TABLE,
+      voters: [
+        { id: 'v1', name: 'Anna', connected: true, hasVoted: false },
+        { id: 'v2', name: 'Bob', connected: false, hasVoted: false },
+      ],
+    };
+    render(
+      <GameTable
+        game={gameState(table) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Make facilitator Anna' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /Make facilitator Bob/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Remove Bob' })).toBeEnabled();
+    cleanup();
+    render(<GameTable game={gameState(table) as Game} reconnecting={false} {...IDLE} />);
+    expect(screen.queryByRole('button', { name: /Make facilitator/ })).toBeNull();
+  });
+
+  it('hands over to the right voter after the confirmation', async () => {
+    const onTransferFacilitator = vi.fn(() => Promise.resolve({ ok: true as const }));
+    render(
+      <GameTable
+        game={gameState(TABLE) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+        onTransferFacilitator={onTransferFacilitator}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Make facilitator Bob' }));
+    expect(onTransferFacilitator).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm handover' }));
+
+    expect(onTransferFacilitator).toHaveBeenCalledWith('v2');
   });
 
   it('disables Remove while reconnecting', () => {

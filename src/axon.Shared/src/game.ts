@@ -13,6 +13,7 @@ export const GAME_EVENTS = {
   roundFinish: 'round:finish',
   playerRemove: 'player:remove',
   playerRemoved: 'player:removed',
+  facilitatorTransfer: 'facilitator:transfer',
   ended: 'game:ended',
 } as const;
 
@@ -203,6 +204,13 @@ export const playerRemoveEnvelopeSchema = z.looseObject({});
 export const playerRemovePayloadSchema = z.object({ playerId: z.string() });
 
 export type PlayerRemovePayload = z.infer<typeof playerRemovePayloadSchema>;
+
+// Same shape as player:remove: the target is checked after the role, so a voter is FORBIDDEN first.
+export const facilitatorTransferEnvelopeSchema = z.looseObject({});
+
+export const facilitatorTransferPayloadSchema = z.object({ playerId: z.string() });
+
+export type FacilitatorTransferPayload = z.infer<typeof facilitatorTransferPayloadSchema>;
 
 export const GAME_END_REASONS = ['server-restart', 'expired'] as const;
 

@@ -5,6 +5,7 @@ import {
   gameIdSchema,
   gameJoinPayloadSchema,
   playerNameSchema,
+  facilitatorTransferEnvelopeSchema,
   playerRemoveEnvelopeSchema,
   roundFinishEnvelopeSchema,
   playerTokenSchema,
@@ -22,6 +23,7 @@ import {
   finishRound,
   getVote,
   removePlayer,
+  transferFacilitator,
   revealRound,
   revoteRound,
   setStory,
@@ -292,6 +294,55 @@ export function registerGateway(io: Server, store: GameStore): void {
       io.in(room).disconnectSockets(true);
       io.to(gameRoom(decision.game.id)).emit(GAME_EVENTS.state, toPublicState(decision.game));
       logEvent('player.removed', { gameId: decision.game.id });
+    });
+
+    socket.on(GAME_EVENTS.facilitatorTransfer, (payload: unknown, ack?: unknown) => {
+      const reply = replyTo(ack);
+      const input = typeof payload === 'object' && payload !== null ? payload : {};
+      let previousId = '';
+      let newId = '';
+      const decision = decideCommand(
+        store,
+        session,
+        payload,
+        facilitatorTransferEnvelopeSchema,
+        (game, playerId) => {
+          const result = transferFacilitator(
+            game,
+            playerId,
+            (input as { playerId?: unknown }).playerId,
+          );
+          if (result.ok) {
+            previousId = result.previousId;
+            newId = result.newId;
+          }
+          return result;
+        },
+      );
+      if (!decision.ok) {
+        logEvent(
+          'facilitator.transfer.rejected',
+          { gameId: decision.gameId, code: decision.code },
+          'warn',
+        );
+        reply(failedAck(decision.code));
+        return;
+      }
+
+      reply({ ok: true });
+      // Both players learn the new role (no token: their seat does not change) and start with no
+      // vote; everyone else just sees the new state.
+      const mine: VoteMine = { card: null };
+      for (const id of [previousId, newId]) {
+        const joined: GameJoined = {
+          playerId: id,
+          role: id === newId ? 'facilitator' : 'voter',
+        };
+        io.to(playerRoom(id)).emit(GAME_EVENTS.joined, joined);
+        io.to(playerRoom(id)).emit(GAME_EVENTS.voteMine, mine);
+      }
+      io.to(gameRoom(decision.game.id)).emit(GAME_EVENTS.state, toPublicState(decision.game));
+      logEvent('facilitator.transferred', { gameId: decision.game.id });
     });
 
     socket.on('disconnect', () => {

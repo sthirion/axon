@@ -302,6 +302,16 @@ describe('connectGameSocket', () => {
       expect(await result).toEqual({ ok: false, code: 'INVALID_PAYLOAD' });
     });
 
+    it('emits facilitator:transfer with the player id', async () => {
+      const client = connect();
+
+      const result = client.transferFacilitator('p7');
+      emitted('facilitator:transfer')[0]?.ack?.(failAck('FORBIDDEN'));
+
+      expect(emitted('facilitator:transfer')[0]?.payload).toEqual({ playerId: 'p7' });
+      expect(await result).toEqual({ ok: false, code: 'FORBIDDEN' });
+    });
+
     it('emits round:revote with no payload', async () => {
       const client = connect();
 

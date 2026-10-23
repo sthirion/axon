@@ -89,6 +89,7 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
 | C→S | `round:finish` | `{ finalEstimate: 0\|1\|2\|3\|5\|8\|13\|21 }` or `{ skip: true }` | facilitator, phase `revealed` (or `voting` for skip) |
 | C→S | `player:remove` | `{ playerId }` | facilitator, any phase |
 | S→C | `player:removed` | — | the removed player, then disconnect |
+| C→S | `facilitator:transfer` | `{ playerId }` | facilitator, any phase; target must be an online voter other than the sender |
 | S→C | `game:ended` | `{ reason: 'server-restart' \| 'expired' }` | everyone in the game (server shutdown, or the game hit its age cap) |
 
 - Every socket that joins also joins the room `player:<playerId>`. `vote:mine` is emitted to
@@ -110,6 +111,16 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
   voter's vote is discarded, the voter is deleted (their name is free again) and the SHA-256 of
   their token is added to `bannedTokenHashes`. Results are recalculated when the round is
   revealed.
+- `facilitator:transfer` is the only way the role moves. Check order: not joined (`FORBIDDEN`),
+  game gone, payload is an object (`INVALID_PAYLOAD`), sender is the facilitator
+  (`FORBIDDEN`), then the target: it must be a string naming a player who is a voter, is not the
+  sender and is online (`INVALID_PAYLOAD` otherwise, also for a removed or unknown id). On
+  success the domain swaps the two roles, sets `facilitatorId` and deletes the new
+  facilitator's vote; then: ack, `game:joined { playerId, role }` (no token: the seat does not
+  change) and `vote:mine { card: null }` to the `player:<id>` rooms of both players, then
+  `game:state` to the game room. Because the role lives on the player and tokens find players,
+  a rejoin with either token gets the current role; banned tokens stay banned. Results are
+  recalculated from the remaining votes when the round is revealed.
 - A missing ack callback is tolerated: the event is still processed.
 
 ### `PublicGameState`
@@ -174,7 +185,8 @@ sequenceDiagram
 
 - Creating a game is the only REST call: `POST /api/games { name }` returns
   `{ gameId, token }`. The client saves the token, then sends `game:join` like everyone else.
-- The facilitator reconnects the same way; their token maps to the facilitator role
+- The facilitator reconnects the same way; their token maps to their current role (after a
+  handover that is `voter` for the old facilitator and `facilitator` for the new one)
   (Requirement 8.3). The role never moves to another player (Requirement 8.4).
 
 ### Vote and Reveal
@@ -308,6 +320,12 @@ sequenceDiagram
   facilitator sees "Too large: consider splitting this story." next to the Final estimate while
   the select shows such a card, and the reveal announcement adds ", too large to take as one
   story" when the proposal is too large.
+- **Handover:** the facilitator sees "Make facilitator" next to "Remove" on every online voter
+  (`MakeFacilitatorButton`, two clicks like Remove; focus returns to the button on cancel). The
+  client never changes role on its own: it follows the server's `game:joined { role }`, so the
+  page swaps between the voter view (deck) and the facilitator view (story, reveal, estimate,
+  remove) when that arrives. The live region says "<name> is now the facilitator" for every
+  player; the matching removal of that voter from the list is not announced as a removal.
 - **Panels:** every section is its own panel (`Panel`: shaded background, thin border, rounded
   corners, 16 to 20 px padding, 24 px between panels, a very light shadow in light mode only,
   never `overflow-hidden` so focus rings are not cut off). Work area: Story, Your vote, Round

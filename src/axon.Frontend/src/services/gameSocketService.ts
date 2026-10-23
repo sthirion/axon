@@ -112,6 +112,7 @@ export function connectGameSocket(
     castVote: (card) => request(GAME_EVENTS.voteCast, { card }),
     revealRound: () => request(GAME_EVENTS.roundReveal, undefined),
     removePlayer: (playerId) => request(GAME_EVENTS.playerRemove, { playerId }),
+    transferFacilitator: (playerId) => request(GAME_EVENTS.facilitatorTransfer, { playerId }),
     revoteRound: () => request(GAME_EVENTS.roundRevote, undefined),
     finishRound: (payload) => request(GAME_EVENTS.roundFinish, payload),
     close() {

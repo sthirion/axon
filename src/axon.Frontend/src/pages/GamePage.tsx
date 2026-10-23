@@ -65,6 +65,7 @@ function SessionView({ session }: { readonly session: GameSession }) {
         onRevote={session.revoteRound}
         onFinish={session.finishRound}
         onRemovePlayer={session.removePlayer}
+        onTransferFacilitator={session.transferFacilitator}
       />
     );
   }

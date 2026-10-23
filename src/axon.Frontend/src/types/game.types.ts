@@ -35,6 +35,7 @@ export interface GameSocketClient {
   readonly revealRound: () => Promise<ActionResult>;
   readonly revoteRound: () => Promise<ActionResult>;
   readonly removePlayer: (playerId: string) => Promise<ActionResult>;
+  readonly transferFacilitator: (playerId: string) => Promise<ActionResult>;
   readonly finishRound: (payload: RoundFinishPayload) => Promise<ActionResult>;
   readonly close: () => void;
 }

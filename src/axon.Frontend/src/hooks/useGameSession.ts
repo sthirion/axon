@@ -62,6 +62,7 @@ export interface GameSession {
   readonly revealRound: () => Promise<ActionResult>;
   readonly revoteRound: () => Promise<ActionResult>;
   readonly removePlayer: (playerId: string) => Promise<ActionResult>;
+  readonly transferFacilitator: (playerId: string) => Promise<ActionResult>;
   readonly finishRound: (payload: RoundFinishPayload) => Promise<ActionResult>;
 }
 
@@ -226,6 +227,12 @@ export function useGameSession(gameId: string): GameSession {
     [],
   );
 
+  const transferFacilitator = useCallback(
+    (playerId: string) =>
+      clientRef.current?.transferFacilitator(playerId) ?? Promise.resolve(NOT_CONNECTED),
+    [],
+  );
+
   const revoteRound = useCallback(
     () => clientRef.current?.revoteRound() ?? Promise.resolve(NOT_CONNECTED),
     [],
@@ -255,6 +262,7 @@ export function useGameSession(gameId: string): GameSession {
     revealRound,
     revoteRound,
     removePlayer,
+    transferFacilitator,
     finishRound,
   };
 }
