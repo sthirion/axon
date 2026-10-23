@@ -522,19 +522,19 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
       await form.getByLabel('Title').fill('T');
       await form.getByLabel('Link').fill('https://example.com/story');
       await form.getByRole('button', { name: 'Start voting' }).click();
-      await expect(card(voter.page, '0')).toBeEnabled();
+      await expect(card(voter.page, '1')).toBeEnabled();
 
-      await card(voter.page, '0').focus();
-      await voter.page.keyboard.press('ArrowRight');
-      await expect(card(voter.page, '1')).toBeChecked();
+      await card(voter.page, '1').focus();
       await voter.page.keyboard.press('ArrowRight');
       await expect(card(voter.page, '2')).toBeChecked();
+      await voter.page.keyboard.press('ArrowRight');
+      await expect(card(voter.page, '3')).toBeChecked();
       await voter.page.keyboard.press('Tab');
       await expect(button(voter.page, 'Withdraw vote')).toBeFocused();
       await voter.page.keyboard.press('Shift+Tab');
-      await expect(card(voter.page, '2')).toBeFocused();
+      await expect(card(voter.page, '3')).toBeFocused();
       await voter.page.keyboard.press('Enter');
-      await expect(card(voter.page, '2')).toBeChecked();
+      await expect(card(voter.page, '3')).toBeChecked();
     });
   });
 

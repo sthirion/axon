@@ -17,12 +17,21 @@ describe('calculateStats: every row of the table in the requirements', () => {
     ['fibonacci 2, 3', 'fibonacci', [2, 3], 2.5, 3, false, ['v1', 'v2'], 3],
     ['fibonacci a single sized vote', 'fibonacci', [5], 5, 5, false, [], 5],
     ['fibonacci 1, 2 (tie goes higher)', 'fibonacci', [1, 2], 1.5, 2, false, ['v1', 'v2'], 2],
-    ['fibonacci 0, 0', 'fibonacci', [0, 0], 0, 0, true, [], 0],
+    ['fibonacci 1, 1', 'fibonacci', [1, 1], 1, 1, true, [], 1],
     ['fibonacci 1, 1, 2', 'fibonacci', [1, 1, 2], 1.3, 1, false, ['v1', 'v2', 'v3'], 1],
     ['fibonacci 13, 21 (equally close)', 'fibonacci', [13, 21], 17, 21, false, ['v1', 'v2'], 21],
     ['incremental 4, 6', 'incremental', [4, 6], 5, 6, false, ['v1', 'v2'], 5],
     ['incremental 7, 7, 7', 'incremental', [7, 7, 7], 7, 7, true, [], 7],
-    ['incremental 0, 10', 'incremental', [0, 10], 5, 10, false, ['v1', 'v2'], 5],
+    [
+      'incremental 1, 10 (tie goes higher)',
+      'incremental',
+      [1, 10],
+      5.5,
+      10,
+      false,
+      ['v1', 'v2'],
+      6,
+    ],
     ['incremental 3, 4 (tie goes higher)', 'incremental', [3, 4], 3.5, 4, false, ['v1', 'v2'], 4],
     ['incremental 9, 10, ?', 'incremental', [9, 10, '?'], 9.5, 10, false, ['v1', 'v2'], 10],
     ['tshirt M, M, M', 'tshirt', ['M', 'M', 'M'], null, 'M', true, [], 'M'],
@@ -65,10 +74,10 @@ describe('calculateStats: every row of the table in the requirements', () => {
 describe('calculateStats: numeric scales', () => {
   it.each<[Scale, Card[], number]>([
     ['fibonacci', [2, 2, 3], 2.3],
-    ['fibonacci', [0, 0, 1], 0.3],
+    ['fibonacci', [1, 1, 1, 2], 1.3],
     ['fibonacci', [1, 2, 2, 2], 1.8],
     ['incremental', [1, 1, 1, 2], 1.3],
-    ['incremental', [0, 1, 1, 1, 1, 1, 1, 1], 0.9],
+    ['incremental', [1, 2, 2, 2, 2, 2, 2, 2], 1.9],
     ['incremental', [10, 10, 9], 9.7],
   ])('rounds the %s average of %j half up to %d', (scale, cards, average) => {
     expect(calculateStats(votesOf(...cards), scale).average).toBe(average);
@@ -110,9 +119,9 @@ describe('calculateStats: distribution', () => {
     ],
     [
       'incremental',
-      [10, 0, 10, '?'],
+      [10, 1, 10, '?'],
       [
-        [0, 1],
+        [1, 1],
         [10, 2],
         ['?', 1],
       ],

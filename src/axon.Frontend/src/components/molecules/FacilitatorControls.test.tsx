@@ -28,7 +28,6 @@ describe('FacilitatorControls', () => {
     expect(select).toHaveValue('8');
     expect([...(select as HTMLSelectElement).options].map((o) => o.text)).toEqual([
       'Choose an estimate',
-      '0',
       '1',
       '2',
       '3',
@@ -146,9 +145,9 @@ describe('FacilitatorControls', () => {
 
 describe('FacilitatorControls per scale', () => {
   it.each([
-    ['incremental', ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
+    ['incremental', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
     ['tshirt', ['XS', 'S', 'M', 'L', 'XL']],
-    ['fibonacci', ['0', '1', '2', '3', '5', '8', '13', '21']],
+    ['fibonacci', ['1', '2', '3', '5', '8', '13', '21']],
   ] as const)('offers only the sized cards of %s, never ? or coffee', (scale, cards) => {
     renderControls({ scale, suggestedEstimate: null });
 

@@ -23,7 +23,7 @@ const DESKTOP = { width: 1280, height: 800 };
 const MOBILE = { width: 390, height: 844 };
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 const NEW_TAB_NAME = /\(opens in a new tab\)$/;
-const CARD_LABELS = ['0', '1', '2', '3', '5', '8', '13', '21', '?', 'Coffee break'];
+const CARD_LABELS = ['1', '2', '3', '5', '8', '13', '21', '?', 'Coffee break'];
 
 interface Player {
   readonly context: BrowserContext;
@@ -613,28 +613,28 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       await startVoting(table);
 
       // When
-      await tabTo(page, card(page, '0'));
+      await tabTo(page, card(page, '1'));
 
       // Then
-      await expect(card(page, '0')).toBeFocused();
+      await expect(card(page, '1')).toBeFocused();
       await expect(checkedCards(page)).toHaveCount(0);
 
       // When
       await page.keyboard.press('Space');
 
       // Then
-      await expect(card(page, '0')).toBeChecked();
-      await expect(card(page, '0')).toBeFocused();
+      await expect(card(page, '1')).toBeChecked();
+      await expect(card(page, '1')).toBeFocused();
 
-      // When / Then: backwards through the wrap, 0 -> Coffee break -> ? -> 21
+      // When / Then: backwards through the wrap, 1 -> Coffee break -> ? -> 21
       for (const label of ['Coffee break', '?', '21']) {
         await page.keyboard.press('ArrowLeft');
         await expect(card(page, label)).toBeChecked();
         await expect(card(page, label)).toBeFocused();
       }
 
-      // When / Then: forwards through the wrap, 21 -> ? -> Coffee break -> 0
-      for (const label of ['?', 'Coffee break', '0']) {
+      // When / Then: forwards through the wrap, 21 -> ? -> Coffee break -> 1
+      for (const label of ['?', 'Coffee break', '1']) {
         await page.keyboard.press('ArrowRight');
         await expect(card(page, label)).toBeChecked();
         await expect(card(page, label)).toBeFocused();
@@ -644,7 +644,7 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       await page.keyboard.press('ArrowRight');
 
       // Then
-      await expect(card(page, '1')).toBeChecked();
+      await expect(card(page, '2')).toBeChecked();
       await expect(checkedCards(page)).toHaveCount(1);
 
       // When
@@ -658,19 +658,19 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
 
       // Then
       await expect(checkedCards(page)).toHaveCount(0);
-      await expect(card(page, '0')).toBeFocused();
+      await expect(card(page, '1')).toBeFocused();
       await expectVoteStatus(table.facilitator.page, 'Anna', false);
 
       // When
       await page.keyboard.press('Space');
-      await expect(card(page, '0')).toBeChecked();
+      await expect(card(page, '1')).toBeChecked();
       await page.keyboard.press('Tab');
       await expect(withdrawButton(page)).toBeFocused();
       await page.keyboard.press('Space');
 
       // Then
       await expect(checkedCards(page)).toHaveCount(0);
-      await expect(card(page, '0')).toBeFocused();
+      await expect(card(page, '1')).toBeFocused();
       await expectVoteStatus(table.facilitator.page, 'Anna', false);
     });
 
@@ -784,16 +784,16 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
         await expect(allCards(page)).toHaveCount(CARD_LABELS.length);
 
         // When
-        await tabTo(page, card(page, '0'));
+        await tabTo(page, card(page, '1'));
         await page.keyboard.press('Space');
-        await expect(card(page, '0')).toBeChecked();
-        const cardBefore = await focusStyle(cardFace(page, '1'));
+        await expect(card(page, '1')).toBeChecked();
+        const cardBefore = await focusStyle(cardFace(page, '2'));
         const withdrawBefore = await focusStyle(withdrawButton(page));
         await page.keyboard.press('ArrowRight');
 
         // Then
-        await expect(card(page, '1')).toBeFocused();
-        expectFocusIndicator(cardBefore, await focusStyle(cardFace(page, '1')), 'focused card "1"');
+        await expect(card(page, '2')).toBeFocused();
+        expectFocusIndicator(cardBefore, await focusStyle(cardFace(page, '2')), 'focused card "2"');
 
         // When
         await page.keyboard.press('Tab');

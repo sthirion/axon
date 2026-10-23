@@ -9,8 +9,9 @@ export const DEFAULT_SCALE: Scale = 'fibonacci';
 // Exact strings only: "Fibonacci", "t-shirt" and "" are not scales.
 export const scaleSchema = z.enum(SCALES);
 
-const FIBONACCI = [0, 1, 2, 3, 5, 8, 13, 21] as const;
-const INCREMENTAL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+// No zero card: nothing is estimated at zero effort, so the numeric decks start at 1.
+const FIBONACCI = [1, 2, 3, 5, 8, 13, 21] as const;
+const INCREMENTAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 // Deck order is size order: XS < S < M < L < XL.
 const SIZES = ['XS', 'S', 'M', 'L', 'XL'] as const;
 // Present in every scale; never an estimate.
@@ -47,8 +48,8 @@ export const SCALE_LABELS: Readonly<Record<Scale, string>> = {
 };
 
 export const SCALE_DESCRIPTIONS: Readonly<Record<Scale, string>> = {
-  fibonacci: '0, 1, 2, 3, 5, 8, 13, 21',
-  incremental: '0 to 10',
+  fibonacci: '1, 2, 3, 5, 8, 13, 21',
+  incremental: '1 to 10',
   tshirt: 'XS, S, M, L, XL',
 };
 

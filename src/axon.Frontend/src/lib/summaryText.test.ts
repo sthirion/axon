@@ -20,8 +20,8 @@ describe('summaryText', () => {
   });
 
   it('copies titles as stored without escaping', () => {
-    expect(summaryText([{ title: '<b>x</b> & y', estimate: 0 }], 0)).toBe(
-      '1. <b>x</b> & y - 0\nTotal: 0',
+    expect(summaryText([{ title: '<b>x</b> & y', estimate: 1 }], 1)).toBe(
+      '1. <b>x</b> & y - 1\nTotal: 1',
     );
   });
 });

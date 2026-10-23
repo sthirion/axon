@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { CardDeck } from './CardDeck';
 import type { ActionResult } from '../../types/game.types';
 
-const LABELS = ['0', '1', '2', '3', '5', '8', '13', '21', '?', 'Coffee break'];
+const LABELS = ['1', '2', '3', '5', '8', '13', '21', '?', 'Coffee break'];
 
 function setup(selected: Card | null, disabled = false) {
   const onCast = vi.fn<(card: Card | null) => Promise<ActionResult>>(() =>
@@ -24,12 +24,12 @@ const radio = (name: string) => screen.getByRole('radio', { name });
 const withdraw = () => screen.getByRole('button', { name: 'Withdraw vote' });
 
 describe('CardDeck', () => {
-  it('is a radio group named "Your vote" with the 10 cards in order', () => {
+  it('is a radio group named "Your vote" with the 9 cards in order', () => {
     setup(null);
 
     expect(screen.getByRole('radiogroup', { name: 'Your vote' })).toBeInTheDocument();
     expect(radios()).toEqual(LABELS.map((label) => radio(label)));
-    expect(radios()).toHaveLength(10);
+    expect(radios()).toHaveLength(9);
   });
 
   it('shows the coffee card as a hidden glyph with the accessible name "Coffee break"', () => {
@@ -52,10 +52,10 @@ describe('CardDeck', () => {
     expect(radio('Coffee break')).toBeChecked();
   });
 
-  it('shows 0 as selected, not as "no vote"', () => {
-    setup(0);
+  it('shows the first card as selected, not as "no vote"', () => {
+    setup(1);
 
-    expect(radio('0')).toBeChecked();
+    expect(radio('1')).toBeChecked();
     expect(withdraw()).toBeEnabled();
   });
 
@@ -99,9 +99,9 @@ describe('CardDeck', () => {
     it('makes only the first card tabbable when nothing is selected', async () => {
       const { user } = setup(null);
 
-      expect(tabbable()).toEqual([radio('0')]);
+      expect(tabbable()).toEqual([radio('1')]);
       await user.tab();
-      expect(radio('0')).toHaveFocus();
+      expect(radio('1')).toHaveFocus();
     });
 
     it('makes only the selected card tabbable and enters on it', async () => {
@@ -126,11 +126,11 @@ describe('CardDeck', () => {
       await user.tab();
 
       await user.keyboard('{ArrowRight}');
-      expect(radio('1')).toHaveFocus();
+      expect(radio('2')).toHaveFocus();
       await user.keyboard('{ArrowDown}');
 
-      expect(radio('2')).toHaveFocus();
-      expect(onCast.mock.calls).toEqual([[1], [2]]);
+      expect(radio('3')).toHaveFocus();
+      expect(onCast.mock.calls).toEqual([[2], [3]]);
     });
 
     it('moves to and selects the previous card with ArrowLeft and ArrowUp', async () => {
@@ -168,11 +168,11 @@ describe('CardDeck', () => {
       await user.tab();
 
       await user.keyboard('{ArrowRight}');
-      expect(radio('0')).toHaveFocus();
+      expect(radio('1')).toHaveFocus();
       await user.keyboard('{ArrowLeft}');
 
       expect(radio('Coffee break')).toHaveFocus();
-      expect(onCast.mock.calls).toEqual([[0], ['coffee']]);
+      expect(onCast.mock.calls).toEqual([[1], ['coffee']]);
     });
 
     it('selects the focused card with Space', async () => {
@@ -181,7 +181,7 @@ describe('CardDeck', () => {
 
       await user.keyboard(' ');
 
-      expect(onCast).toHaveBeenCalledExactlyOnceWith(0);
+      expect(onCast).toHaveBeenCalledExactlyOnceWith(1);
     });
 
     it('does nothing on Space for the card that is already selected', async () => {
@@ -229,7 +229,7 @@ describe('CardDeck', () => {
       await user.click(withdraw());
 
       expect(onCast).toHaveBeenCalledExactlyOnceWith(null);
-      await vi.waitFor(() => expect(radio('0')).toHaveFocus());
+      await vi.waitFor(() => expect(radio('1')).toHaveFocus());
     });
 
     it('keeps the selection, the focus and shows the error when the ack fails', async () => {
@@ -242,7 +242,7 @@ describe('CardDeck', () => {
         'That action is not available right now.',
       );
       expect(radio('8')).toBeChecked();
-      expect(radio('0')).not.toHaveFocus();
+      expect(radio('1')).not.toHaveFocus();
     });
   });
 
@@ -313,8 +313,8 @@ describe('CardDeck per scale', () => {
   const labels = () => screen.getAllByRole('radio').map((r) => r.getAttribute('value'));
 
   it.each<[Scale, string[]]>([
-    ['fibonacci', ['0', '1', '2', '3', '5', '8', '13', '21', '?', 'coffee']],
-    ['incremental', ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '?', 'coffee']],
+    ['fibonacci', ['1', '2', '3', '5', '8', '13', '21', '?', 'coffee']],
+    ['incremental', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '?', 'coffee']],
     ['tshirt', ['XS', 'S', 'M', 'L', 'XL', '?', 'coffee']],
   ])('shows exactly the %s deck, in order', (scale, expected) => {
     renderDeck(scale);
@@ -323,9 +323,9 @@ describe('CardDeck per scale', () => {
   });
 
   it.each<[Scale, Array<string | number>]>([
-    ['tshirt', ['5', '0', '13']],
-    ['fibonacci', ['M', 'XS', '4', '10']],
-    ['incremental', ['M', '11', '13', '21']],
+    ['tshirt', ['5', '1', '13']],
+    ['fibonacci', ['M', 'XS', '0', '4', '10']],
+    ['incremental', ['M', '0', '11', '13', '21']],
   ])('shows no card of another scale in the %s deck', (scale, foreign) => {
     renderDeck(scale);
 

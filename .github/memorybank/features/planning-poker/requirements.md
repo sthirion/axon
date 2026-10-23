@@ -15,7 +15,7 @@ records the agreed estimate and moves on to the next story. Games live in memory
 - **Game**: one estimation session with a unique link. Exists in memory only.
 - **Round**: estimating one story, from setting the story to recording the final estimate.
 - **Story**: the work item being estimated: a link and an optional title.
-- **Deck**: the Fibonacci cards 0, 1, 2, 3, 5, 8, 13, 21, `?` and coffee.
+- **Deck**: the Fibonacci cards 1, 2, 3, 5, 8, 13, 21, `?` and coffee.
 - **Numeric vote**: a vote on a card from 0 to 21. `?` and coffee are non-numeric.
 - **Player token**: a random secret stored in the browser that identifies a player within one
   game.
@@ -88,8 +88,8 @@ knows what we are voting on.
 **User story:** As a voter, I want to pick a card in secret so that I am not influenced by
 others.
 
-1. THE SYSTEM SHALL offer the deck of the game's scale: 0, 1, 2, 3, 5, 8, 13, 21 (Fibonacci),
-   0 to 10 (incremental) or XS, S, M, L, XL (t-shirt), plus `?` and coffee in every scale.
+1. THE SYSTEM SHALL offer the deck of the game's scale: 1, 2, 3, 5, 8, 13, 21 (Fibonacci),
+   1 to 10 (incremental) or XS, S, M, L, XL (t-shirt), plus `?` and coffee in every scale.
 1. IF a vote is not in the game's deck THEN THE SYSTEM SHALL reject it.
 1. WHILE votes are hidden THE SYSTEM SHALL let a voter pick, change or withdraw their vote.
 1. WHILE votes are hidden THE SYSTEM SHALL show every player who has voted, but not the

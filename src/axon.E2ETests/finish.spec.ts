@@ -223,7 +223,7 @@ test.describe('Re-vote, record the final estimate and keep a session summary @TE
       .locator('option')
       .allTextContents();
 
-    expect(options).toEqual(['Choose an estimate', '0', '1', '2', '3', '5', '8', '13', '21']);
+    expect(options).toEqual(['Choose an estimate', '1', '2', '3', '5', '8', '13', '21']);
   });
 
   test('shows only the right controls to the right people', async ({ browser }) => {

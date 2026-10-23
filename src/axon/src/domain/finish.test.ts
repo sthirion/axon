@@ -73,7 +73,7 @@ describe('revoteRound', () => {
 });
 
 describe('finishRound with a final estimate', () => {
-  it.each([0, 1, 2, 3, 5, 8, 13, 21])('records %d and returns to waiting', (finalEstimate) => {
+  it.each([1, 2, 3, 5, 8, 13, 21])('records %d and returns to waiting', (finalEstimate) => {
     const game = aRevealedGame();
 
     expect(finishRound(game, FACILITATOR, { finalEstimate })).toEqual({ ok: true });

@@ -13,8 +13,8 @@ import {
 const codePoints = (count: number, char = 'a') => char.repeat(count);
 
 describe('DECK', () => {
-  it('lists the ten cards in order', () => {
-    expect(DECK).toEqual([0, 1, 2, 3, 5, 8, 13, 21, '?', 'coffee']);
+  it('lists the nine cards in order, with no zero', () => {
+    expect(DECK).toEqual([1, 2, 3, 5, 8, 13, 21, '?', 'coffee']);
   });
 });
 
@@ -25,6 +25,7 @@ describe('cardSchema', () => {
 
   it.each([
     '5',
+    0,
     5.5,
     -1,
     '',

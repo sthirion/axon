@@ -50,7 +50,7 @@ describe('castVote per scale', () => {
 
   it.each<[Scale, Card[]]>([
     ['fibonacci', ['M', 'XS', 4, 10] as Card[]],
-    ['incremental', ['M', 11, 13, 21] as Card[]],
+    ['incremental', [0, 'M', 11, 13, 21] as unknown as Card[]],
     ['tshirt', [0, 5, 13, 'XXL', 'm'] as Card[]],
   ])('%s rejects cards of other scales with INVALID_CARD and keeps the vote', (scale, foreign) => {
     const game = aVotingGame(scale);
@@ -94,7 +94,7 @@ describe('finishRound per scale', () => {
   );
 
   it.each<[Scale, unknown[]]>([
-    ['fibonacci', ['?', 'coffee', 4, 'M', 10]],
+    ['fibonacci', ['?', 'coffee', 0, 4, 'M', 10]],
     ['incremental', ['?', 'coffee', 11, 'M', 21]],
     ['tshirt', ['?', 'coffee', 0, 5, 'XXL', 'm']],
   ])('%s rejects everything else with INVALID_CARD and records nothing', (scale, bad) => {

@@ -20,8 +20,8 @@ describe('ScalePicker', () => {
       'tshirt',
     ]);
     expect(screen.getByRole('radio', { name: /Fibonacci/ })).toBeVisible();
-    expect(screen.getByText('0, 1, 2, 3, 5, 8, 13, 21')).toBeVisible();
-    expect(screen.getByText('0 to 10')).toBeVisible();
+    expect(screen.getByText('1, 2, 3, 5, 8, 13, 21')).toBeVisible();
+    expect(screen.getByText('1 to 10')).toBeVisible();
     expect(screen.getByText('XS, S, M, L, XL')).toBeVisible();
   });
 
