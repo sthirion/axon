@@ -1,5 +1,6 @@
-import type { HistoryEntry } from '@axon/shared';
+import { isTooLarge, type HistoryEntry, type Scale } from '@axon/shared';
 import { memo, useId, useState } from 'react';
+import { sizeStyle } from '../../lib/sizeStyles';
 import { summaryText } from '../../lib/summaryText';
 import { Button } from '../atoms/Button';
 import { StoryTitle } from '../atoms/StoryTitle';
@@ -9,12 +10,14 @@ export const COPIED_MESSAGE = 'Summary copied';
 export const COPY_ERROR_MESSAGE = 'Could not copy. Select the text instead.';
 
 interface SessionSummaryProps {
+  readonly scale: Scale;
   readonly history: readonly HistoryEntry[];
   // `null` for t-shirt sizes, which cannot be added up.
   readonly total: number | null;
 }
 
 export const SessionSummary = memo(function SessionSummary({
+  scale,
   history,
   total,
 }: SessionSummaryProps) {
@@ -48,7 +51,20 @@ export const SessionSummary = memo(function SessionSummary({
               <span className="min-w-0">
                 <StoryTitle title={entry.title} url={entry.url} />
               </span>
-              <span className="font-semibold">{entry.estimate}</span>
+              <span className="flex items-baseline gap-2">
+                {isTooLarge(scale, entry.estimate) && (
+                  <span className="type-meta font-medium text-red-700 dark:text-red-400">
+                    <span aria-hidden="true">⚠ </span>Too large
+                  </span>
+                )}
+                <span
+                  className={`rounded border px-2 font-semibold ${
+                    sizeStyle(scale, entry.estimate)?.chip ?? 'border-transparent'
+                  }`}
+                >
+                  {entry.estimate}
+                </span>
+              </span>
             </li>
           ))}
         </ol>

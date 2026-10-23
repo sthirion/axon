@@ -375,3 +375,107 @@ describe('CardDeck per scale', () => {
     ).toHaveLength(1);
   });
 });
+
+describe('CardDeck size colours and the too-large flag', () => {
+  const renderDeck = (scale: Scale, selected: Card | null = null) => {
+    const onCast = vi.fn<(card: Card | null) => Promise<ActionResult>>(() =>
+      Promise.resolve({ ok: true }),
+    );
+    return render(<CardDeck scale={scale} selected={selected} disabled={false} onCast={onCast} />);
+  };
+  const faceOf = (value: string) =>
+    document.querySelector<HTMLInputElement>(`input[value="${value}"]`)!
+      .nextElementSibling as HTMLElement;
+  const bars = (value: string) => faceOf(value).querySelectorAll('[data-filled="true"]').length;
+
+  it.each<[Scale, Array<[string, number]>]>([
+    [
+      'fibonacci',
+      [
+        ['1', 1],
+        ['2', 1],
+        ['3', 2],
+        ['5', 3],
+        ['8', 4],
+        ['13', 5],
+        ['21', 5],
+      ],
+    ],
+    [
+      'incremental',
+      [
+        ['1', 1],
+        ['3', 2],
+        ['5', 3],
+        ['7', 4],
+        ['9', 5],
+        ['10', 5],
+      ],
+    ],
+    [
+      'tshirt',
+      [
+        ['XS', 1],
+        ['S', 2],
+        ['M', 3],
+        ['L', 4],
+        ['XL', 5],
+      ],
+    ],
+  ])('shows the size bar of every sized %s card, growing with its level', (scale, expected) => {
+    renderDeck(scale);
+
+    for (const [value, filled] of expected) {
+      expect(bars(value), `${scale} ${value}`).toBe(filled);
+    }
+  });
+
+  it.each<Scale>(['fibonacci', 'incremental', 'tshirt'])(
+    'gives ? and coffee no bar and no flag in %s',
+    (scale) => {
+      renderDeck(scale);
+
+      for (const value of ['?', 'coffee']) {
+        expect(faceOf(value).querySelector('[data-filled]')).toBeNull();
+        expect(faceOf(value)).not.toHaveTextContent('⚠');
+      }
+    },
+  );
+
+  it.each<[Scale, string[], string[]]>([
+    ['fibonacci', ['13', '21'], ['1', '2', '3', '5', '8', '?', 'coffee']],
+    ['incremental', ['8', '9', '10'], ['1', '2', '3', '4', '5', '6', '7', '?', 'coffee']],
+    ['tshirt', ['L', 'XL'], ['XS', 'S', 'M', '?', 'coffee']],
+  ])('flags exactly the too-large %s cards with ⚠ and nothing else', (scale, flagged, others) => {
+    renderDeck(scale);
+
+    for (const value of flagged) expect(faceOf(value)).toHaveTextContent('⚠');
+    for (const value of others) expect(faceOf(value)).not.toHaveTextContent('⚠');
+  });
+
+  it('keeps the accessible name of a flagged card and describes it instead', () => {
+    renderDeck('fibonacci');
+
+    const card = screen.getByRole('radio', { name: '13' });
+    expect(card).toHaveAccessibleDescription('Too large: consider splitting this story');
+    expect(screen.getByRole('radio', { name: '5' })).not.toHaveAccessibleDescription(
+      'Too large: consider splitting this story',
+    );
+  });
+
+  it('explains the mark in a visible legend', () => {
+    renderDeck('tshirt');
+
+    expect(screen.getByText('Too large to take as one story')).toBeVisible();
+  });
+
+  it('keeps the legend and the descriptions while a card is selected', () => {
+    renderDeck('fibonacci', 5);
+
+    expect(screen.getByText('Too large to take as one story')).toBeVisible();
+    expect(screen.getByRole('radio', { name: '21' })).toHaveAccessibleDescription(
+      'Too large: consider splitting this story',
+    );
+    expect(screen.getByRole('radio', { name: '8' })).not.toHaveAccessibleDescription();
+  });
+});

@@ -159,3 +159,45 @@ describe('ResultsPanel for t-shirt sizes', () => {
     expect(screen.getByText('Outliers: Anna, Bob')).toBeVisible();
   });
 });
+
+describe('ResultsPanel and the too-large flag', () => {
+  it('says "Too large" next to the cards at or above the threshold, and only those', () => {
+    renderPanel(
+      {
+        distribution: [
+          { card: 5, count: 1 },
+          { card: 8, count: 1 },
+          { card: 13, count: 2 },
+          { card: 21, count: 1 },
+          { card: '?', count: 1 },
+        ],
+      },
+      [],
+      'fibonacci',
+    );
+
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(items.map((item) => item.textContent?.includes('Too large'))).toEqual([
+      false,
+      false,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it.each([
+    ['incremental', 7, false],
+    ['incremental', 8, true],
+    ['tshirt', 'M', false],
+    ['tshirt', 'L', true],
+  ] as const)('flags %s %s: %s', (scale, card, flagged) => {
+    renderPanel(
+      { distribution: [{ card, count: 1 }], median: card, suggestedEstimate: card },
+      [],
+      scale,
+    );
+
+    expect(screen.queryByText('Too large', { exact: false }) !== null).toBe(flagged);
+  });
+});

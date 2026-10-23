@@ -1,5 +1,6 @@
 import {
   estimateCardsOf,
+  isTooLarge,
   type EstimateCard,
   type RoundFinishPayload,
   type Scale,
@@ -60,6 +61,14 @@ function EstimateForm({
             </option>
           ))}
         </select>
+        <p role="status" className="type-meta min-h-5 font-medium text-red-700 dark:text-red-400">
+          {isTooLarge(
+            scale,
+            cards.find((card) => String(card) === estimate),
+          )
+            ? 'Too large: consider splitting this story.'
+            : ''}
+        </p>
       </div>
       <Button
         disabled={busy || estimate === ''}

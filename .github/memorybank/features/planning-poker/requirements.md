@@ -113,6 +113,9 @@ differences.
    voter's card, the number of votes per card (distribution bars), and the average.
 1. THE SYSTEM SHALL calculate the average over numeric votes only, rounded to one decimal.
    For t-shirt sizes it shows the median size instead of an average.
+1. THE SYSTEM SHALL colour cards by size (small green to large red, with a size bar so colour
+   is not the only cue) and mark cards that are too large to take on as one story, telling the
+   facilitator when the estimate is too large.
 1. THE SYSTEM SHALL show `?` and coffee votes but leave them out of the average and the
    consensus check.
 1. WHEN all numeric votes are equal and there are at least two of them THE SYSTEM SHALL

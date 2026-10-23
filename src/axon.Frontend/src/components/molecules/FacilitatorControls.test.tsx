@@ -182,3 +182,54 @@ describe('FacilitatorControls per scale', () => {
     expect(screen.getByRole('button', { name: 'Record estimate' })).toBeDisabled();
   });
 });
+
+describe('FacilitatorControls too-large hint', () => {
+  const HINT = 'Too large: consider splitting this story.';
+  const hint = () => screen.getByRole('status');
+
+  it.each([
+    ['fibonacci', 13],
+    ['fibonacci', 21],
+    ['incremental', 8],
+    ['incremental', 10],
+    ['tshirt', 'L'],
+    ['tshirt', 'XL'],
+  ] as const)('shows the hint when the proposal is %s %s', (scale, suggestedEstimate) => {
+    renderControls({ scale, suggestedEstimate });
+
+    expect(hint()).toHaveTextContent(HINT);
+  });
+
+  it.each([
+    ['fibonacci', 8],
+    ['incremental', 7],
+    ['tshirt', 'M'],
+  ] as const)('shows no hint when the proposal is %s %s', (scale, suggestedEstimate) => {
+    renderControls({ scale, suggestedEstimate });
+
+    expect(hint()).toBeEmptyDOMElement();
+  });
+
+  it('shows no hint without a proposal', () => {
+    renderControls({ scale: 'fibonacci', suggestedEstimate: null });
+
+    expect(hint()).toBeEmptyDOMElement();
+  });
+
+  it('follows the select: it appears and disappears as the chosen card changes', async () => {
+    renderControls({ scale: 'fibonacci', suggestedEstimate: 5 });
+    expect(hint()).toBeEmptyDOMElement();
+
+    await userEvent.selectOptions(screen.getByLabelText('Final estimate'), '13');
+    expect(hint()).toHaveTextContent(HINT);
+    await userEvent.selectOptions(screen.getByLabelText('Final estimate'), '8');
+    expect(hint()).toBeEmptyDOMElement();
+  });
+
+  it('is a polite status region that is always present, so it does not shift the layout', () => {
+    renderControls({ scale: 'tshirt', suggestedEstimate: 'M' });
+
+    expect(hint()).toBeInTheDocument();
+    expect(hint().textContent).toBe('');
+  });
+});

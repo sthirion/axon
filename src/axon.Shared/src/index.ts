@@ -79,6 +79,7 @@ export {
   type VoteCastPayload,
   type VoteMine,
 } from './game.js';
+export { isTooLarge, SIZE_LEVELS, sizeLevel, TOO_LARGE_FROM, type SizeLevel } from './size.js';
 export {
   STORY_TITLE_MAX_LENGTH,
   STORY_URL_MAX_LENGTH,

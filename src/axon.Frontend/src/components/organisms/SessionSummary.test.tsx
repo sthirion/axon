@@ -24,7 +24,7 @@ afterEach(() => {
 
 describe('SessionSummary', () => {
   it('shows the empty message, a total of 0 and a disabled copy button', () => {
-    render(<SessionSummary history={[]} total={0} />);
+    render(<SessionSummary scale="fibonacci" history={[]} total={0} />);
 
     expect(screen.getByText(EMPTY_SUMMARY_MESSAGE)).toBeVisible();
     expect(screen.getByText('Total: 0')).toBeVisible();
@@ -32,7 +32,7 @@ describe('SessionSummary', () => {
   });
 
   it('lists the stories in order with estimate or skipped and the total', () => {
-    render(<SessionSummary history={HISTORY} total={5} />);
+    render(<SessionSummary scale="fibonacci" history={HISTORY} total={5} />);
 
     const items = within(screen.getByRole('list')).getAllByRole('listitem');
     expect(items).toHaveLength(2);
@@ -43,7 +43,7 @@ describe('SessionSummary', () => {
   });
 
   it('opens a link safely in a new tab and shows a title as text only', () => {
-    const { container } = render(<SessionSummary history={HISTORY} total={5} />);
+    const { container } = render(<SessionSummary scale="fibonacci" history={HISTORY} total={5} />);
 
     const link = screen.getByRole('link', { name: /^Login page.*\(opens in a new tab\)$/ });
     expect(link).toHaveAttribute('href', 'https://e.com/1');
@@ -58,7 +58,7 @@ describe('SessionSummary', () => {
   it('copies the plain text and announces it', async () => {
     const writeText = vi.fn(() => Promise.resolve());
     stubClipboard(writeText);
-    render(<SessionSummary history={HISTORY} total={5} />);
+    render(<SessionSummary scale="fibonacci" history={HISTORY} total={5} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Copy summary' }));
 
@@ -71,7 +71,7 @@ describe('SessionSummary', () => {
 
   it('shows an alert when the clipboard is unavailable', async () => {
     stubClipboard(() => Promise.reject(new Error('denied')));
-    render(<SessionSummary history={HISTORY} total={5} />);
+    render(<SessionSummary scale="fibonacci" history={HISTORY} total={5} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Copy summary' }));
 
@@ -81,11 +81,17 @@ describe('SessionSummary', () => {
 
   it('forgets the copied message once a story is added', async () => {
     stubClipboard(() => Promise.resolve());
-    const { rerender } = render(<SessionSummary history={HISTORY} total={5} />);
+    const { rerender } = render(<SessionSummary scale="fibonacci" history={HISTORY} total={5} />);
     await userEvent.click(screen.getByRole('button', { name: 'Copy summary' }));
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(COPIED_MESSAGE));
 
-    rerender(<SessionSummary history={[...HISTORY, { title: 'Next', estimate: 3 }]} total={8} />);
+    rerender(
+      <SessionSummary
+        scale="fibonacci"
+        history={[...HISTORY, { title: 'Next', estimate: 3 }]}
+        total={8}
+      />,
+    );
 
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
@@ -98,7 +104,7 @@ describe('SessionSummary for t-shirt sizes', () => {
   ];
 
   it('shows the sizes and no total', () => {
-    render(<SessionSummary history={SIZES} total={null} />);
+    render(<SessionSummary scale="tshirt" history={SIZES} total={null} />);
 
     const items = within(screen.getByRole('list')).getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('Login pageM');
@@ -107,7 +113,7 @@ describe('SessionSummary for t-shirt sizes', () => {
   });
 
   it('shows no total and the empty message for an empty t-shirt history', () => {
-    render(<SessionSummary history={[]} total={null} />);
+    render(<SessionSummary scale="tshirt" history={[]} total={null} />);
 
     expect(screen.getByText(EMPTY_SUMMARY_MESSAGE)).toBeVisible();
     expect(screen.queryByText(/Total/)).toBeNull();
@@ -116,7 +122,7 @@ describe('SessionSummary for t-shirt sizes', () => {
   it('copies the sizes without a total line', async () => {
     const writeText = vi.fn(() => Promise.resolve());
     stubClipboard(writeText);
-    render(<SessionSummary history={SIZES} total={null} />);
+    render(<SessionSummary scale="tshirt" history={SIZES} total={null} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Copy summary' }));
 
@@ -124,7 +130,7 @@ describe('SessionSummary for t-shirt sizes', () => {
   });
 
   it('still shows a total of 0 for a numeric session', () => {
-    render(<SessionSummary history={[]} total={0} />);
+    render(<SessionSummary scale="tshirt" history={[]} total={0} />);
 
     expect(screen.getByText('Total: 0')).toBeVisible();
   });
@@ -133,7 +139,11 @@ describe('SessionSummary for t-shirt sizes', () => {
 describe('SessionSummary for link-only stories', () => {
   it('shows the link as the clickable text and no title', () => {
     render(
-      <SessionSummary history={[{ title: '', url: 'https://e.com/1', estimate: 5 }]} total={5} />,
+      <SessionSummary
+        scale="fibonacci"
+        history={[{ title: '', url: 'https://e.com/1', estimate: 5 }]}
+        total={5}
+      />,
     );
 
     const link = screen.getByRole('link', { name: 'https://e.com/1 (opens in a new tab)' });
@@ -145,11 +155,73 @@ describe('SessionSummary for link-only stories', () => {
     const writeText = vi.fn(() => Promise.resolve());
     stubClipboard(writeText);
     render(
-      <SessionSummary history={[{ title: '', url: 'https://e.com/1', estimate: 5 }]} total={5} />,
+      <SessionSummary
+        scale="fibonacci"
+        history={[{ title: '', url: 'https://e.com/1', estimate: 5 }]}
+        total={5}
+      />,
     );
 
     await userEvent.click(screen.getByRole('button', { name: 'Copy summary' }));
 
     expect(writeText).toHaveBeenCalledWith('1. https://e.com/1 - 5\nTotal: 5');
+  });
+});
+
+describe('SessionSummary and the too-large flag', () => {
+  it('marks a story whose estimate is too large, and only that one', () => {
+    render(
+      <SessionSummary
+        scale="fibonacci"
+        history={[
+          { title: 'Small', url: 'https://e.com/1', estimate: 3 },
+          { title: 'Big', url: 'https://e.com/2', estimate: 13 },
+          { title: 'Huge', url: 'https://e.com/3', estimate: 21 },
+          { title: 'Skipped', url: 'https://e.com/4', estimate: 'skipped' },
+        ]}
+        total={37}
+      />,
+    );
+
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(items.map((item) => item.textContent?.includes('Too large'))).toEqual([
+      false,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it.each([
+    ['tshirt', 'L', true],
+    ['tshirt', 'M', false],
+    ['incremental', 8, true],
+    ['incremental', 4, false],
+  ] as const)('marks %s %s: %s', (scale, estimate, flagged) => {
+    render(
+      <SessionSummary
+        scale={scale}
+        history={[{ title: 'T', url: 'https://e.com/1', estimate }]}
+        total={scale === 'tshirt' ? null : 1}
+      />,
+    );
+
+    expect(screen.queryByText(/Too large/) !== null).toBe(flagged);
+  });
+
+  it('leaves the copied text unchanged', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    render(
+      <SessionSummary
+        scale="fibonacci"
+        history={[{ title: 'Big', url: 'https://e.com/2', estimate: 13 }]}
+        total={13}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Copy summary' }));
+
+    expect(writeText).toHaveBeenCalledWith('1. Big (https://e.com/2) - 13\nTotal: 13');
   });
 });
