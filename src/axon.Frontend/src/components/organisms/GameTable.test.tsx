@@ -2,7 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { GameTable, NO_VOTERS_MESSAGE } from './GameTable';
-import { GAME_ID, gameState } from '../../test/fakeSocket';
+import { gameState } from '../../test/fakeSocket';
 
 type Game = Parameters<typeof GameTable>[0]['game'];
 
@@ -63,11 +63,11 @@ describe('GameTable', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
-  it('shows the join link built from the origin and game id with a copy button', () => {
+  it('no longer has a join link panel: the link lives in the page header', () => {
     renderTable(gameState() as Game);
 
-    expect(screen.getByText(`${window.location.origin}/g/${GAME_ID}`)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Join link' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
   });
 
   it('renders names as text, never as markup', () => {
@@ -617,10 +617,10 @@ describe('GameTable panels', () => {
     },
   };
 
-  it('puts a voter in panels for the story, the people, the summary and the join link', () => {
+  it('puts a voter in panels for the story, the people and the summary', () => {
     render(<GameTable game={gameState(VOTING) as Game} reconnecting={false} {...IDLE} />);
 
-    for (const name of ['Story', 'Facilitator', 'Voters', 'Summary', 'Join link']) {
+    for (const name of ['Story', 'Facilitator', 'Voters', 'Summary']) {
       expect(screen.getByRole('region', { name })).toBeVisible();
     }
     expect(screen.getByRole('radiogroup', { name: 'Your vote' })).toBeVisible();
@@ -689,7 +689,6 @@ describe('GameTable panels', () => {
       'Facilitator',
       'Voters',
       'Summary',
-      'Join link',
     ]);
   });
 });

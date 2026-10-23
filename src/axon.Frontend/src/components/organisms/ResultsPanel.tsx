@@ -52,6 +52,14 @@ export const ResultsPanel = memo(function ResultsPanel({
             <span className="w-8 shrink-0 text-right font-semibold">
               <CardFace card={card} />
             </span>
+            <span className="w-5 shrink-0 text-center font-bold text-green-800 dark:text-green-400">
+              {card === results.suggestedEstimate && (
+                <>
+                  <span aria-hidden="true">✓</span>
+                  <span className="sr-only">Recommended</span>
+                </>
+              )}
+            </span>
             <span aria-hidden="true" className="h-4 min-w-0 flex-1">
               <span
                 className={`block h-full rounded ${

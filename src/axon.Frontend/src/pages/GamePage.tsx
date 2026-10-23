@@ -2,6 +2,7 @@ import { ERROR_MESSAGES } from '@axon/shared';
 import { useParams } from 'react-router';
 import { Button } from '../components/atoms/Button';
 import { Panel } from '../components/atoms/Panel';
+import { JoinLink } from '../components/molecules/JoinLink';
 import { NameForm } from '../components/molecules/NameForm';
 import { GameEnded } from '../components/organisms/GameEnded';
 import { GameNotFound } from '../components/organisms/GameNotFound';
@@ -82,7 +83,17 @@ function SessionPage({ gameId }: { readonly gameId: string }) {
   // The estimation page uses the full width; every other view stays narrow.
   const wide = session.phase === 'joined' && session.game !== null;
   return (
-    <PageLayout wide={wide}>
+    <PageLayout
+      wide={wide}
+      headerExtra={
+        session.phase === 'joined' && session.game && session.role === 'facilitator' ? (
+          <JoinLink
+            gameId={session.game.gameId}
+            link={`${window.location.origin}/g/${session.game.gameId}`}
+          />
+        ) : undefined
+      }
+    >
       <SessionView session={session} />
     </PageLayout>
   );

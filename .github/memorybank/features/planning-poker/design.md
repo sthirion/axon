@@ -323,11 +323,23 @@ sequenceDiagram
   mounts, so a first paint, reload or late join shows the end state at once. With
   `prefers-reduced-motion: reduce` there are no transitions or animations; the state is shown
   immediately (the raised card is still raised, without movement).
+- **Join link:** only the facilitator needs it, so it sits in the page header (before the theme
+  toggle) and not in a panel: the session ID (the GUID, in monospace, with an "Session ID"
+  text for screen readers) and a "Copy link" button that copies the full join link
+  (`<origin>/g/<id>`) and says "Link copied" in a polite status. Voters, the join prompt and
+  the other views show none of it. After a handover the header follows the role.
+- **Recommended vote:** in the results the card equal to the suggested estimate gets a check
+  mark in its own fixed column (hidden from assistive technology) with the text "Recommended"
+  for screen readers, in the success text colour; no other row is marked and nothing is marked
+  without a suggestion or when the suggestion was not voted.
+- **Round controls:** the final-estimate select, "Record estimate", "Re-vote" and "Skip story"
+  share one wrapping row (the buttons to the right of the select, below it on narrow screens)
+  so the results above keep the width.
 - **Panels:** every section is its own panel (`Panel`: shaded background, thin border, rounded
   corners, 16 to 20 px padding, 24 px between panels, a very light shadow in light mode only,
   never `overflow-hidden` so focus rings are not cut off). Work area: Story, Your vote, Round
   controls (one region around Reveal and the facilitator controls), Results. People area:
-  Facilitator, Voters, Summary, Join link. The create form, the join prompt and the not-found,
+  Facilitator, Voters, Summary. The create form, the join prompt and the not-found,
   ended and removed views are one panel each; the header, page heading, banners and footer stay
   outside. The border is decorative (the heading carries the meaning); text and control colours
   inside panels are checked against the panel background (slate-50 / slate-800) in

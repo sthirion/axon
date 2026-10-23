@@ -33,8 +33,24 @@ describe('ResultsPanel', () => {
     const items = within(screen.getByRole('list')).getAllByRole('listitem');
     expect(items).toHaveLength(3);
     expect(items[0]).toHaveTextContent('31 vote');
-    expect(items[1]).toHaveTextContent('53 votes');
+    expect(items[1]).toHaveTextContent('5✓Recommended3 votes');
     expect(items[2]).toHaveTextContent('Coffee break1 vote');
+  });
+
+  it('marks only the recommended card with a check mark that has a text alternative', () => {
+    renderPanel();
+
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(within(items[1]!).getByText('Recommended')).toBeInTheDocument();
+    expect(items[1]!.querySelector('[aria-hidden="true"]')).toHaveTextContent('✓');
+    expect(within(items[0]!).queryByText('Recommended')).toBeNull();
+    expect(within(items[2]!).queryByText('Recommended')).toBeNull();
+  });
+
+  it('marks nothing when there is no recommendation', () => {
+    renderPanel({ suggestedEstimate: null });
+
+    expect(screen.queryByText('Recommended')).toBeNull();
   });
 
   it('scales the bars to the highest count and hides them from assistive tech', () => {
@@ -118,7 +134,7 @@ describe('ResultsPanel for t-shirt sizes', () => {
 
     const items = within(screen.getByRole('list')).getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('S1 vote');
-    expect(items[1]).toHaveTextContent('M2 votes');
+    expect(items[1]).toHaveTextContent('M✓Recommended2 votes');
   });
 
   it('shows consensus with the size', () => {

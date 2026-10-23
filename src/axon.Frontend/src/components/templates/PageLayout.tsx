@@ -13,15 +13,17 @@ interface PageLayoutProps {
   readonly brand?: boolean;
   // The estimation page uses the full width (two columns on desktop); other pages stay narrow.
   readonly wide?: boolean;
+  // Extra header content, shown before the theme toggle (the join link of an open session).
+  readonly headerExtra?: ReactNode;
 }
 
-export function PageLayout({ children, brand = true, wide = false }: PageLayoutProps) {
+export function PageLayout({ children, brand = true, wide = false, headerExtra }: PageLayoutProps) {
   const width = wide ? 'max-w-3xl lg:max-w-6xl' : 'max-w-xl';
   return (
     <>
       <header
         className={cn(
-          'mx-auto flex w-full min-w-0 items-center justify-between gap-3 p-4 pb-0 sm:px-6',
+          'mx-auto flex w-full min-w-0 flex-wrap items-center justify-between gap-3 p-4 pb-0 sm:px-6',
           width,
         )}
       >
@@ -33,7 +35,8 @@ export function PageLayout({ children, brand = true, wide = false }: PageLayoutP
             </>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {headerExtra}
           <ThemeToggle />
           <Logo />
         </div>
