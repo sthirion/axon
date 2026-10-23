@@ -19,7 +19,7 @@ function aTable(): Game {
   const game = aGame({ id: FACILITATOR, name: 'Fran' });
   addVoter(game, aNewPlayer({ id: 'anna', name: 'Anna', token: 'anna-token' }));
   addVoter(game, aNewPlayer({ id: 'bob', name: 'Bob', token: 'bob-token' }));
-  setStory(game, FACILITATOR, { title: 'Login page' });
+  setStory(game, FACILITATOR, { title: 'Login page', url: 'https://example.com/story' });
   return game;
 }
 
@@ -81,7 +81,8 @@ describe('removePlayer', () => {
   it.each(['waiting', 'voting', 'revealed'] as const)('works in the %s phase', (phase) => {
     const game = aGame({ id: FACILITATOR });
     addVoter(game, aNewPlayer({ id: 'anna', name: 'Anna' }));
-    if (phase !== 'waiting') setStory(game, FACILITATOR, { title: 'T' });
+    if (phase !== 'waiting')
+      setStory(game, FACILITATOR, { title: 'T', url: 'https://example.com/story' });
     if (phase === 'revealed') {
       castVote(game, 'anna', 5);
       revealRound(game, FACILITATOR);

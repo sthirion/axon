@@ -28,26 +28,24 @@ function isHttpLink(value: string): boolean {
   }
 }
 
-// Trim, then NFC, then count code points (String.length counts UTF-16 units).
+// Trim, then NFC, then count code points (String.length counts UTF-16 units). Blank is allowed: the
+// title is optional.
 const storyTitleSchema = z
   .string()
   .trim()
   .normalize('NFC')
-  .refine((title) => {
-    const length = [...title].length;
-    return length >= 1 && length <= STORY_TITLE_MAX_LENGTH;
-  })
+  .refine((title) => [...title].length <= STORY_TITLE_MAX_LENGTH)
   .refine((title) => !CONTROL_CHARACTER.test(title));
 
-// A blank link means "no link"; anything else must be an absolute http(s) URL.
-const storyLinkSchema = z
-  .string()
-  .trim()
-  .refine((link) => link === '' || isHttpLink(link));
+// The link is required and must be an absolute http(s) URL (the check rejects anything else, a blank
+// value included).
+const storyLinkSchema = z.string().trim().refine(isHttpLink);
 
+// A story needs a link; the title is optional. With no title the link itself is what players see, so
+// the stored title is then the empty string.
 export const storySchema = z
-  .object({ title: storyTitleSchema, url: storyLinkSchema.optional() })
-  .transform(({ title, url }): Story => (url ? { title, url } : { title }));
+  .object({ title: storyTitleSchema.optional(), url: storyLinkSchema })
+  .transform(({ title, url }): Story => ({ title: title ?? '', url }));
 
 // Only a plain object passes; fields are validated later so the error code can differ.
 export const storySetEnvelopeSchema = z.looseObject({});

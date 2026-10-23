@@ -4,6 +4,7 @@ import { aGame, aNewPlayer } from '../testing/builders.js';
 import {
   addVoter,
   castVote,
+  finishRound,
   getVote,
   revealRound,
   setStory,
@@ -22,7 +23,7 @@ function aGameWithVoters(): Game {
 
 function aVotingGame(): Game {
   const game = aGameWithVoters();
-  setStory(game, FACILITATOR, { title: 'Login page' });
+  setStory(game, FACILITATOR, { title: 'Login page', url: 'https://example.com/story' });
   return game;
 }
 
@@ -47,23 +48,27 @@ describe('setStory', () => {
     expect(game.story).toEqual({ title: 'Login page', url: 'https://e.com/1' });
   });
 
-  it('stores no url when the link is blank', () => {
+  it.each([
+    ['a missing link', { title: 'T' }],
+    ['a blank link', { title: 'T', url: '  ' }],
+    ['text that is not a URL', { title: 'T', url: 'not a url' }],
+  ])('rejects %s with INVALID_STORY and stays waiting', (_label, input) => {
     const game = aGameWithVoters();
 
-    setStory(game, FACILITATOR, { title: 'T', url: '  ' });
-
-    expect(game.story).toStrictEqual({ title: 'T' });
+    expect(setStory(game, FACILITATOR, input)).toEqual({ ok: false, code: 'INVALID_STORY' });
+    expect(game.phase).toBe('waiting');
+    expect(game.story).toBeUndefined();
   });
 
-  it('replaces the story while voting, keeps the phase and removes a link that is not sent again', () => {
+  it('replaces the story while voting and keeps the phase', () => {
     const game = aVotingGame();
     setStory(game, FACILITATOR, { title: 'A', url: 'https://e.com/a' });
 
-    const result = setStory(game, FACILITATOR, { title: 'B' });
+    const result = setStory(game, FACILITATOR, { title: 'B', url: 'https://example.com/story' });
 
     expect(result).toEqual({ ok: true });
     expect(game.phase).toBe('voting');
-    expect(game.story).toStrictEqual({ title: 'B' });
+    expect(game.story).toStrictEqual({ title: 'B', url: 'https://example.com/story' });
   });
 
   it('keeps every vote when the story is edited', () => {
@@ -71,7 +76,7 @@ describe('setStory', () => {
     castVote(game, 'anna', 5);
     castVote(game, 'bob', '?');
 
-    setStory(game, FACILITATOR, { title: 'Edited' });
+    setStory(game, FACILITATOR, { title: 'Edited', url: 'https://example.com/story' });
 
     expect(getVote(game, 'anna')).toBe(5);
     expect(getVote(game, 'bob')).toBe('?');
@@ -80,7 +85,7 @@ describe('setStory', () => {
   it('rejects a voter with FORBIDDEN and changes nothing', () => {
     const game = aGameWithVoters();
 
-    const result = setStory(game, 'anna', { title: 'Mine' });
+    const result = setStory(game, 'anna', { title: 'Mine', url: 'https://example.com/story' });
 
     expect(result).toEqual({ ok: false, code: 'FORBIDDEN' });
     expect(game.phase).toBe('waiting');
@@ -118,11 +123,62 @@ describe('setStory', () => {
     const game = aVotingGame();
     castVote(game, 'anna', 5);
 
-    const result = setStory(game, FACILITATOR, { title: '' });
+    const result = setStory(game, FACILITATOR, { title: 'No link' });
 
     expect(result).toEqual({ ok: false, code: 'INVALID_STORY' });
-    expect(game.story).toEqual({ title: 'Login page' });
+    expect(game.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
     expect(getVote(game, 'anna')).toBe(5);
+  });
+});
+
+describe('setStory with a link and no title', () => {
+  it('opens voting and stores the link with an empty title', () => {
+    const game = aGameWithVoters();
+
+    const result = setStory(game, FACILITATOR, { title: '  ', url: 'https://e.com/1' });
+
+    expect(result).toEqual({ ok: true });
+    expect(game.phase).toBe('voting');
+    expect(game.story).toStrictEqual({ title: '', url: 'https://e.com/1' });
+    expect(toPublicState(game).story).toEqual({ title: '', url: 'https://e.com/1' });
+  });
+
+  it('rejects neither a title nor a link, and an unsafe link without a title', () => {
+    const game = aGameWithVoters();
+
+    expect(setStory(game, FACILITATOR, { title: '', url: '' })).toEqual({
+      ok: false,
+      code: 'INVALID_STORY',
+    });
+    expect(setStory(game, FACILITATOR, { url: 'javascript:alert(1)' })).toEqual({
+      ok: false,
+      code: 'INVALID_STORY',
+    });
+    expect(game.phase).toBe('waiting');
+  });
+
+  it('lets the facilitator add a title later and keeps the votes', () => {
+    const game = aGameWithVoters();
+    setStory(game, FACILITATOR, { url: 'https://e.com/1' });
+    castVote(game, 'anna', 5);
+
+    setStory(game, FACILITATOR, { title: 'Login', url: 'https://e.com/1' });
+
+    expect(game.story).toStrictEqual({ title: 'Login', url: 'https://e.com/1' });
+    expect(getVote(game, 'anna')).toBe(5);
+  });
+
+  it('records a link-only story in the history with its link', () => {
+    const game = aGameWithVoters();
+    setStory(game, FACILITATOR, { url: 'https://e.com/1' });
+    castVote(game, 'anna', 5);
+    revealRound(game, FACILITATOR);
+
+    finishRound(game, FACILITATOR, { finalEstimate: 5 });
+
+    expect(toPublicState(game).history).toEqual([
+      { title: '', url: 'https://e.com/1', estimate: 5 },
+    ]);
   });
 });
 
@@ -246,13 +302,13 @@ describe('toPublicState with story and votes', () => {
     expect(state.voters.map((voter) => voter.hasVoted)).toEqual([false, false]);
   });
 
-  it('is voting with the story and omits the url when there is no link', () => {
+  it('is voting with the story and its link', () => {
     const game = aVotingGame();
 
     const state = toPublicState(game);
 
     expect(state.phase).toBe('voting');
-    expect(state.story).toStrictEqual({ title: 'Login page' });
+    expect(state.story).toStrictEqual({ title: 'Login page', url: 'https://example.com/story' });
   });
 
   it('includes the url when there is a link', () => {
@@ -383,16 +439,18 @@ describe('after the reveal', () => {
   it('rejects story:set with WRONG_PHASE, even an invalid story, and keeps phase and story', () => {
     const game = aRevealedGame();
 
-    expect(setStory(game, FACILITATOR, { title: 'New' })).toEqual({
-      ok: false,
-      code: 'WRONG_PHASE',
-    });
-    expect(setStory(game, FACILITATOR, { title: '' })).toEqual({
+    expect(setStory(game, FACILITATOR, { title: 'New', url: 'https://example.com/story' })).toEqual(
+      {
+        ok: false,
+        code: 'WRONG_PHASE',
+      },
+    );
+    expect(setStory(game, FACILITATOR, { title: 'No link' })).toEqual({
       ok: false,
       code: 'WRONG_PHASE',
     });
     expect(game.phase).toBe('revealed');
-    expect(game.story).toEqual({ title: 'Login page' });
+    expect(game.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
   });
 
   it('still rejects a voter setting the story with FORBIDDEN', () => {

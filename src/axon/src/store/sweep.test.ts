@@ -124,7 +124,10 @@ describe('sweep: empty games', () => {
   it('keeps the full state when a player reconnects in time and restarts the clock afterwards', () => {
     const store = aStore();
     const ctx = anOnlineGame(store);
-    setStory(ctx.game, ctx.facilitator.id, { title: 'Login page' });
+    setStory(ctx.game, ctx.facilitator.id, {
+      title: 'Login page',
+      url: 'https://example.com/story',
+    });
     castVote(ctx.game, ctx.anna.id, 5);
     ctx.game.bannedTokenHashes.add('abc');
     disconnectAll(store, ctx);
@@ -135,7 +138,7 @@ describe('sweep: empty games', () => {
     now += TTL;
 
     expect(store.sweep()).toEqual([]);
-    expect(ctx.game.story).toEqual({ title: 'Login page' });
+    expect(ctx.game.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
     expect(ctx.game.votes.get(ctx.anna.id)).toBe(5);
     expect(ctx.game.bannedTokenHashes.has('abc')).toBe(true);
     expect(ctx.game.emptySince).toBeUndefined();
@@ -187,7 +190,7 @@ describe('sweep: maximum age', () => {
   it('deletes a game at the cap with players connected, in any phase', () => {
     const store = aStore();
     const voting = anOnlineGame(store);
-    setStory(voting.game, voting.facilitator.id, { title: 'T' });
+    setStory(voting.game, voting.facilitator.id, { title: 'T', url: 'https://example.com/story' });
 
     now += MAX_AGE - 1;
     expect(store.sweep()).toEqual([]);
@@ -266,7 +269,10 @@ describe('sweep: logging', () => {
     const store = aStore();
     const ctx = anOnlineGame(store);
     store.joinAsVoter(ctx.game, 'Secret Name');
-    setStory(ctx.game, ctx.facilitator.id, { title: 'Secret story' });
+    setStory(ctx.game, ctx.facilitator.id, {
+      title: 'Secret story',
+      url: 'https://example.com/story',
+    });
     now += MAX_AGE;
 
     store.sweep();

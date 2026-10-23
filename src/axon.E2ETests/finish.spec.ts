@@ -97,7 +97,7 @@ test.describe('Re-vote, record the final estimate and keep a session summary @TE
   async function startStory(table: Table, title: string, link?: string): Promise<void> {
     const form = storyForm(table.facilitator.page);
     await form.getByLabel('Title').fill(title);
-    if (link !== undefined) await form.getByLabel('Link').fill(link);
+    await form.getByLabel('Link').fill(link ?? 'https://example.com/story');
     await form.getByRole('button', { name: 'Start voting' }).click();
     for (const { page } of table.all) {
       await expect(storyRegion(page)).toContainText(title.slice(0, 40));
@@ -116,7 +116,11 @@ test.describe('Re-vote, record the final estimate and keep a session summary @TE
     for (const { page } of table.all) await expect(resultsRegion(page)).toBeVisible();
   }
 
-  async function expectSummary(table: Table, entries: string[], total: number): Promise<void> {
+  async function expectSummary(
+    table: Table,
+    entries: Array<string | RegExp>,
+    total: number,
+  ): Promise<void> {
     for (const { page } of table.all) {
       const items = summary(page).getByRole('listitem');
       await expect(items).toHaveCount(entries.length);
@@ -179,8 +183,8 @@ test.describe('Re-vote, record the final estimate and keep a session summary @TE
     await button(table.facilitator.page, 'Skip story').click();
 
     // Then both stories are in the summary for every player
-    await expectSummary(table, ['Login page', 'Checkoutskipped'], 5);
-    const link = summary(table.voters['Anna']!.page).getByRole('link');
+    await expectSummary(table, ['Login page', /Checkout.*skipped/], 5);
+    const link = summary(table.voters['Anna']!.page).getByRole('link').first();
     await expect(link).toHaveAttribute('href', `${baseURL}/story-link-fixture`);
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -206,7 +210,7 @@ test.describe('Re-vote, record the final estimate and keep a session summary @TE
     await expect(button(table.facilitator.page, 'Record estimate')).toBeDisabled();
     await estimateSelect(table.facilitator.page).selectOption('13');
     await button(table.facilitator.page, 'Record estimate').click();
-    await expectSummary(table, ['Login page13'], 13);
+    await expectSummary(table, [/Login page.*13/], 13);
   });
 
   test('offers only the numeric deck values as final estimate', async ({ browser }) => {
@@ -253,13 +257,13 @@ test.describe('Re-vote, record the final estimate and keep a session summary @TE
     await button(table.facilitator.page, 'Record estimate').click();
     await startStory(table, 'Checkout');
     await button(table.facilitator.page, 'Skip story').click();
-    await expectSummary(table, ['Login page', 'Checkoutskipped'], 8);
+    await expectSummary(table, ['Login page', /Checkout.*skipped/], 8);
 
     for (const { page } of table.all) {
       await button(page, 'Copy summary').click();
       await expect(summary(page).getByRole('status')).toHaveText('Summary copied');
       expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-        `1. Login page (${baseURL}/story-link-fixture) - 8\n2. Checkout - skipped\nTotal: 8`,
+        `1. Login page (${baseURL}/story-link-fixture) - 8\n2. Checkout (https://example.com/story) - skipped\nTotal: 8`,
       );
     }
   });

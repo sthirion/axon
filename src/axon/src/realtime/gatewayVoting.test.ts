@@ -100,19 +100,22 @@ describe('story:set success', () => {
     });
   });
 
-  it('broadcasts a story without a url key when the link is blank', () => {
+  it.each([
+    ['a blank link', { title: 'Login page', url: '   ' }],
+    ['no link', { title: 'Login page' }],
+  ])('rejects %s with INVALID_STORY and broadcasts nothing', (_label, payload) => {
     const { io, facilitator } = aSetup();
+    const before = mark(io);
 
-    send(facilitator, 'story:set', { title: 'Login page', url: '   ' });
-
-    expect(states(io).at(-1)!.story).toStrictEqual({ title: 'Login page' });
+    expect(send(facilitator, 'story:set', payload)).toEqual(failure('INVALID_STORY'));
+    expect(since(io, before)).toEqual([]);
   });
 
   it('does not send vote:mine to anyone', () => {
     const { io, facilitator } = aSetup();
     const before = mark(io);
 
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
 
     expect(since(io, before).map((b) => b.event)).toEqual(['game:state']);
     expect(voteMines(facilitator)).toEqual([]);
@@ -121,20 +124,22 @@ describe('story:set success', () => {
   it('keeps the votes when the story is edited while voting', () => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'A' });
+    send(facilitator, 'story:set', { title: 'A', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 5 });
 
-    send(facilitator, 'story:set', { title: 'B' });
+    send(facilitator, 'story:set', { title: 'B', url: 'https://example.com/story' });
 
     const last = states(io).at(-1)!;
-    expect(last.story).toEqual({ title: 'B' });
+    expect(last.story).toEqual({ title: 'B', url: 'https://example.com/story' });
     expect(last.voters[0]!.hasVoted).toBe(true);
   });
 
   it('is processed without an ack callback', () => {
     const { io, facilitator } = aSetup();
 
-    expect(() => facilitator.trigger('story:set', { title: 'T' })).not.toThrow();
+    expect(() =>
+      facilitator.trigger('story:set', { title: 'T', url: 'https://example.com/story' }),
+    ).not.toThrow();
 
     expect(states(io).at(-1)!.phase).toBe('voting');
   });
@@ -144,7 +149,7 @@ describe('vote:cast success', () => {
   it('acks, sends vote:mine to the player room, then broadcasts game:state, in that order', () => {
     const { io, gameId, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     io.timeline.length = 0;
     const before = mark(io);
 
@@ -161,7 +166,7 @@ describe('vote:cast success', () => {
   it.each([...DECK])('confirms card %j to the owner and marks the voter as voted', (card) => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
 
     send(anna.socket, 'vote:cast', { card });
 
@@ -173,7 +178,7 @@ describe('vote:cast success', () => {
   it('sends the new card when the vote changes', () => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 3 });
 
     send(anna.socket, 'vote:cast', { card: 13 });
@@ -187,7 +192,7 @@ describe('vote:cast success', () => {
   it('withdraws with null: vote:mine carries null and hasVoted is false', () => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 3 });
 
     const ack = send(anna.socket, 'vote:cast', { card: null });
@@ -202,7 +207,7 @@ describe('vote:cast success', () => {
   it('treats withdrawing without a vote and re-casting the same card as full successes', () => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     const before = mark(io);
 
     expect(send(anna.socket, 'vote:cast', { card: null })).toEqual({ ok: true });
@@ -222,7 +227,7 @@ describe('vote:cast success', () => {
   it('never puts a card value in game:state', () => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
 
     for (const card of [...DECK, null]) {
       send(anna.socket, 'vote:cast', { card });
@@ -236,7 +241,7 @@ describe('vote:cast success', () => {
   it('is processed without an ack callback', () => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
 
     expect(() => anna.socket.trigger('vote:cast', { card: 5 })).not.toThrow();
 
@@ -246,7 +251,7 @@ describe('vote:cast success', () => {
   it('does not crash when the ack argument is not a function', () => {
     const { facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
 
     expect(() => anna.socket.trigger('vote:cast', { card: 5 }, 'nope')).not.toThrow();
     expect(() => anna.socket.trigger('vote:cast', { card: 4 }, 'nope')).not.toThrow();
@@ -277,7 +282,7 @@ describe('vote:mine on join', () => {
   it('restores the current card of a rejoining voter', () => {
     const { io, gameId, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 8 });
     anna.socket.trigger('disconnect');
     io.timeline.length = 0;
@@ -293,7 +298,7 @@ describe('vote:mine on join', () => {
   it('keeps the vote and shows hasVoted while the voter is offline', () => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 8 });
 
     anna.socket.trigger('disconnect');
@@ -304,7 +309,7 @@ describe('vote:mine on join', () => {
   it('sends null to a rejoining voter who withdrew', () => {
     const { io, gameId, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 8 });
     send(anna.socket, 'vote:cast', { card: null });
     anna.socket.trigger('disconnect');
@@ -319,7 +324,7 @@ describe('vote:mine on join', () => {
     const { io, gameId, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
     const bob = join('s2', 'Bob');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 5 });
     bob.socket.trigger('disconnect');
 
@@ -332,7 +337,7 @@ describe('vote:mine on join', () => {
   it('is never sent to the facilitator', () => {
     const { io, gameId, facilitator, facilitatorToken } = aSetup();
     const again = io.connect('f2');
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
 
     again.sendJoin({ gameId, token: facilitatorToken });
 
@@ -363,7 +368,7 @@ describe('vote:mine on join', () => {
 
 describe('story:set and vote:cast precedence', () => {
   it.each([
-    ['story:set', { title: 'T' }],
+    ['story:set', { title: 'T', url: 'https://example.com/story' }],
     ['story:set', null],
     ['vote:cast', { card: 5 }],
     ['vote:cast', 'garbage'],
@@ -420,7 +425,7 @@ describe('story:set and vote:cast precedence', () => {
     (payload) => {
       const { io, facilitator, join } = aSetup();
       const anna = join('s1', 'Anna');
-      send(facilitator, 'story:set', { title: 'T' });
+      send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
       const before = mark(io);
 
       expect(send(anna.socket, 'vote:cast', payload)).toEqual(failure('INVALID_PAYLOAD'));
@@ -436,8 +441,8 @@ describe('story:set and vote:cast precedence', () => {
   });
 
   it.each([
-    ['a valid payload', { title: 'Mine' }],
-    ['an invalid title', { title: '' }],
+    ['a valid payload', { title: 'Mine', url: 'https://example.com/mine' }],
+    ['an invalid payload', { title: '' }],
   ])('acks FORBIDDEN when a voter sends story:set with %s', (_label, payload) => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
@@ -446,8 +451,11 @@ describe('story:set and vote:cast precedence', () => {
     expect(send(anna.socket, 'story:set', payload)).toEqual(failure('FORBIDDEN'));
     expect(since(io, before)).toEqual([]);
 
-    send(facilitator, 'story:set', { title: 'Theirs' });
-    expect(states(io).at(-1)!.story).toEqual({ title: 'Theirs' });
+    send(facilitator, 'story:set', { title: 'Theirs', url: 'https://example.com/story' });
+    expect(states(io).at(-1)!.story).toEqual({
+      title: 'Theirs',
+      url: 'https://example.com/story',
+    });
   });
 
   it.each([{ card: 5 }, { card: null }, { card: 4 }])(
@@ -463,7 +471,7 @@ describe('story:set and vote:cast precedence', () => {
 
   it('acks FORBIDDEN when the facilitator votes while voting', () => {
     const { io, facilitator } = aSetup();
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     const before = mark(io);
 
     expect(send(facilitator, 'vote:cast', { card: 5 })).toEqual(failure('FORBIDDEN'));
@@ -499,14 +507,14 @@ describe('story:set and vote:cast precedence', () => {
   it('keeps story and votes after an invalid edit while voting', () => {
     const { io, facilitator, join } = aSetup();
     const anna = join('s1', 'Anna');
-    send(facilitator, 'story:set', { title: 'A' });
+    send(facilitator, 'story:set', { title: 'A', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 5 });
     const before = mark(io);
 
-    expect(send(facilitator, 'story:set', { title: '' })).toEqual(failure('INVALID_STORY'));
+    expect(send(facilitator, 'story:set', { title: 'No link' })).toEqual(failure('INVALID_STORY'));
 
     expect(since(io, before)).toEqual([]);
-    send(facilitator, 'story:set', { title: 'A' });
+    send(facilitator, 'story:set', { title: 'A', url: 'https://example.com/story' });
     expect(states(io).at(-1)!.voters[0]!.hasVoted).toBe(true);
   });
 
@@ -515,7 +523,7 @@ describe('story:set and vote:cast precedence', () => {
     (card) => {
       const { io, facilitator, join } = aSetup();
       const anna = join('s1', 'Anna');
-      send(facilitator, 'story:set', { title: 'T' });
+      send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
       send(anna.socket, 'vote:cast', { card: 3 });
       const before = mark(io);
 
@@ -529,14 +537,19 @@ describe('story:set and vote:cast precedence', () => {
   it('processes events without an ack callback even when they fail', () => {
     const { io, facilitator } = aSetup();
 
-    expect(() => io.connect('x').trigger('story:set', { title: 'T' })).not.toThrow();
+    expect(() =>
+      io.connect('x').trigger('story:set', { title: 'T', url: 'https://example.com/story' }),
+    ).not.toThrow();
     expect(() => facilitator.trigger('vote:cast', { card: 5 })).not.toThrow();
   });
 
   it('answers with the fixed message and never echoes the submitted input', () => {
     const { facilitator } = aSetup();
 
-    const ack = send(facilitator, 'story:set', { title: '<script>\talert(1)</script>' });
+    const ack = send(facilitator, 'story:set', {
+      title: '<script>\talert(1)</script>',
+      url: 'https://example.com/story',
+    });
 
     expect(ack).toEqual(failure('INVALID_STORY'));
   });
@@ -615,7 +628,7 @@ describe('round:reveal', () => {
     const setup = aSetup();
     const anna = setup.join('anna', 'Anna');
     const bob = setup.join('bob', 'Bob');
-    send(setup.facilitator, 'story:set', { title: 'Login page' });
+    send(setup.facilitator, 'story:set', { title: 'Login page', url: 'https://example.com/story' });
     return { ...setup, anna, bob };
   }
 
@@ -693,7 +706,9 @@ describe('round:reveal', () => {
     expect(send(facilitator, 'round:reveal', undefined)).toEqual(failure('WRONG_PHASE'));
     expect(send(anna.socket, 'vote:cast', { card: 5 })).toEqual(failure('WRONG_PHASE'));
     expect(send(anna.socket, 'vote:cast', { card: null })).toEqual(failure('WRONG_PHASE'));
-    expect(send(facilitator, 'story:set', { title: 'Other' })).toEqual(failure('WRONG_PHASE'));
+    expect(
+      send(facilitator, 'story:set', { title: 'Other', url: 'https://example.com/story' }),
+    ).toEqual(failure('WRONG_PHASE'));
     expect(since(io, before)).toEqual([]);
   });
 
@@ -714,7 +729,7 @@ describe('round:revote and round:finish', () => {
     const setup = aSetup();
     const anna = setup.join('anna', 'Anna');
     const bob = setup.join('bob', 'Bob');
-    send(setup.facilitator, 'story:set', { title: 'Login page' });
+    send(setup.facilitator, 'story:set', { title: 'Login page', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 3 });
     send(bob.socket, 'vote:cast', { card: 8 });
     send(setup.facilitator, 'round:reveal', undefined);
@@ -743,7 +758,7 @@ describe('round:revote and round:finish', () => {
     ]);
     const state = sent.at(-1)?.payload as PublicGameState;
     expect(state.phase).toBe('voting');
-    expect(state.story).toEqual({ title: 'Login page' });
+    expect(state.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
     expect(state).not.toHaveProperty('results');
     expect(state.voters.every((v) => !v.hasVoted && !('card' in v))).toBe(true);
     expect(voteMines(anna.socket).length).toBe(annaMines);
@@ -784,7 +799,7 @@ describe('round:revote and round:finish', () => {
 
   it('rejects a re-vote while voting with WRONG_PHASE and no broadcast', () => {
     const { io, facilitator } = aSetup();
-    send(facilitator, 'story:set', { title: 'T' });
+    send(facilitator, 'story:set', { title: 'T', url: 'https://example.com/story' });
     const before = mark(io);
 
     expect(send(facilitator, 'round:revote', undefined)).toEqual(failure('WRONG_PHASE'));
@@ -808,7 +823,9 @@ describe('round:revote and round:finish', () => {
     const state = since(io, before).at(-1)?.payload as PublicGameState;
     expect(state.phase).toBe('waiting');
     expect(state.story).toBeNull();
-    expect(state.history).toEqual([{ title: 'Login page', estimate: 5 }]);
+    expect(state.history).toEqual([
+      { title: 'Login page', url: 'https://example.com/story', estimate: 5 },
+    ]);
     expect(state.total).toBe(5);
     expect(state).not.toHaveProperty('results');
     expect(state.voters.every((v) => !v.hasVoted)).toBe(true);
@@ -879,7 +896,7 @@ describe('player:remove', () => {
     const setup = aSetup();
     const anna = setup.join('anna', 'Anna');
     const bob = setup.join('bob', 'Bob');
-    send(setup.facilitator, 'story:set', { title: 'Login page' });
+    send(setup.facilitator, 'story:set', { title: 'Login page', url: 'https://example.com/story' });
     send(anna.socket, 'vote:cast', { card: 3 });
     send(bob.socket, 'vote:cast', { card: 8 });
     return { ...setup, anna, bob };

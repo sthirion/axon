@@ -4,7 +4,7 @@ import { actionErrorMessage } from '../../lib/actionErrors';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
 
-export const TITLE_ERROR_MESSAGE = 'Enter a title of 1 to 200 characters.';
+export const TITLE_ERROR_MESSAGE = 'Enter a title of up to 200 characters.';
 export const LINK_ERROR_MESSAGE = 'Enter a full link starting with http:// or https://.';
 
 const INPUT_CLASS =
@@ -74,6 +74,9 @@ export const StoryForm = memo(function StoryForm({
       noValidate
       className="space-y-4"
     >
+      <p id={`${id}-hint`} className="type-meta text-slate-600 dark:text-slate-400">
+        The link is required. The title is optional.
+      </p>
       <div className="space-y-1">
         <label htmlFor={`${id}-title`} className="block type-body font-medium">
           Title
@@ -83,14 +86,13 @@ export const StoryForm = memo(function StoryForm({
           id={`${id}-title`}
           type="text"
           autoComplete="off"
-          aria-required="true"
           value={title}
           onChange={(event) => {
             setTitle(event.target.value);
             setTitleError(null);
           }}
           aria-invalid={titleError ? true : undefined}
-          aria-describedby={titleError ? titleErrorId : undefined}
+          aria-describedby={titleError ? titleErrorId : `${id}-hint`}
           className={INPUT_CLASS}
         />
         {titleError && (
@@ -109,13 +111,14 @@ export const StoryForm = memo(function StoryForm({
           type="text"
           inputMode="url"
           autoComplete="off"
+          aria-required="true"
           value={link}
           onChange={(event) => {
             setLink(event.target.value);
             setLinkError(null);
           }}
           aria-invalid={linkError ? true : undefined}
-          aria-describedby={linkError ? linkErrorId : undefined}
+          aria-describedby={linkError ? linkErrorId : `${id}-hint`}
           className={INPUT_CLASS}
         />
         {linkError && (

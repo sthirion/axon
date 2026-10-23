@@ -93,6 +93,7 @@ test.describe('Reveal votes with distribution, average, consensus and outliers @
     await expect(votersRegion(facilitator.page).getByRole('listitem')).toHaveCount(names.length);
     const form = facilitator.page.getByRole('form', { name: 'Story' });
     await form.getByLabel('Title').fill('Login page');
+    await form.getByLabel('Link').fill('https://example.com/story');
     await form.getByRole('button', { name: 'Start voting' }).click();
     for (const { page } of [facilitator, ...Object.values(voters)]) {
       await expect(page.getByRole('region', { name: 'Story' })).toContainText('Login page');

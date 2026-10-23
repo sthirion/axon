@@ -129,3 +129,27 @@ describe('SessionSummary for t-shirt sizes', () => {
     expect(screen.getByText('Total: 0')).toBeVisible();
   });
 });
+
+describe('SessionSummary for link-only stories', () => {
+  it('shows the link as the clickable text and no title', () => {
+    render(
+      <SessionSummary history={[{ title: '', url: 'https://e.com/1', estimate: 5 }]} total={5} />,
+    );
+
+    const link = screen.getByRole('link', { name: 'https://e.com/1 (opens in a new tab)' });
+    expect(link).toHaveAttribute('href', 'https://e.com/1');
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+  });
+
+  it('copies the link once in place of the title', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    render(
+      <SessionSummary history={[{ title: '', url: 'https://e.com/1', estimate: 5 }]} total={5} />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Copy summary' }));
+
+    expect(writeText).toHaveBeenCalledWith('1. https://e.com/1 - 5\nTotal: 5');
+  });
+});

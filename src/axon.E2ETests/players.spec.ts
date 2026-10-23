@@ -100,6 +100,7 @@ test.describe('Facilitator reconnect and removing players @TEST', () => {
   async function startStory(table: Table, title = 'Login page'): Promise<void> {
     const form = table.facilitator.page.getByRole('form', { name: 'Story' });
     await form.getByLabel('Title').fill(title);
+    await form.getByLabel('Link').fill('https://example.com/story');
     await form.getByRole('button', { name: 'Start voting' }).click();
     for (const { page } of table.all) {
       await expect(page.getByRole('region', { name: 'Story' })).toContainText(title);

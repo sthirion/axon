@@ -181,7 +181,7 @@ describe('the next round and the public state', () => {
     const game = aRevealedGame();
     finishRound(game, FACILITATOR, { finalEstimate: 5 });
 
-    setStory(game, FACILITATOR, { title: 'Checkout' });
+    setStory(game, FACILITATOR, { title: 'Checkout', url: 'https://example.com/story' });
 
     const state = toPublicState(game);
     expect(state.phase).toBe('voting');
@@ -192,9 +192,9 @@ describe('the next round and the public state', () => {
   it('lists the history oldest first with a story without a link as-is, and totals numbers only', () => {
     const game = aRevealedGame();
     finishRound(game, FACILITATOR, { finalEstimate: 5 });
-    setStory(game, FACILITATOR, { title: 'Checkout' });
+    setStory(game, FACILITATOR, { title: 'Checkout', url: 'https://example.com/story' });
     finishRound(game, FACILITATOR, { skip: true });
-    setStory(game, FACILITATOR, { title: 'Search' });
+    setStory(game, FACILITATOR, { title: 'Search', url: 'https://example.com/story' });
     castVote(game, 'anna', 8);
     revealRound(game, FACILITATOR);
     finishRound(game, FACILITATOR, { finalEstimate: 8 });
@@ -203,8 +203,8 @@ describe('the next round and the public state', () => {
 
     expect(state.history).toEqual([
       { title: 'Login page', url: 'https://e.com/1', estimate: 5 },
-      { title: 'Checkout', estimate: 'skipped' },
-      { title: 'Search', estimate: 8 },
+      { title: 'Checkout', url: 'https://example.com/story', estimate: 'skipped' },
+      { title: 'Search', url: 'https://example.com/story', estimate: 8 },
     ]);
     expect(state.total).toBe(13);
     expect(state.story).toBeNull();

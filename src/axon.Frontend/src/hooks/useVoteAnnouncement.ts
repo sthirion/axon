@@ -42,7 +42,10 @@ export function describeVoteChanges(
     if (next.results) messages.push(describeResults(next.results));
   } else {
     if (previous.phase === 'waiting' && next.phase === 'voting' && next.story) {
-      messages.push(`Voting is open: ${next.story.title}`);
+      // A link-only story has no title to read out.
+      messages.push(
+        next.story.title === '' ? 'Voting is open' : `Voting is open: ${next.story.title}`,
+      );
     }
     for (const voter of next.voters) {
       if (voter.id === ownPlayerId) continue;

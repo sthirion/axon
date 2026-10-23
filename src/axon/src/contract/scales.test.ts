@@ -199,15 +199,27 @@ describe('publicGameStateSchema and the scale', () => {
   it.each([
     [
       'a size estimate in a Fibonacci history',
-      { scale: 'fibonacci', total: 0, history: [{ title: 'A', estimate: 'M' }] },
+      {
+        scale: 'fibonacci',
+        total: 0,
+        history: [{ title: 'A', url: 'https://example.com/story', estimate: 'M' }],
+      },
     ],
     [
       'a number estimate in a t-shirt history',
-      { scale: 'tshirt', total: null, history: [{ title: 'A', estimate: 5 }] },
+      {
+        scale: 'tshirt',
+        total: null,
+        history: [{ title: 'A', url: 'https://example.com/story', estimate: 5 }],
+      },
     ],
     [
       '? as an estimate',
-      { scale: 'fibonacci', total: 0, history: [{ title: 'A', estimate: '?' }] },
+      {
+        scale: 'fibonacci',
+        total: 0,
+        history: [{ title: 'A', url: 'https://example.com/story', estimate: '?' }],
+      },
     ],
   ])('rejects %s', (_label, overrides) => {
     expect(publicGameStateSchema.safeParse(base(overrides)).success).toBe(false);
@@ -218,8 +230,8 @@ describe('publicGameStateSchema and the scale', () => {
       scale: 'tshirt',
       total: null,
       history: [
-        { title: 'A', estimate: 'M' },
-        { title: 'B', estimate: 'skipped' },
+        { title: 'A', url: 'https://example.com/story', estimate: 'M' },
+        { title: 'B', url: 'https://example.com/story', estimate: 'skipped' },
       ],
     });
 

@@ -376,6 +376,10 @@ Paths follow the source paths in [project-config.md](../../../project-config.md)
     not an object, or not exactly one of `finalEstimate` / `skip: true`), role (`FORBIDDEN`),
     phase (`WRONG_PHASE`: an estimate needs `revealed`, a skip needs `voting` or `revealed`),
     value (`INVALID_CARD`: the estimate is not a numeric deck value; `?` and coffee are rejected).
+- Changed by story #28: the link is required and the title is optional. `INVALID_STORY` now
+  means a missing, blank or non-URL link (it must be an absolute `http`/`https` URL up to 2048
+  characters), or a title over 200 characters or with a control character. A blank title is
+  stored as `''` and the link is then shown as the story.
 - Added by story #22: `INVALID_SCALE` (`POST /api/games` with a `scale` that is not one of the
   three exact strings; the name is checked first, a missing scale means Fibonacci). `vote:cast`
   and `round:finish` check the card against the session's own scale and answer `INVALID_CARD`

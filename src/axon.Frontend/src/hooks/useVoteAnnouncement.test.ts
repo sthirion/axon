@@ -333,3 +333,17 @@ describe('describeVoteChanges for t-shirt sizes', () => {
     expect(describeVoteChanges(sized(base), waiting, null)).toBe('Estimate recorded: XL');
   });
 });
+
+describe('describeVoteChanges for a link-only story', () => {
+  it('says only that voting is open, because there is no title to read out', () => {
+    const linkOnly = gameState({
+      phase: 'voting',
+      story: { title: '', url: 'https://example.com/1' },
+      voters: [ANNA],
+    });
+
+    expect(describeVoteChanges(gameState({ voters: [ANNA] }), linkOnly, null)).toBe(
+      'Voting is open',
+    );
+  });
+});

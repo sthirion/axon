@@ -16,7 +16,7 @@ declare global {
 }
 
 const WAITING_MESSAGE = 'Waiting for the facilitator to set the story.';
-const TITLE_ERROR = 'Enter a title of 1 to 200 characters.';
+const TITLE_ERROR = 'Enter a title of up to 200 characters.';
 const LINK_ERROR = 'Enter a full link starting with http:// or https://.';
 const XSS_TITLE = '<img src=x onerror=alert(1)>';
 const DESKTOP = { width: 1280, height: 800 };
@@ -157,7 +157,7 @@ async function tabTo(page: Page, target: Locator, maxTabs = 10): Promise<void> {
 async function setStory(page: Page, title: string, link?: string): Promise<void> {
   const form = storyForm(page);
   await form.getByLabel('Title').fill(title);
-  if (link !== undefined) await form.getByLabel('Link').fill(link);
+  await form.getByLabel('Link').fill(link ?? 'https://example.com/story');
   await form.getByRole('button', { name: 'Start voting' }).click();
 }
 
@@ -165,7 +165,7 @@ async function editStory(page: Page, title: string, link?: string): Promise<void
   await page.getByRole('button', { name: 'Edit story' }).click();
   const form = storyForm(page);
   await form.getByLabel('Title').fill(title);
-  if (link !== undefined) await form.getByLabel('Link').fill(link);
+  await form.getByLabel('Link').fill(link ?? 'https://example.com/story');
   await form.getByRole('button', { name: 'Save' }).click();
 }
 
@@ -279,7 +279,7 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       // Then
       for (const { page } of [facilitator, anna, bob]) {
         await expect(storyRegion(page)).toContainText('Login page');
-        await expect(storyRegion(page).getByRole('link')).toHaveCount(0);
+        await expect(storyRegion(page).getByRole('link')).toHaveCount(1);
       }
       await expect(facilitator.page.getByRole('button', { name: 'Edit story' })).toBeEnabled();
       await expect(storyForm(facilitator.page)).toHaveCount(0);
@@ -293,26 +293,61 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       }
     });
 
-    test('an empty title shows an inline error, focuses the field and sends nothing', async ({
+    test('an empty form shows the link error, focuses the Link field and sends nothing', async ({
       browser,
     }) => {
       // Given
       const { facilitator, anna } = await newTable(browser);
       const form = storyForm(facilitator.page);
-      const title = form.getByLabel('Title');
+      const link = form.getByLabel('Link');
 
       // When
       await form.getByRole('button', { name: 'Start voting' }).click();
 
       // Then
-      await expect(form.getByText(TITLE_ERROR)).toBeVisible();
-      await expect(title).toHaveAttribute('aria-invalid', 'true');
-      await expect(title).toBeFocused();
-      const errorId = await title.getAttribute('aria-describedby');
+      await expect(form.getByText(LINK_ERROR)).toBeVisible();
+      await expect(link).toHaveAttribute('aria-invalid', 'true');
+      await expect(link).toBeFocused();
+      const errorId = await link.getAttribute('aria-describedby');
       expect(errorId).not.toBeNull();
-      await expect(facilitator.page.locator(`[id="${errorId}"]`)).toHaveText(TITLE_ERROR);
+      await expect(facilitator.page.locator(`[id="${errorId}"]`)).toHaveText(LINK_ERROR);
+      await expect(form.getByLabel('Title')).not.toHaveAttribute('aria-invalid', 'true');
       await expect(anna.page.getByText(WAITING_MESSAGE)).toBeVisible();
       expect(sentCount(facilitator, 'story:set')).toBe(0);
+    });
+
+    test('a title without a link is refused because the link is required', async ({ browser }) => {
+      const { facilitator, anna } = await newTable(browser);
+      const form = storyForm(facilitator.page);
+
+      await form.getByLabel('Title').fill('Login page');
+      await form.getByRole('button', { name: 'Start voting' }).click();
+
+      await expect(form.getByText(LINK_ERROR)).toBeVisible();
+      await expect(anna.page.getByText(WAITING_MESSAGE)).toBeVisible();
+      expect(sentCount(facilitator, 'story:set')).toBe(0);
+    });
+
+    test.describe('links that are not URLs', () => {
+      for (const value of [
+        'not a url',
+        'example.com',
+        'ftp://example.com/x',
+        '/relative',
+        'https://',
+      ]) {
+        test(`"${value}" is refused with the link error`, async ({ browser }) => {
+          const { facilitator } = await newTable(browser);
+          const form = storyForm(facilitator.page);
+
+          await form.getByLabel('Title').fill('Login page');
+          await form.getByLabel('Link').fill(value);
+          await form.getByRole('button', { name: 'Start voting' }).click();
+
+          await expect(form.getByText(LINK_ERROR)).toBeVisible();
+          expect(sentCount(facilitator, 'story:set')).toBe(0);
+        });
+      }
     });
 
     test('a javascript: link shows an inline error and sends nothing', async ({ browser }) => {
@@ -407,6 +442,7 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
 
       // When
       await form.getByLabel('Title').fill('Checkout page');
+      await form.getByLabel('Link').fill('https://example.com/story');
       await form.getByRole('button', { name: 'Save' }).click();
 
       // Then
@@ -440,7 +476,7 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       expect(sentCount(facilitator, 'story:set')).toBe(sentBefore);
     });
 
-    test('editing the story can add and remove the link', async ({ browser }) => {
+    test('editing the story can change the link but never remove it', async ({ browser }) => {
       // Given
       const table = await newTable(browser);
       const url = `${baseURL}/story-link-fixture`;
@@ -452,12 +488,12 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       // Then
       await expect(storyRegion(table.anna.page).getByRole('link')).toHaveAttribute('href', url);
 
-      // When
+      // When the link is cleared the form refuses it, so a story always has a link
       await editStory(table.facilitator.page, 'Login page', '');
 
       // Then
-      await expect(storyRegion(table.anna.page).getByRole('link')).toHaveCount(0);
-      await expect(storyRegion(table.facilitator.page).getByRole('link')).toHaveCount(0);
+      await expect(storyForm(table.facilitator.page).getByText(LINK_ERROR)).toBeVisible();
+      await expect(storyRegion(table.anna.page).getByRole('link')).toHaveAttribute('href', url);
     });
   });
 
@@ -780,7 +816,7 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       // Given
       const { facilitator } = await newTable(browser);
       await storyForm(facilitator.page).getByRole('button', { name: 'Start voting' }).click();
-      await expect(storyForm(facilitator.page).getByText(TITLE_ERROR)).toBeVisible();
+      await expect(storyForm(facilitator.page).getByText(LINK_ERROR)).toBeVisible();
 
       // When
       const results = await new AxeBuilder({ page: facilitator.page })
