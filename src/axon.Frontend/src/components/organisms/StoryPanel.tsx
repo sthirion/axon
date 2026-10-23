@@ -2,6 +2,7 @@ import type { PlayerRole, Story } from '@axon/shared';
 import { memo, useEffect, useId, useRef, useState } from 'react';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
+import { Panel } from '../atoms/Panel';
 import { StoryTitle } from '../atoms/StoryTitle';
 import { StoryForm } from '../molecules/StoryForm';
 
@@ -76,12 +77,12 @@ export const StoryPanel = memo(function StoryPanel({
   }
 
   return (
-    <section aria-labelledby={headingId} className="min-w-0 space-y-2">
+    <Panel aria-labelledby={headingId}>
       <h2 id={headingId} className="type-section">
         Story
       </h2>
       {renderBody()}
-    </section>
+    </Panel>
   );
 });
 StoryPanel.displayName = 'StoryPanel';

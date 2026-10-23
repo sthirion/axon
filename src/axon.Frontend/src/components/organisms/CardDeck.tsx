@@ -4,6 +4,7 @@ import { actionErrorMessage } from '../../lib/actionErrors';
 import { SIZE_STYLES } from '../../lib/sizeStyles';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
+import { Panel } from '../atoms/Panel';
 import { CardFace } from '../atoms/CardFace';
 import { SizeBar } from '../atoms/SizeBar';
 
@@ -46,7 +47,7 @@ export const CardDeck = memo(function CardDeck({
   }
 
   return (
-    <div className="space-y-3">
+    <Panel as="div">
       <fieldset role="radiogroup" className="min-w-0 space-y-2">
         <legend className="type-section">Your vote</legend>
         <div className="grid grid-cols-5 gap-2 md:flex md:flex-wrap">
@@ -114,7 +115,7 @@ export const CardDeck = memo(function CardDeck({
       <Button disabled={disabled || selected === null} onClick={() => void withdraw()}>
         Withdraw vote
       </Button>
-    </div>
+    </Panel>
   );
 });
 CardDeck.displayName = 'CardDeck';

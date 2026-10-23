@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { DEFAULT_SCALE, ERROR_MESSAGES, type Scale } from '@axon/shared';
+import { Panel } from '../components/atoms/Panel';
 import { NameForm } from '../components/molecules/NameForm';
 import { ScalePicker } from '../components/molecules/ScalePicker';
 import { PageLayout } from '../components/templates/PageLayout';
@@ -38,19 +39,21 @@ export function CreateGamePage() {
 
   return (
     <PageLayout brand={false}>
-      <div className="space-y-1">
-        <h1 className="type-display">{PRODUCT_NAME}</h1>
-        <p className="type-body text-slate-600 dark:text-slate-400">{PRODUCT_SUBTITLE}</p>
-      </div>
-      <NameForm
-        submitLabel="Create session"
-        submitting={submitting}
-        onSubmit={handleSubmit}
-        fieldError={fieldError}
-        formError={formError}
-      >
-        <ScalePicker value={scale} onChange={setScale} disabled={submitting} />
-      </NameForm>
+      <Panel as="div">
+        <div className="space-y-1">
+          <h1 className="type-display">{PRODUCT_NAME}</h1>
+          <p className="type-body text-slate-600 dark:text-slate-400">{PRODUCT_SUBTITLE}</p>
+        </div>
+        <NameForm
+          submitLabel="Create session"
+          submitting={submitting}
+          onSubmit={handleSubmit}
+          fieldError={fieldError}
+          formError={formError}
+        >
+          <ScalePicker value={scale} onChange={setScale} disabled={submitting} />
+        </NameForm>
+      </Panel>
     </PageLayout>
   );
 }

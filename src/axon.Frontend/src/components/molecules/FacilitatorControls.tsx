@@ -125,7 +125,7 @@ export const FacilitatorControls = memo(function FacilitatorControls({
     pending === action ? PENDING_LABEL[action] : text;
 
   return (
-    <section aria-label="Round controls" className="space-y-3">
+    <div className="space-y-3">
       {revealed && (
         <EstimateForm
           scale={scale}
@@ -158,7 +158,7 @@ export const FacilitatorControls = memo(function FacilitatorControls({
           {error}
         </p>
       )}
-    </section>
+    </div>
   );
 });
 FacilitatorControls.displayName = 'FacilitatorControls';

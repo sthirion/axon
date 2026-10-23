@@ -590,3 +590,106 @@ describe('GameTable and the scale', () => {
     expect(screen.getByLabelText('Final estimate')).toHaveValue('XL');
   });
 });
+
+describe('GameTable panels', () => {
+  const panelNames = () =>
+    screen
+      .getAllByRole('region')
+      .map((r) => r.getAttribute('aria-label') ?? r.querySelector('h2')?.textContent);
+
+  const STORY = { title: 'Login page', url: 'https://example.com/1' };
+  const VOTING = {
+    phase: 'voting',
+    story: STORY,
+    voters: [{ id: 'v1', name: 'Anna', connected: true, hasVoted: true }],
+  };
+  const REVEALED = {
+    phase: 'revealed',
+    story: STORY,
+    voters: [{ id: 'v1', name: 'Anna', connected: true, hasVoted: true, card: 5 }],
+    results: {
+      distribution: [{ card: 5, count: 1 }],
+      average: 5,
+      median: 5,
+      consensus: false,
+      outlierIds: [],
+      suggestedEstimate: 5,
+    },
+  };
+
+  it('puts a voter in panels for the story, the people, the summary and the join link', () => {
+    render(<GameTable game={gameState(VOTING) as Game} reconnecting={false} {...IDLE} />);
+
+    for (const name of ['Story', 'Facilitator', 'Voters', 'Summary', 'Join link']) {
+      expect(screen.getByRole('region', { name })).toBeVisible();
+    }
+    expect(screen.getByRole('radiogroup', { name: 'Your vote' })).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Round controls' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Results' })).toBeNull();
+  });
+
+  it('gives the facilitator one Round controls panel with Reveal in it while voting', () => {
+    render(
+      <GameTable
+        game={gameState(VOTING) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+      />,
+    );
+
+    const controls = screen.getAllByRole('region', { name: 'Round controls' });
+    expect(controls).toHaveLength(1);
+    expect(within(controls[0]!).getByRole('button', { name: 'Reveal votes' })).toBeVisible();
+    expect(within(controls[0]!).getByRole('button', { name: 'Skip story' })).toBeVisible();
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+  });
+
+  it('keeps one Round controls panel after the reveal, with the estimate controls and no Reveal', () => {
+    render(
+      <GameTable
+        game={gameState(REVEALED) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+      />,
+    );
+
+    const controls = screen.getAllByRole('region', { name: 'Round controls' });
+    expect(controls).toHaveLength(1);
+    expect(within(controls[0]!).queryByRole('button', { name: 'Reveal votes' })).toBeNull();
+    expect(within(controls[0]!).getByRole('button', { name: 'Record estimate' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Results' })).toBeVisible();
+  });
+
+  it('shows no Round controls panel to a voter or while waiting', () => {
+    render(<GameTable game={gameState(REVEALED) as Game} reconnecting={false} {...IDLE} />);
+    expect(screen.queryByRole('region', { name: 'Round controls' })).toBeNull();
+    cleanup();
+    render(
+      <GameTable game={gameState() as Game} reconnecting={false} {...IDLE} role="facilitator" />,
+    );
+    expect(screen.queryByRole('region', { name: 'Round controls' })).toBeNull();
+  });
+
+  it('keeps the work area before the people area in the document, panels in order', () => {
+    render(
+      <GameTable
+        game={gameState(REVEALED) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+      />,
+    );
+
+    expect(panelNames()).toEqual([
+      'Story',
+      'Round controls',
+      'Results',
+      'Facilitator',
+      'Voters',
+      'Summary',
+      'Join link',
+    ]);
+  });
+});

@@ -193,11 +193,16 @@ test.describe('Look and layout @TEST', () => {
         for (const page of [fac, anna]) {
           const story = (await region(page, 'Story').boundingBox())!;
           const voters = (await region(page, 'Voters').boundingBox())!;
+          // The first panel of the people area starts level with the first panel of the work area.
+          const firstOfPeople = (await region(page, 'Facilitator').boundingBox())!;
           if (wide) {
             expect(voters.x, `${tag} voters sit right of the story`).toBeGreaterThanOrEqual(
               story.x + story.width,
             );
-            expect(Math.abs(voters.y - story.y), `${tag} columns start together`).toBeLessThan(120);
+            expect(
+              Math.abs(firstOfPeople.y - story.y),
+              `${tag} columns start together`,
+            ).toBeLessThan(40);
             expect(story.width + voters.width, `${tag} columns use the width`).toBeGreaterThan(
               Math.min(viewport.width, 1152) * 0.8,
             );

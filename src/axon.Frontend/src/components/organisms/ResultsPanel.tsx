@@ -2,6 +2,7 @@ import { isTooLarge, type RoundStats, type Scale } from '@axon/shared';
 import { memo, useId } from 'react';
 import { sizeStyle } from '../../lib/sizeStyles';
 import { CardFace } from '../atoms/CardFace';
+import { Panel } from '../atoms/Panel';
 
 export const NO_AVERAGE_MESSAGE = 'No average';
 export const NO_MEDIAN_MESSAGE = 'No median';
@@ -41,7 +42,7 @@ export const ResultsPanel = memo(function ResultsPanel({
   const consensus = consensusText(results);
 
   return (
-    <section aria-labelledby={headingId} className="min-w-0 space-y-3">
+    <Panel aria-labelledby={headingId}>
       <h2 id={headingId} className="type-section">
         Results
       </h2>
@@ -71,7 +72,7 @@ export const ResultsPanel = memo(function ResultsPanel({
       <p className="font-medium">{centreText(results, scale)}</p>
       {consensus && <p className="font-medium">{consensus}</p>}
       {outlierNames.length > 0 && <p>Outliers: {outlierNames.join(', ')}</p>}
-    </section>
+    </Panel>
   );
 });
 ResultsPanel.displayName = 'ResultsPanel';
