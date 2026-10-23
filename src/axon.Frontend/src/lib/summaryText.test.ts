@@ -44,3 +44,17 @@ describe('summaryText for t-shirt sizes', () => {
     expect(summaryText([], null)).toBe('');
   });
 });
+
+describe('summaryText for link-only stories', () => {
+  it('prints the link once in place of the title', () => {
+    expect(
+      summaryText(
+        [
+          { title: '', url: 'https://e.com/1', estimate: 5 },
+          { title: 'Checkout', url: 'https://e.com/2', estimate: 'skipped' },
+        ],
+        5,
+      ),
+    ).toBe('1. https://e.com/1 - 5\n2. Checkout (https://e.com/2) - skipped\nTotal: 5');
+  });
+});

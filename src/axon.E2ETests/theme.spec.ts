@@ -520,6 +520,7 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
       await button(voter.page, 'Join').click();
       const form = fac.page.getByRole('form', { name: 'Story' });
       await form.getByLabel('Title').fill('T');
+      await form.getByLabel('Link').fill('https://example.com/story');
       await form.getByRole('button', { name: 'Start voting' }).click();
       await expect(card(voter.page, '0')).toBeEnabled();
 
@@ -552,6 +553,7 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
       await button(voter.page, 'Join').click();
       const form = fac.page.getByRole('form', { name: 'Story' });
       await form.getByLabel('Title').fill('T');
+      await form.getByLabel('Link').fill('https://example.com/story');
       await form.getByRole('button', { name: 'Start voting' }).click();
       await card(voter.page, '3').click();
       await expect(card(voter.page, '3')).toBeChecked();
@@ -596,6 +598,7 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
         await expect(votersRegion(fac.page).getByRole('listitem')).toHaveCount(2);
         const form = fac.page.getByRole('form', { name: 'Story' });
         await form.getByLabel('Title').fill('Login page');
+        await form.getByLabel('Link').fill('https://example.com/story');
         await form.getByRole('button', { name: 'Start voting' }).click();
         await expect(liveRegion(bob.page)).toHaveText('Voting is open: Login page');
 

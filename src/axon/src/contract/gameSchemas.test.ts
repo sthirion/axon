@@ -314,7 +314,7 @@ describe('publicGameStateSchema history', () => {
     voters: [],
     history: [
       { title: 'A', url: 'https://e.com/a', estimate: 5 },
-      { title: 'B', estimate: 'skipped' },
+      { title: 'B', url: 'https://example.com/story', estimate: 'skipped' },
     ],
     total: 5,
   };
@@ -326,9 +326,21 @@ describe('publicGameStateSchema history', () => {
   it.each([
     ['a missing history', { ...state, history: undefined }],
     ['a missing total', { ...state, total: undefined }],
-    ['an extra entry key', { ...state, history: [{ title: 'A', estimate: 5, votes: [] }] }],
-    ['an unknown estimate string', { ...state, history: [{ title: 'A', estimate: 'later' }] }],
-    ['a null estimate', { ...state, history: [{ title: 'A', estimate: null }] }],
+    [
+      'an extra entry key',
+      {
+        ...state,
+        history: [{ title: 'A', url: 'https://example.com/story', estimate: 5, votes: [] }],
+      },
+    ],
+    [
+      'an unknown estimate string',
+      { ...state, history: [{ title: 'A', url: 'https://example.com/story', estimate: 'later' }] },
+    ],
+    [
+      'a null estimate',
+      { ...state, history: [{ title: 'A', url: 'https://example.com/story', estimate: null }] },
+    ],
     ['a string total', { ...state, total: '5' }],
   ])('rejects %s', (_label, value) => {
     expect(publicGameStateSchema.safeParse(value).success).toBe(false);

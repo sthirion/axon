@@ -103,7 +103,12 @@ describe('voting scales over Socket.IO and REST', () => {
     };
     const anna = await voter('Anna');
     const bob = await voter('Bob');
-    expect(await facilitator.emit(GAME_EVENTS.storySet, { title: 'Login page' })).toEqual({
+    expect(
+      await facilitator.emit(GAME_EVENTS.storySet, {
+        title: 'Login page',
+        url: 'https://example.com/story',
+      }),
+    ).toEqual({
       ok: true,
     });
     await Promise.all([anna, bob].map((c) => c.state((s) => s.phase === 'voting')));
@@ -288,7 +293,9 @@ describe('voting scales over Socket.IO and REST', () => {
           String(card),
         ).toEqual({ ok: true });
         const state = await s.anna.state((x) => x.history.length === 1);
-        expect(state.history).toEqual([{ title: 'Login page', estimate: card }]);
+        expect(state.history).toEqual([
+          { title: 'Login page', url: 'https://example.com/story', estimate: card },
+        ]);
       }
     });
 
@@ -317,7 +324,10 @@ describe('voting scales over Socket.IO and REST', () => {
       await vote(s.anna, first);
       await reveal(s);
       await s.facilitator.emit(GAME_EVENTS.roundFinish, { finalEstimate: first });
-      await s.facilitator.emit(GAME_EVENTS.storySet, { title: 'Checkout' });
+      await s.facilitator.emit(GAME_EVENTS.storySet, {
+        title: 'Checkout',
+        url: 'https://example.com/story',
+      });
       await s.anna.state((x) => x.phase === 'voting' && x.story?.title === 'Checkout');
       await vote(s.anna, second);
       await reveal(s);

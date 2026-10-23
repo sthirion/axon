@@ -91,6 +91,7 @@ test.describe('Game lifetime @TEST', () => {
       const gameUrl = await createGame(page);
       const form = page.getByRole('form', { name: 'Story' });
       await form.getByLabel('Title').fill('Login page');
+      await form.getByLabel('Link').fill('https://example.com/story');
       await form.getByRole('button', { name: 'Start voting' }).click();
       await expect(page.getByRole('region', { name: 'Story' })).toContainText('Login page');
       await page.close();

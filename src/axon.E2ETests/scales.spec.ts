@@ -102,6 +102,7 @@ test.describe('Voting scales @TEST', () => {
   async function startStory(s: Session, title = 'Login page'): Promise<void> {
     const form = s.fac.getByRole('form', { name: 'Story' });
     await form.getByLabel('Title').fill(title);
+    await form.getByLabel('Link').fill('https://example.com/story');
     await form.getByRole('button', { name: 'Start voting' }).click();
     for (const page of s.all) await expect(region(page, 'Story')).toContainText(title);
   }
@@ -277,6 +278,7 @@ test.describe('Voting scales @TEST', () => {
       await expect(fac.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
       const form = fac.getByRole('form', { name: 'Story' });
       await form.getByLabel('Title').fill('Login page');
+      await form.getByLabel('Link').fill('https://example.com/story');
       await form.getByRole('button', { name: 'Start voting' }).click();
       await button(fac, 'Skip story').click();
       await expect(region(fac, 'Summary')).toContainText('skipped');
@@ -285,7 +287,7 @@ test.describe('Voting scales @TEST', () => {
 
       await expect(region(fac, 'Summary').getByRole('status')).toHaveText('Summary copied');
       expect(await fac.evaluate(() => navigator.clipboard.readText())).toBe(
-        '1. Login page - skipped',
+        '1. Login page (https://example.com/story) - skipped',
       );
     });
   });

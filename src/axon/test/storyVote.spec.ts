@@ -247,7 +247,11 @@ describe('story and vote over Socket.IO', () => {
     return round;
   }
 
-  async function startVoting(round: Round, title = 'Login page', url?: string): Promise<void> {
+  async function startVoting(
+    round: Round,
+    title = 'Login page',
+    url = 'https://example.com/story',
+  ): Promise<void> {
     const ack = await round.facilitator.emit(GAME_EVENTS.storySet, { title, url });
     expect(ack).toEqual({ ok: true });
     await Promise.all(round.everyone.map((c) => c.stateWhere((s) => s.phase === 'voting')));
@@ -340,19 +344,25 @@ describe('story and vote over Socket.IO', () => {
       ['no url', { title: 'Login page' }],
       ['a blank url', { title: 'Login page', url: '   ' }],
       ['an empty url', { title: 'Login page', url: '' }],
-    ])('story:set with %s stores a story without a url key', async (_label, payload) => {
-      // Given
-      const { facilitator } = await aRound({ voting: false });
+      ['a null url', { title: 'Login page', url: null }],
+      ['text that is not a URL', { title: 'Login page', url: 'not a url' }],
+    ])(
+      'story:set with %s acks INVALID_STORY, because the link is required',
+      async (_label, payload) => {
+        // Given
+        const round = await aRound({ voting: false });
 
-      // When
-      const ack = await facilitator.emit(GAME_EVENTS.storySet, payload);
-      const state = await facilitator.stateWhere((s) => s.phase === 'voting');
+        // When
+        const { result, state } = await expectSilent(round.table, round.everyone, () =>
+          round.facilitator.emit(GAME_EVENTS.storySet, payload),
+        );
 
-      // Then
-      expect(ack).toEqual({ ok: true });
-      expect(state.story).toEqual({ title: 'Login page' });
-      expect(state.story).not.toHaveProperty('url');
-    });
+        // Then
+        expect(result).toEqual(failedAck('INVALID_STORY'));
+        expect(state.phase).toBe('waiting');
+        expect(state.story).toBeNull();
+      },
+    );
 
     it.each([
       ['a single code point', 'A', 'A'],
@@ -367,7 +377,10 @@ describe('story and vote over Socket.IO', () => {
         const { facilitator, anna } = await aRound({ voting: false });
 
         // When
-        const ack = await facilitator.emit(GAME_EVENTS.storySet, { title });
+        const ack = await facilitator.emit(GAME_EVENTS.storySet, {
+          title,
+          url: 'https://example.com/story',
+        });
         const state = await anna.client.stateWhere((s) => s.phase === 'voting');
 
         // Then
@@ -377,9 +390,6 @@ describe('story and vote over Socket.IO', () => {
     );
 
     const rejectedTitles: ReadonlyArray<readonly [string, unknown]> = [
-      ['a missing', undefined],
-      ['an empty', ''],
-      ['a whitespace-only', '   '],
       ['a 201 code point', 'a'.repeat(201)],
       ['a 201 emoji', '😀'.repeat(201)],
       ['a newline-containing', 'Line\nbreak'],
@@ -398,7 +408,7 @@ describe('story and vote over Socket.IO', () => {
 
         // When
         const { result, state } = await expectSilent(round.table, round.everyone, () =>
-          round.facilitator.emit(GAME_EVENTS.storySet, { title }),
+          round.facilitator.emit(GAME_EVENTS.storySet, { title, url: 'https://example.com/story' }),
         );
 
         // Then
@@ -480,11 +490,16 @@ describe('story and vote over Socket.IO', () => {
       const { facilitator } = await aRound({ voting: false });
 
       // When
-      await facilitator.emit(GAME_EVENTS.storySet, { title: 'T', card: 5, extra: 'x' });
+      await facilitator.emit(GAME_EVENTS.storySet, {
+        title: 'T',
+        card: 5,
+        extra: 'x',
+        url: 'https://example.com/story',
+      });
       const state = await facilitator.stateWhere((s) => s.phase === 'voting');
 
       // Then
-      expect(state.story).toEqual({ title: 'T' });
+      expect(state.story).toEqual({ title: 'T', url: 'https://example.com/story' });
     });
 
     it('story:set rejection carries the fixed INVALID_STORY message', async () => {
@@ -492,13 +507,14 @@ describe('story and vote over Socket.IO', () => {
       const { facilitator } = await aRound({ voting: false });
 
       // When
-      const ack = await facilitator.emit(GAME_EVENTS.storySet, { title: '' });
+      const ack = await facilitator.emit(GAME_EVENTS.storySet, { title: 'No link' });
 
       // Then
       expect(ack).toEqual({
         ok: false,
         code: 'INVALID_STORY',
-        message: 'Enter a title of 1 to 200 characters and an optional http or https link.',
+        message:
+          'Enter a link starting with http:// or https://, and an optional title of up to 200 characters.',
       });
     });
   });
@@ -530,7 +546,7 @@ describe('story and vote over Socket.IO', () => {
       expect(secondTab.mine).toEqual([5]);
     });
 
-    it('story:set without a url while voting removes the link', async () => {
+    it('story:set with another link while voting replaces the link', async () => {
       // Given
       const round = await aRound();
       await round.facilitator.emit(GAME_EVENTS.storySet, {
@@ -541,13 +557,16 @@ describe('story and vote over Socket.IO', () => {
       const mark = round.bob.client.events.length;
 
       // When
-      const ack = await round.facilitator.emit(GAME_EVENTS.storySet, { title: 'A' });
+      const ack = await round.facilitator.emit(GAME_EVENTS.storySet, {
+        title: 'A',
+        url: 'https://example.com/story',
+      });
       const state = await round.bob.client.nextState(mark);
 
       // Then
       expect(ack).toEqual({ ok: true });
-      expect(state.story).toEqual({ title: 'A' });
-      expect(state.story).not.toHaveProperty('url');
+      expect(state.story).toEqual({ title: 'A', url: 'https://example.com/story' });
+      expect(state.story?.url).toBe('https://example.com/story');
     });
 
     it('invalid story:set while voting acks INVALID_STORY and leaves story and votes unchanged', async () => {
@@ -557,21 +576,21 @@ describe('story and vote over Socket.IO', () => {
 
       // When
       const { result, state } = await expectSilent(round.table, round.everyone, () =>
-        round.facilitator.emit(GAME_EVENTS.storySet, { title: '' }),
+        round.facilitator.emit(GAME_EVENTS.storySet, { title: 'No link' }),
       );
 
       // Then
       expect(result).toEqual(failedAck('INVALID_STORY'));
       expect(state.phase).toBe('voting');
-      expect(state.story).toEqual({ title: 'Login page' });
+      expect(state.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
       expect(voterOf(state, 'Anna').hasVoted).toBe(true);
     });
   });
 
   describe('story:set authorization (AC-6)', () => {
     const attempts: ReadonlyArray<readonly [string, boolean, unknown]> = [
-      ['a valid payload while waiting', false, { title: 'Mine' }],
-      ['a valid payload while voting', true, { title: 'Mine' }],
+      ['a valid payload while waiting', false, { title: 'Mine', url: 'https://example.com/m' }],
+      ['a valid payload while voting', true, { title: 'Mine', url: 'https://example.com/m' }],
       ['an invalid title while voting', true, { title: '' }],
       ['an invalid link while waiting', false, { title: 'Mine', url: 'javascript:alert(1)' }],
     ];
@@ -590,7 +609,9 @@ describe('story and vote over Socket.IO', () => {
         // Then
         expect(result).toEqual(failedAck('FORBIDDEN'));
         expect(state.phase).toBe(voting ? 'voting' : 'waiting');
-        expect(state.story).toEqual(voting ? { title: 'Login page' } : null);
+        expect(state.story).toEqual(
+          voting ? { title: 'Login page', url: 'https://example.com/story' } : null,
+        );
       },
     );
   });
@@ -621,7 +642,7 @@ describe('story and vote over Socket.IO', () => {
       // Then
       expect(result).toEqual(failedAck('FORBIDDEN'));
       expect(state.phase).toBe('voting');
-      expect(state.story).toEqual({ title: 'Login page' });
+      expect(state.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
     });
 
     it.each([
@@ -637,7 +658,11 @@ describe('story and vote over Socket.IO', () => {
 
         // When
         const { result, state } = await expectSilent(round.table, round.everyone, () =>
-          round.bob.client.emit(GAME_EVENTS.storySet, { title: 'Hijacked', playerId }),
+          round.bob.client.emit(GAME_EVENTS.storySet, {
+            title: 'Hijacked',
+            playerId,
+            url: 'https://example.com/story',
+          }),
         );
 
         // Then
@@ -664,7 +689,7 @@ describe('story and vote over Socket.IO', () => {
 
       // Then
       expect(result).toEqual(failedAck('FORBIDDEN'));
-      expect(state.story).toEqual({ title: 'Login page' });
+      expect(state.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
     });
 
     it.each([
@@ -773,12 +798,13 @@ describe('story and vote over Socket.IO', () => {
         title: 'Still mine',
         role: 'voter',
         playerId: round.anna.playerId,
+        url: 'https://example.com/story',
       });
       const state = await round.anna.client.stateWhere((s) => s.phase === 'voting');
 
       // Then
       expect(ack).toEqual({ ok: true });
-      expect(state.story).toEqual({ title: 'Still mine' });
+      expect(state.story).toEqual({ title: 'Still mine', url: 'https://example.com/story' });
     });
   });
 
@@ -996,7 +1022,10 @@ describe('story and vote over Socket.IO', () => {
 
       // When
       const wrongPhase = await round.anna.client.emit(GAME_EVENTS.voteCast, { card: 5 });
-      const forbidden = await round.anna.client.emit(GAME_EVENTS.storySet, { title: 'T' });
+      const forbidden = await round.anna.client.emit(GAME_EVENTS.storySet, {
+        title: 'T',
+        url: 'https://example.com/story',
+      });
       await startVoting(round);
       const invalidCard = await round.anna.client.emit(GAME_EVENTS.voteCast, { card: 4 });
 
@@ -1118,7 +1147,12 @@ describe('story and vote over Socket.IO', () => {
       };
 
       // When
-      expect(await table.facilitator.emit(GAME_EVENTS.storySet, { title: 'Login page' })).toEqual({
+      expect(
+        await table.facilitator.emit(GAME_EVENTS.storySet, {
+          title: 'Login page',
+          url: 'https://example.com/story',
+        }),
+      ).toEqual({
         ok: true,
       });
       for (const [index, card] of DECK.entries()) {
@@ -1139,9 +1173,9 @@ describe('story and vote over Socket.IO', () => {
       expect(await unjoined.emit(GAME_EVENTS.voteCast, { card: 5 })).toEqual(
         failedAck('FORBIDDEN'),
       );
-      expect(await unjoined.emit(GAME_EVENTS.storySet, { title: 'x' })).toEqual(
-        failedAck('FORBIDDEN'),
-      );
+      expect(
+        await unjoined.emit(GAME_EVENTS.storySet, { title: 'x', url: 'https://example.com/story' }),
+      ).toEqual(failedAck('FORBIDDEN'));
       await settle(table, [anna.client, annaTab2, bob.client, bobTab2]);
 
       // Then
@@ -1278,7 +1312,7 @@ describe('story and vote over Socket.IO', () => {
 
   describe('unjoined sockets and malformed events (AC-14)', () => {
     it.each([
-      ['story:set', GAME_EVENTS.storySet, { title: 'T' }],
+      ['story:set', GAME_EVENTS.storySet, { title: 'T', url: 'https://example.com/story' }],
       ['story:set', GAME_EVENTS.storySet, null],
       ['vote:cast', GAME_EVENTS.voteCast, { card: 5 }],
       ['vote:cast', GAME_EVENTS.voteCast, 'garbage'],
@@ -1324,7 +1358,7 @@ describe('story and vote over Socket.IO', () => {
         'anna',
         true,
         GAME_EVENTS.storySet,
-        { title: '' },
+        { title: '', url: 'https://example.com/story' },
         'FORBIDDEN',
       ],
       [
@@ -1412,11 +1446,14 @@ describe('story and vote over Socket.IO', () => {
       const round = await aRound({ voting: false });
 
       // When
-      round.facilitator.socket.emit(GAME_EVENTS.storySet, { title: 'No ack' });
+      round.facilitator.socket.emit(GAME_EVENTS.storySet, {
+        title: 'No ack',
+        url: 'https://example.com/story',
+      });
       const state = await round.bob.client.stateWhere((s) => s.phase === 'voting');
 
       // Then
-      expect(state.story).toEqual({ title: 'No ack' });
+      expect(state.story).toEqual({ title: 'No ack', url: 'https://example.com/story' });
     });
 
     it('vote:cast with a non-function ack argument is tolerated', async () => {
@@ -1454,11 +1491,17 @@ describe('story and vote over Socket.IO', () => {
         url: 'https://example.com/secret-link',
       });
       await round.anna.client.emit(GAME_EVENTS.voteCast, { card: 'coffee' });
-      await round.facilitator.emit(GAME_EVENTS.storySet, { title: 'Secret\nTitle' });
+      await round.facilitator.emit(GAME_EVENTS.storySet, {
+        title: 'Secret\nTitle',
+        url: 'https://example.com/story',
+      });
       await startVoting(round, 'Hidden title');
       await round.anna.client.emit(GAME_EVENTS.voteCast, { card: 'bogus-card' });
       await round.facilitator.emit(GAME_EVENTS.voteCast, { card: 5 });
-      await unjoined.emit(GAME_EVENTS.storySet, { title: 'Secret project' });
+      await unjoined.emit(GAME_EVENTS.storySet, {
+        title: 'Secret project',
+        url: 'https://example.com/story',
+      });
       await cast(round.anna.client, 13);
 
       // Then
@@ -1692,14 +1735,20 @@ describe('story and vote over Socket.IO', () => {
           await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined),
           await round.anna.client.emit(GAME_EVENTS.voteCast, { card: 13 }),
           await round.anna.client.emit(GAME_EVENTS.voteCast, { card: null }),
-          await round.facilitator.emit(GAME_EVENTS.storySet, { title: 'Sneaky edit' }),
-          await round.facilitator.emit(GAME_EVENTS.storySet, { title: '' }),
+          await round.facilitator.emit(GAME_EVENTS.storySet, {
+            title: 'Sneaky edit',
+            url: 'https://example.com/story',
+          }),
+          await round.facilitator.emit(GAME_EVENTS.storySet, {
+            title: '',
+            url: 'https://example.com/story',
+          }),
         ],
       );
 
       expect(result).toEqual(Array(5).fill(failedAck('WRONG_PHASE')));
       expect(state.phase).toBe('revealed');
-      expect(state.story).toEqual({ title: 'Login page' });
+      expect(state.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
       expect(voterOf(state, 'Anna').card).toBe(3);
       expect(round.anna.client.mineSince(0).at(-1)).toBe(3);
     });
@@ -1710,9 +1759,12 @@ describe('story and vote over Socket.IO', () => {
       expect(await round.facilitator.emit(GAME_EVENTS.voteCast, { card: 5 })).toEqual(
         failedAck('FORBIDDEN'),
       );
-      expect(await round.anna.client.emit(GAME_EVENTS.storySet, { title: 'X' })).toEqual(
-        failedAck('FORBIDDEN'),
-      );
+      expect(
+        await round.anna.client.emit(GAME_EVENTS.storySet, {
+          title: 'X',
+          url: 'https://example.com/story',
+        }),
+      ).toEqual(failedAck('FORBIDDEN'));
     });
 
     it('sends cards to a voter who rejoins and to a new voter who joins after the reveal', async () => {
@@ -1820,7 +1872,7 @@ describe('story and vote over Socket.IO', () => {
         states.forEach((state) => {
           expect(publicGameStateSchema.safeParse(state).success).toBe(true);
           expect(state.phase).toBe('voting');
-          expect(state.story).toEqual({ title: 'Login page' });
+          expect(state.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
           expect(state).not.toHaveProperty('results');
           expect(state.voters.every((v) => !v.hasVoted && !('card' in v))).toBe(true);
           expect(state.history).toEqual([]);
@@ -1900,7 +1952,9 @@ describe('story and vote over Socket.IO', () => {
           expect(state.phase).toBe('waiting');
           expect(state.story).toBeNull();
           expect(state).not.toHaveProperty('results');
-          expect(state.history).toEqual([{ title: 'Login page', estimate: 5 }]);
+          expect(state.history).toEqual([
+            { title: 'Login page', url: 'https://example.com/story', estimate: 5 },
+          ]);
           expect(state.total).toBe(5);
           expect(state.voters.every((v) => !v.hasVoted && !('card' in v))).toBe(true);
         });
@@ -1934,7 +1988,9 @@ describe('story and vote over Socket.IO', () => {
 
         const { states } = await command(round, GAME_EVENTS.roundFinish, { skip: true });
 
-        expect(states[0]?.history).toEqual([{ title: 'Login page', estimate: 'skipped' }]);
+        expect(states[0]?.history).toEqual([
+          { title: 'Login page', url: 'https://example.com/story', estimate: 'skipped' },
+        ]);
       });
 
       it('plays a second round from a clean start and keeps the summary in order', async () => {
@@ -1949,13 +2005,18 @@ describe('story and vote over Socket.IO', () => {
         const marks = round.everyone.map((c) => c.events.length);
         await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined);
         await Promise.all(round.everyone.map((c, i) => c.nextState(marks[i] as number)));
-        const { states } = await command(round, GAME_EVENTS.roundFinish, { finalEstimate: 8 });
+        expect(await round.facilitator.emit(GAME_EVENTS.roundFinish, { finalEstimate: 8 })).toEqual(
+          {
+            ok: true,
+          },
+        );
+        const states = [await round.anna.client.stateWhere((x) => x.history.length === 2)];
 
         // Then
         expect(fresh.voters.every((v) => !v.hasVoted)).toBe(true);
         expect(states[0]?.history).toEqual([
-          { title: 'Login page', estimate: 5 },
-          { title: 'Checkout', estimate: 8 },
+          { title: 'Login page', url: 'https://example.com/story', estimate: 5 },
+          { title: 'Checkout', url: 'https://example.com/story', estimate: 8 },
         ]);
         expect(states[0]?.total).toBe(13);
       });
@@ -2055,7 +2116,9 @@ describe('story and vote over Socket.IO', () => {
         const late = await aVoter(round.table, 'Cy');
 
         const rejoined = await tab.stateWhere(() => true);
-        expect(rejoined.history).toEqual([{ title: 'Login page', estimate: 13 }]);
+        expect(rejoined.history).toEqual([
+          { title: 'Login page', url: 'https://example.com/story', estimate: 13 },
+        ]);
         expect(tab.mine).toEqual([null]);
         const joined = await late.client.stateWhere(hasVoter('Cy', true));
         expect(joined.total).toBe(13);
@@ -2123,7 +2186,7 @@ describe('story and vote over Socket.IO', () => {
         states.forEach((state) => {
           expect(state.facilitator).toEqual({ name: 'Fran', connected: false });
           expect(state.phase).toBe('voting');
-          expect(state.story).toEqual({ title: 'Login page' });
+          expect(state.story).toEqual({ title: 'Login page', url: 'https://example.com/story' });
           expect(voterOf(state, 'Anna').hasVoted).toBe(true);
         });
         expect(server.store.get(round.table.gameId)).toBeDefined();
@@ -2154,7 +2217,10 @@ describe('story and vote over Socket.IO', () => {
         const marks = bob.events.length;
 
         const results = [
-          await round.anna.client.emit(GAME_EVENTS.storySet, { title: 'Mine' }),
+          await round.anna.client.emit(GAME_EVENTS.storySet, {
+            title: 'Mine',
+            url: 'https://example.com/story',
+          }),
           await round.anna.client.emit(GAME_EVENTS.roundReveal, undefined),
           await round.anna.client.emit(GAME_EVENTS.roundRevote, undefined),
           await round.anna.client.emit(GAME_EVENTS.roundFinish, { skip: true }),
@@ -2419,5 +2485,84 @@ describe('story and vote over Socket.IO', () => {
       await Promise.all(round.everyone.map((c, i) => c.nextState(marks[i] as number)));
       return round;
     }
+  });
+
+  describe('story:set with a link and no title (Story #28)', () => {
+    const LINK = 'https://example.com/story/1';
+
+    it('opens voting for everyone with the link and an empty title', async () => {
+      const round = await aRound({ voting: false });
+
+      const ack = await round.facilitator.emit(GAME_EVENTS.storySet, { url: LINK });
+      const states = await Promise.all(
+        round.everyone.map((c) => c.stateWhere((s) => s.phase === 'voting')),
+      );
+
+      expect(ack).toEqual({ ok: true });
+      states.forEach((state) => expect(state.story).toEqual({ title: '', url: LINK }));
+    });
+
+    it.each([
+      ['an empty title with a link', { title: '', url: LINK }],
+      ['a whitespace title with a link', { title: '   ', url: `  ${LINK}  ` }],
+    ])('accepts %s and stores the trimmed link', async (_label, payload) => {
+      const round = await aRound({ voting: false });
+
+      expect(await round.facilitator.emit(GAME_EVENTS.storySet, payload)).toEqual({ ok: true });
+
+      const state = await round.anna.client.stateWhere((s) => s.phase === 'voting');
+      expect(state.story).toEqual({ title: '', url: LINK });
+    });
+
+    it.each([
+      ['neither a title nor a link', {}],
+      ['a blank title and a blank link', { title: ' ', url: ' ' }],
+      ['an unsafe link and no title', { url: 'javascript:alert(1)' }],
+      ['a relative link and no title', { title: '', url: '/story/1' }],
+      ['a null link and no title', { title: '', url: null }],
+    ])('rejects %s with INVALID_STORY and changes nothing', async (_label, payload) => {
+      const round = await aRound({ voting: false });
+
+      const { result, state } = await expectSilent(round.table, [round.anna.client], () =>
+        round.facilitator.emit(GAME_EVENTS.storySet, payload),
+      );
+
+      expect(result).toEqual(failedAck('INVALID_STORY'));
+      expect(state.phase).toBe('waiting');
+      expect(state.story).toBeNull();
+    });
+
+    it('keeps the votes when a link-only story gets a title later, and records it in the history', async () => {
+      const round = await aRound({ voting: false });
+      await round.facilitator.emit(GAME_EVENTS.storySet, { url: LINK });
+      await round.anna.client.stateWhere((s) => s.phase === 'voting');
+      await castAndSync(round, round.anna, 5);
+
+      expect(
+        await round.facilitator.emit(GAME_EVENTS.storySet, { title: 'Login page', url: LINK }),
+      ).toEqual({ ok: true });
+      const edited = await round.bob.client.stateWhere((s) => s.story?.title === 'Login page');
+      expect(voterOf(edited, 'Anna').hasVoted).toBe(true);
+      await round.facilitator.emit(GAME_EVENTS.storySet, { url: LINK });
+      await round.bob.client.stateWhere((s) => s.story?.title === '');
+      const marks = round.everyone.map((c) => c.events.length);
+      await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined);
+      await Promise.all(round.everyone.map((c, i) => c.nextState(marks[i] as number)));
+      await round.facilitator.emit(GAME_EVENTS.roundFinish, { finalEstimate: 5 });
+
+      const state = await round.bob.client.stateWhere((s) => s.history.length === 1);
+      expect(state.history).toEqual([{ title: '', url: LINK, estimate: 5 }]);
+    });
+
+    it('still rejects a voter with FORBIDDEN, before looking at the story', async () => {
+      const round = await aRound({ voting: false });
+
+      expect(await round.anna.client.emit(GAME_EVENTS.storySet, { url: LINK })).toEqual(
+        failedAck('FORBIDDEN'),
+      );
+      expect(await round.anna.client.emit(GAME_EVENTS.storySet, {})).toEqual(
+        failedAck('FORBIDDEN'),
+      );
+    });
   });
 });

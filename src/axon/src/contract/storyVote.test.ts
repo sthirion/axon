@@ -44,30 +44,37 @@ describe('cardSchema', () => {
   });
 });
 
-describe('storySchema title', () => {
+const LINK = 'https://example.com/1';
+
+describe('storySchema title (optional)', () => {
   it.each([
     ['one code point', 'A', 'A'],
     ['200 code points', codePoints(200), codePoints(200)],
     ['200 astral code points', codePoints(200, '😀'), codePoints(200, '😀')],
     ['surrounding whitespace', '  Login  ', 'Login'],
   ])('accepts %s', (_label, title, stored) => {
-    expect(storySchema.parse({ title })).toEqual({ title: stored });
+    expect(storySchema.parse({ title, url: LINK })).toEqual({ title: stored, url: LINK });
   });
 
   it('normalizes the title to NFC', () => {
-    expect(storySchema.parse({ title: 'Cafe\u0301' })).toEqual({ title: 'Caf\u00e9' });
+    expect(storySchema.parse({ title: 'Cafe\u0301', url: LINK }).title).toBe('Caf\u00e9');
   });
 
   it('counts code points after normalization', () => {
     const title = 'e\u0301'.repeat(200);
 
-    expect(storySchema.safeParse({ title }).success).toBe(true);
+    expect(storySchema.safeParse({ title, url: LINK }).success).toBe(true);
   });
 
   it.each([
     ['missing', undefined],
     ['empty', ''],
     ['whitespace only', '   '],
+  ])('treats a %s title as no title and stores the empty string', (_label, title) => {
+    expect(storySchema.parse({ title, url: LINK })).toEqual({ title: '', url: LINK });
+  });
+
+  it.each([
     ['201 code points', codePoints(201)],
     ['201 astral code points', codePoints(201, '😀')],
     ['a newline inside', 'Line\nbreak'],
@@ -77,12 +84,14 @@ describe('storySchema title', () => {
     ['null', null],
     ['an array', ['T']],
   ])('rejects %s', (_label, title) => {
-    expect(storySchema.safeParse({ title }).success).toBe(false);
+    expect(storySchema.safeParse({ title, url: LINK }).success).toBe(false);
   });
 });
 
-describe('storySchema link', () => {
+describe('storySchema link (required)', () => {
   it.each([
+    'https://example.com/1',
+    'http://example.com',
     'https://dev.azure.com/org/p/_workitems/edit/1',
     'HTTP://Example.com',
     'https://example.com/x?a=b#c',
@@ -98,8 +107,17 @@ describe('storySchema link', () => {
     });
   });
 
-  it.each([undefined, '', '   '])('treats %j as no link and omits the key', (url) => {
-    expect(storySchema.parse({ title: 'T', url })).toStrictEqual({ title: 'T' });
+  it.each([
+    ['missing', undefined],
+    ['empty', ''],
+    ['whitespace only', '   '],
+    ['null', null],
+    ['a number', 42],
+    ['an object', {}],
+    ['an array', ['https://example.com']],
+  ])('rejects a %s link, with or without a title', (_label, url) => {
+    expect(storySchema.safeParse({ title: 'T', url }).success).toBe(false);
+    expect(storySchema.safeParse({ url }).success).toBe(false);
   });
 
   it.each([
@@ -111,6 +129,8 @@ describe('storySchema link', () => {
     'ftp://host/x',
     '/relative/path',
     'relative',
+    'example.com',
+    'www.example.com/x',
     '//evil.example/x',
     'https://',
     'http://exa mple.com',
@@ -118,17 +138,46 @@ describe('storySchema link', () => {
     'https://example.com/a\nb',
     'https://example.com/\u0000',
     `https://example.com/${'a'.repeat(2049 - 'https://example.com/'.length)}`,
-    null,
-    42,
-    {},
-  ])('rejects %j', (url) => {
+  ])('rejects the non-URL or unsafe link %j', (url) => {
     expect(storySchema.safeParse({ title: 'T', url }).success).toBe(false);
+    expect(storySchema.safeParse({ url }).success).toBe(false);
   });
 
   it('strips unknown keys', () => {
-    expect(storySchema.parse({ title: 'T', card: 5, role: 'facilitator' })).toStrictEqual({
+    expect(
+      storySchema.parse({ title: 'T', url: LINK, card: 5, role: 'facilitator' }),
+    ).toStrictEqual({
       title: 'T',
+      url: LINK,
     });
+  });
+});
+
+describe('storySchema: link required, title optional', () => {
+  it.each([
+    ['a link only', { url: LINK }, { title: '', url: LINK }],
+    ['a blank title and a link', { title: '', url: LINK }, { title: '', url: LINK }],
+    ['both', { title: 'Login', url: LINK }, { title: 'Login', url: LINK }],
+  ])('accepts %s', (_label, input, stored) => {
+    expect(storySchema.parse(input)).toEqual(stored);
+  });
+
+  it.each([
+    ['a title only', { title: 'Login' }],
+    ['neither', {}],
+    ['a title and a blank link', { title: 'Login', url: '  ' }],
+    ['a blank title and a blank link', { title: '  ', url: '  ' }],
+    ['a title and a link that is not a URL', { title: 'Login', url: 'not a url' }],
+    ['a too long title and a link', { title: codePoints(201), url: LINK }],
+    ['a title with a control character and a link', { title: 'a\nb', url: LINK }],
+  ])('rejects %s', (_label, input) => {
+    expect(storySchema.safeParse(input).success).toBe(false);
+  });
+
+  it('accepts a 2048-character link with no title', () => {
+    const url = `https://example.com/${'a'.repeat(2048 - 'https://example.com/'.length)}`;
+
+    expect(storySchema.parse({ url })).toEqual({ title: '', url });
   });
 });
 
@@ -174,7 +223,7 @@ describe('voteCastPayloadSchema and voteMineSchema', () => {
 describe('story and vote error messages', () => {
   it('uses the fixed texts', () => {
     expect(ERROR_MESSAGES.INVALID_STORY).toBe(
-      'Enter a title of 1 to 200 characters and an optional http or https link.',
+      'Enter a link starting with http:// or https://, and an optional title of up to 200 characters.',
     );
     expect(ERROR_MESSAGES.INVALID_CARD).toBe('That card is not in the deck.');
     expect(ERROR_MESSAGES.FORBIDDEN).toBe('You are not allowed to do that.');

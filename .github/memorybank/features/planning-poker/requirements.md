@@ -14,7 +14,7 @@ records the agreed estimate and moves on to the next story. Games live in memory
 - **Player**: the facilitator or a voter.
 - **Game**: one estimation session with a unique link. Exists in memory only.
 - **Round**: estimating one story, from setting the story to recording the final estimate.
-- **Story**: the work item being estimated: a title and an optional link.
+- **Story**: the work item being estimated: a link and an optional title.
 - **Deck**: the Fibonacci cards 0, 1, 2, 3, 5, 8, 13, 21, `?` and coffee.
 - **Numeric vote**: a vote on a card from 0 to 21. `?` and coffee are non-numeric.
 - **Player token**: a random secret stored in the browser that identifies a player within one
@@ -26,7 +26,7 @@ records the agreed estimate and moves on to the next story. Games live in memory
 | --- | --- | --- |
 | F1 | Create a game and get a shareable link | MVP |
 | F2 | Join a game with the link and a name | MVP |
-| F3 | Set the story for a round (title and optional link) | MVP |
+| F3 | Set the story for a round (link and optional title) | MVP |
 | F4 | Vote with the Fibonacci deck; change the vote until reveal | MVP |
 | F5 | Reveal: individual votes, distribution, average, consensus and outliers | MVP |
 | F6 | Re-vote, record the final estimate, move to the next story | MVP |
@@ -73,9 +73,12 @@ friction.
 knows what we are voting on.
 
 1. THE SYSTEM SHALL let only the facilitator set the story for the current round.
-1. THE SYSTEM SHALL require a title of 1 to 200 characters and accept an optional link.
-1. IF the link is not an absolute `http` or `https` URL THEN THE SYSTEM SHALL reject it.
-1. THE SYSTEM SHALL show the story title to every player and open the link in a new tab with
+1. THE SYSTEM SHALL require a link and accept an optional title of up to 200 characters. A
+   story with a link and no title is shown as its link.
+1. IF the link is missing or is not an absolute `http` or `https` URL THEN THE SYSTEM SHALL
+   reject the story.
+1. THE SYSTEM SHALL show the story title to every player; when there is a link the title is
+   the link, and when there is no title the link itself is shown. Links open in a new tab with
    `rel="noopener noreferrer"`.
 1. WHILE no story is set THE SYSTEM SHALL NOT allow voting.
 1. WHILE votes are hidden THE SYSTEM SHALL let the facilitator edit the story title and link.

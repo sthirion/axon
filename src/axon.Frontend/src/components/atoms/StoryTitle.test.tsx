@@ -37,4 +37,22 @@ describe('StoryTitle', () => {
     expect(screen.getByRole('link')).toHaveTextContent(title);
     expect(linked.container.querySelector('img')).toBeNull();
   });
+
+  it('shows the link itself as the clickable text when there is no title', () => {
+    render(<StoryTitle title="" url="https://example.com/1" />);
+
+    const link = screen.getByRole('link', { name: 'https://example.com/1 (opens in a new tab)' });
+    expect(link).toHaveAttribute('href', 'https://example.com/1');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link).toHaveTextContent('https://example.com/1');
+  });
+
+  it('shows a very long link-only address as the link text', () => {
+    const url = `https://example.com/${'a'.repeat(2028)}`;
+    render(<StoryTitle title="" url={url} />);
+
+    expect(screen.getByRole('link')).toHaveTextContent(url);
+    expect(screen.getByRole('link')).toHaveAttribute('href', url);
+  });
 });

@@ -18,7 +18,7 @@ function aVotingGame(scale?: Scale): Game {
   const game = createGame('G'.repeat(22), aNewPlayer({ id: FACILITATOR, name: 'Fran' }), 0, scale);
   addVoter(game, aNewPlayer({ id: 'anna', name: 'Anna' }));
   addVoter(game, aNewPlayer({ id: 'bob', name: 'Bob' }));
-  setStory(game, FACILITATOR, { title: 'Login page' });
+  setStory(game, FACILITATOR, { title: 'Login page', url: 'https://example.com/story' });
   return game;
 }
 
@@ -87,7 +87,9 @@ describe('finishRound per scale', () => {
       reveal(game);
 
       expect(finishRound(game, FACILITATOR, { finalEstimate: card })).toEqual({ ok: true });
-      expect(game.history).toEqual([{ title: 'Login page', estimate: card }]);
+      expect(game.history).toEqual([
+        { title: 'Login page', url: 'https://example.com/story', estimate: card },
+      ]);
     },
   );
 
@@ -121,7 +123,8 @@ describe('toPublicState totals per scale', () => {
   function played(scale: Scale, estimates: Array<Card | 'skip'>): Game {
     const game = aVotingGame(scale);
     estimates.forEach((estimate, i) => {
-      if (i > 0) setStory(game, FACILITATOR, { title: `Story ${i + 1}` });
+      if (i > 0)
+        setStory(game, FACILITATOR, { title: `Story ${i + 1}`, url: 'https://example.com/story' });
       if (estimate === 'skip') {
         finishRound(game, FACILITATOR, { skip: true });
         return;

@@ -84,10 +84,14 @@ describe('StoryPanel as facilitator', () => {
     await user.clear(screen.getByLabelText('Title'));
     await user.type(screen.getByLabelText('Title'), 'Checkout');
     await user.clear(screen.getByLabelText('Link'));
+    await user.type(screen.getByLabelText('Link'), 'https://example.com/2');
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(onSetStory).toHaveBeenCalledExactlyOnceWith({ title: 'Checkout' });
+    expect(onSetStory).toHaveBeenCalledExactlyOnceWith({
+      title: 'Checkout',
+      url: 'https://example.com/2',
+    });
     expect(await screen.findByRole('button', { name: 'Edit story' })).toHaveFocus();
     expect(screen.queryByRole('form', { name: 'Story' })).not.toBeInTheDocument();
   });
@@ -100,7 +104,7 @@ describe('StoryPanel as facilitator', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Enter a title of 1 to 200 characters and an optional http or https link.',
+      'Enter a link starting with http:// or https://, and an optional title of up to 200 characters.',
     );
     expect(screen.getByLabelText('Title')).toHaveValue('Login page');
   });
@@ -187,5 +191,27 @@ describe('StoryPanel without a known role', () => {
 
     expect(screen.getByText('Login page')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+});
+
+describe('StoryPanel with a link-only story', () => {
+  it.each(['voter', 'facilitator'] as const)(
+    'shows the link as the clickable text to a %s',
+    (role) => {
+      setup(role, { title: '', url: 'https://example.com/1' });
+
+      const link = screen.getByRole('link', { name: 'https://example.com/1 (opens in a new tab)' });
+      expect(link).toHaveAttribute('href', 'https://example.com/1');
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+    },
+  );
+
+  it('prefills Edit story with an empty title and the link', async () => {
+    const { user } = setup('facilitator', { title: '', url: 'https://example.com/1' });
+
+    await user.click(screen.getByRole('button', { name: 'Edit story' }));
+
+    expect(screen.getByLabelText('Title')).toHaveValue('');
+    expect(screen.getByLabelText('Link')).toHaveValue('https://example.com/1');
   });
 });

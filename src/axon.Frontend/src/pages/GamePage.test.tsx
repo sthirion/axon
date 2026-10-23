@@ -752,9 +752,13 @@ describe('GamePage', () => {
       expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
 
       await user.type(screen.getByLabelText('Title'), 'Login page');
+      await user.type(screen.getByLabelText('Link'), 'https://example.com/1');
       await user.click(screen.getByRole('button', { name: 'Start voting' }));
 
-      expect(lastRequest('story:set')?.payload).toEqual({ title: 'Login page' });
+      expect(lastRequest('story:set')?.payload).toEqual({
+        title: 'Login page',
+        url: 'https://example.com/1',
+      });
       expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
       await act(async () => lastRequest('story:set')?.ack?.(OK_ACK));
       await serverEmit('game:state', gameState({ ...VOTING, voters: [ANNA] }));

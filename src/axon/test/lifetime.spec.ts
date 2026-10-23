@@ -162,11 +162,17 @@ describe('game lifetime over Socket.IO', () => {
       const { gameId, facilitator, token } = await aGame();
       const anna = await aVoter(gameId, 'Anna');
       const bob = await aVoter(gameId, 'Bob');
-      await emitWithAck(facilitator, GAME_EVENTS.storySet, { title: 'First' });
+      await emitWithAck(facilitator, GAME_EVENTS.storySet, {
+        title: 'First',
+        url: 'https://example.com/story',
+      });
       await emitWithAck(anna.seat, GAME_EVENTS.voteCast, { card: 5 });
       await emitWithAck(facilitator, GAME_EVENTS.roundReveal);
       await emitWithAck(facilitator, GAME_EVENTS.roundFinish, { finalEstimate: 5 });
-      await emitWithAck(facilitator, GAME_EVENTS.storySet, { title: 'Second' });
+      await emitWithAck(facilitator, GAME_EVENTS.storySet, {
+        title: 'Second',
+        url: 'https://example.com/story',
+      });
       await emitWithAck(anna.seat, GAME_EVENTS.voteCast, { card: 8 });
       const bobId =
         store.get(gameId)!.players.size &&
@@ -191,7 +197,7 @@ describe('game lifetime over Socket.IO', () => {
       expect(lastState(back)).toMatchObject({
         phase: 'voting',
         story: { title: 'Second' },
-        history: [{ title: 'First', estimate: 5 }],
+        history: [{ title: 'First', url: 'https://example.com/story', estimate: 5 }],
         total: 5,
       });
       const bobBack = await connectTo(baseUrl);
@@ -221,7 +227,10 @@ describe('game lifetime over Socket.IO', () => {
       // Given a game being played
       const { gameId, facilitator } = await aGame();
       const anna = await aVoter(gameId, 'Anna');
-      await emitWithAck(facilitator, GAME_EVENTS.storySet, { title: 'Login page' });
+      await emitWithAck(facilitator, GAME_EVENTS.storySet, {
+        title: 'Login page',
+        url: 'https://example.com/story',
+      });
       await emitWithAck(anna.seat, GAME_EVENTS.voteCast, { card: 5 });
 
       // When it passes the cap
@@ -242,7 +251,10 @@ describe('game lifetime over Socket.IO', () => {
     it('keeps a game at the cap minus 1 ms, whatever its state', async () => {
       const { gameId, facilitator } = await aGame();
       const anna = await aVoter(gameId, 'Anna');
-      await emitWithAck(facilitator, GAME_EVENTS.storySet, { title: 'T' });
+      await emitWithAck(facilitator, GAME_EVENTS.storySet, {
+        title: 'T',
+        url: 'https://example.com/story',
+      });
       await emitWithAck(anna.seat, GAME_EVENTS.voteCast, { card: 5 });
       await emitWithAck(facilitator, GAME_EVENTS.roundReveal);
 
