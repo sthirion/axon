@@ -24,6 +24,10 @@ export interface Player {
 export interface Game {
   readonly id: string;
   readonly facilitatorId: string;
+  // Store clock time at creation; the age cap counts from here.
+  readonly createdAt: number;
+  // When the last connected player left (or the game was created empty); cleared on a join.
+  emptySince?: number;
   // Insertion order is join order.
   readonly players: Map<string, Player>;
   phase: GamePhase;
@@ -58,11 +62,13 @@ function newPlayer(input: NewPlayer, role: PlayerRole): Player {
   return { ...input, role, socketIds: new Set() };
 }
 
-export function createGame(id: string, facilitator: NewPlayer): Game {
+export function createGame(id: string, facilitator: NewPlayer, now: number): Game {
   const player = newPlayer(facilitator, 'facilitator');
   return {
     id,
     facilitatorId: player.id,
+    createdAt: now,
+    emptySince: now,
     players: new Map([[player.id, player]]),
     phase: 'waiting',
     votes: new Map(),
@@ -100,6 +106,11 @@ export function findPlayerByTokenHash(game: Game, tokenHash: Buffer): Player | u
 
 export function isConnected(player: Player): boolean {
   return player.socketIds.size > 0;
+}
+
+// A game is empty when no player, facilitator included, has a socket.
+export function isGameEmpty(game: Game): boolean {
+  return [...game.players.values()].every((player) => !isConnected(player));
 }
 
 export function connectSocket(player: Player, socketId: string): void {

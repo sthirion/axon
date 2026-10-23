@@ -85,7 +85,7 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
 | C→S | `round:finish` | `{ finalEstimate: 0\|1\|2\|3\|5\|8\|13\|21 }` or `{ skip: true }` | facilitator, phase `revealed` (or `voting` for skip) |
 | C→S | `player:remove` | `{ playerId }` | facilitator, any phase |
 | S→C | `player:removed` | — | the removed player, then disconnect |
-| S→C | `game:ended` | reason | everyone (server shutdown) |
+| S→C | `game:ended` | `{ reason: 'server-restart' \| 'expired' }` | everyone in the game (server shutdown, or the game hit its age cap) |
 
 - Every socket that joins also joins the room `player:<playerId>`. `vote:mine` is emitted to
   that room only, so all tabs of one voter are updated and nobody else receives the card.
@@ -213,13 +213,24 @@ sequenceDiagram
 
 ## Game Lifetime
 
-- A sweep runs every 30 seconds. When a game has no connected sockets, it records
-  `emptySince`; when someone connects, it clears it. Games where `emptySince` is more than
-  2 minutes old are deleted (Requirement 9.2).
-- Safety cap: games are deleted after 12 hours whatever their state, so memory can't grow
-  without limit.
-- On `SIGTERM` the server sends `game:ended { reason: 'server-restart' }` to every room
-  before exiting.
+- A game records `createdAt`, and `emptySince` while no player (facilitator included) has a
+  socket. `emptySince` is set when the game is created, when the last socket of the last
+  connected player disconnects, and by the sweep as a safety net; it is cleared on every
+  successful `game:join`. This makes the 2-minute rule exact instead of late by up to one sweep.
+- A sweep runs every 30 seconds (`SWEEP_INTERVAL_MS`) on a timer that is `unref`ed. It deletes
+  games that have been empty for 2 minutes (`GAME_EMPTY_TTL_MS`, Requirement 9.2) and games
+  older than 2 hours (`GAME_MAX_AGE_MS`) whatever their state, so memory can't grow without
+  limit. The three durations are validated at startup (positive integers of milliseconds).
+- A game deleted for its age may still have players: they receive `game:ended { reason:
+  'expired' }` and are disconnected. An empty game has nobody to tell. A deleted game's link
+  shows "Game not found".
+- On `SIGTERM` (and `SIGINT`) the server stops the sweeper, sends `game:ended { reason:
+  'server-restart' }` to every connected socket, disconnects them (the event is queued before
+  the disconnect), closes the servers and exits `0`; a second signal, or 5 seconds, exits at
+  once.
+- Players are told in a footer on every page that games are temporary and end when the server
+  restarts (Requirement 9.3).
+- Logs for deletion and shutdown carry `gameId`, `reason` and counts only.
 
 ## REST API
 

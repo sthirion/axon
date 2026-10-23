@@ -36,7 +36,7 @@ Work is delivered through these issues, in order, with `@story /start <issue#>`.
   - [ ] 3.5 Unit tests for 3.1–3.4
 - [ ] 4. Game store and lifetime — _Req 1, 9_
   - [ ] 4.1 In-memory `GameStore` (`Map`), ID and token generation, token hashing, constant-time compare
-  - [ ] 4.2 Sweeper: delete games empty for 2 minutes; 12-hour cap
+  - [ ] 4.2 Sweeper: delete games empty for 2 minutes; 2-hour cap
   - [ ] 4.3 `SIGTERM` handling: send `game:ended` and exit
   - [ ] 4.4 Unit tests with fake timers
 - [ ] 5. Server — _Req 1, 2, 8; NFR security_

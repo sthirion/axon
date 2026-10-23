@@ -1025,3 +1025,48 @@ describe('player:remove', () => {
     expect(text).not.toContain(anna.playerId);
   });
 });
+
+describe('game emptiness', () => {
+  it('starts empty, clears emptySince on a join and sets it when the last socket leaves', () => {
+    const { store, gameId, facilitator, join } = aSetup();
+    const game = store.get(gameId)!;
+    expect(game.emptySince).toBeUndefined();
+    const anna = join('anna', 'Anna');
+
+    facilitator.trigger('disconnect');
+    expect(game.emptySince).toBeUndefined();
+    anna.socket.trigger('disconnect');
+
+    expect(game.emptySince).toBeTypeOf('number');
+  });
+
+  it('stays non-empty while a second tab of a player is open and clears again on rejoin', () => {
+    const { io, store, gameId, facilitator, join } = aSetup();
+    const game = store.get(gameId)!;
+    const anna = join('anna', 'Anna');
+    io.connect('anna-2').sendJoin({ gameId, token: anna.token });
+
+    facilitator.trigger('disconnect');
+    anna.socket.trigger('disconnect');
+    expect(game.emptySince).toBeUndefined();
+    game.players.get(anna.playerId)!.socketIds.clear();
+    store.markDisconnected(game);
+    expect(game.emptySince).toBeTypeOf('number');
+
+    io.connect('anna-3').sendJoin({ gameId, token: anna.token });
+
+    expect(game.emptySince).toBeUndefined();
+  });
+
+  it('does not clear emptySince for a rejected join', () => {
+    const { io, store, gameId, facilitator } = aSetup();
+    const game = store.get(gameId)!;
+    facilitator.trigger('disconnect');
+    const since = game.emptySince;
+
+    io.connect('x').sendJoin({ gameId, token: 'z'.repeat(43) });
+
+    expect(since).toBeTypeOf('number');
+    expect(game.emptySince).toBe(since);
+  });
+});

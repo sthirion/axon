@@ -17,6 +17,7 @@ describe('connectGameSocket', () => {
       onState: vi.fn(),
       onVoteMine: vi.fn(),
       onRemoved: vi.fn(),
+      onEnded: vi.fn(),
       onDisconnect: vi.fn(),
       onRejoinFailed: vi.fn(),
     };
@@ -109,6 +110,28 @@ describe('connectGameSocket', () => {
     socket.serverEmit('connect');
 
     expect(handlers.onRemoved).toHaveBeenCalledTimes(1);
+    expect(handlers.onDisconnect).not.toHaveBeenCalled();
+    expect(socket.joins()).toHaveLength(1);
+  });
+
+  it.each([
+    [{ reason: 'server-restart' }, 'server-restart'],
+    [{ reason: 'expired' }, 'expired'],
+    [{ reason: 'something-new' }, 'server-restart'],
+    [{}, 'server-restart'],
+    [undefined, 'server-restart'],
+  ])('reports game:ended %j as %s and never rejoins afterwards', async (payload, reason) => {
+    const client = connect();
+    const joining = client.join({ gameId: GAME_ID, token: TOKEN });
+    socket.ackJoin(OK_ACK);
+    await joining;
+
+    socket.serverEmit('game:ended', payload);
+    socket.serverEmit('disconnect', 'io server disconnect');
+    socket.serverEmit('connect');
+
+    expect(handlers.onEnded).toHaveBeenCalledTimes(1);
+    expect(handlers.onEnded).toHaveBeenCalledWith(reason);
     expect(handlers.onDisconnect).not.toHaveBeenCalled();
     expect(socket.joins()).toHaveLength(1);
   });

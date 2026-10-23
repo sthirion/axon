@@ -55,6 +55,7 @@ export class FakeIo {
   readonly timeline: string[] = [];
   // Rooms whose sockets the server disconnected, in order.
   readonly disconnected: string[] = [];
+  readonly sockets: FakeSocket[] = [];
   private onConnection: ((socket: FakeSocket) => void) | undefined;
 
   on(event: string, handler: (socket: FakeSocket) => void): this {
@@ -74,6 +75,27 @@ export class FakeIo {
     };
   }
 
+  // Server-wide emit and disconnect, as used on shutdown.
+  emit(event: string, payload: unknown): boolean {
+    this.broadcasts.push({ room: '*', event, payload });
+    this.timeline.push(`emit:${event}`);
+    return true;
+  }
+
+  disconnectSockets(): void {
+    this.disconnected.push('*');
+    this.timeline.push('disconnect:*');
+  }
+
+  async fetchSockets(): Promise<unknown[]> {
+    return [...this.sockets];
+  }
+
+  close(): Promise<void> {
+    this.timeline.push('close');
+    return Promise.resolve();
+  }
+
   in(room: string) {
     return {
       disconnectSockets: (): void => {
@@ -85,6 +107,7 @@ export class FakeIo {
 
   connect(id: string): FakeSocket {
     const socket = new FakeSocket(id, this.timeline);
+    this.sockets.push(socket);
     this.onConnection?.(socket);
     return socket;
   }
