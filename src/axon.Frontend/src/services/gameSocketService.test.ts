@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { connectGameSocket } from './gameSocketService';
+import type { Card } from '@axon/shared';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ACK_TIMEOUT_MS, connectGameSocket } from './gameSocketService';
 import type { GameSocketHandlers } from '../types/game.types';
 import { FakeSocket, GAME_ID, OK_ACK, TOKEN, failAck, gameState } from '../test/fakeSocket';
 
@@ -14,6 +15,7 @@ describe('connectGameSocket', () => {
     handlers = {
       onJoined: vi.fn(),
       onState: vi.fn(),
+      onVoteMine: vi.fn(),
       onDisconnect: vi.fn(),
       onRejoinFailed: vi.fn(),
     };
@@ -177,5 +179,124 @@ describe('connectGameSocket', () => {
 
     expect(socket.closed).toBe(true);
     expect(handlers.onState).not.toHaveBeenCalled();
+  });
+
+  describe('vote:mine', () => {
+    it.each([5, 0, '?', 'coffee', null])('passes the card %j to the handler', (card) => {
+      connect();
+
+      socket.serverEmit('vote:mine', { card });
+
+      expect(handlers.onVoteMine).toHaveBeenCalledExactlyOnceWith(card);
+    });
+
+    it.each([{ card: 4 }, { card: '5' }, { card: 5, extra: 1 }, {}, null, 'coffee'])(
+      'ignores the invalid payload %j',
+      (payload) => {
+        connect();
+
+        socket.serverEmit('vote:mine', payload);
+
+        expect(handlers.onVoteMine).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects an extended game:state that carries a vote value', () => {
+      connect();
+
+      socket.serverEmit('game:state', {
+        ...gameState(),
+        voters: [{ id: 'v1', name: 'Anna', connected: true, hasVoted: true, card: 5 }],
+      });
+
+      expect(handlers.onState).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('story:set and vote:cast', () => {
+    const emitted = (event: string) => socket.emitted.filter((entry) => entry.event === event);
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('emits story:set with the story and resolves ok on the ack', async () => {
+      const client = connect();
+
+      const result = client.setStory({ title: 'Login', url: 'https://example.com/1' });
+      emitted('story:set')[0]?.ack?.(OK_ACK);
+
+      expect(emitted('story:set')[0]?.payload).toEqual({
+        title: 'Login',
+        url: 'https://example.com/1',
+      });
+      expect(await result).toEqual({ ok: true });
+    });
+
+    it.each<Card | null>([5, 'coffee', null])('emits vote:cast with card %j', async (card) => {
+      const client = connect();
+
+      const result = client.castVote(card);
+      emitted('vote:cast')[0]?.ack?.(OK_ACK);
+
+      expect(emitted('vote:cast')[0]?.payload).toEqual({ card });
+      expect(await result).toEqual({ ok: true });
+    });
+
+    it('resolves the failure code of a rejected request', async () => {
+      const client = connect();
+
+      const result = client.castVote(5);
+      emitted('vote:cast')[0]?.ack?.(failAck('WRONG_PHASE'));
+
+      expect(await result).toEqual({ ok: false, code: 'WRONG_PHASE' });
+    });
+
+    it('treats a malformed ack as an unknown failure', async () => {
+      const client = connect();
+
+      const result = client.setStory({ title: 'Login' });
+      emitted('story:set')[0]?.ack?.({ nope: true });
+
+      expect(await result).toEqual({ ok: false, code: 'UNKNOWN' });
+    });
+
+    it('resolves a TIMEOUT failure after 5 seconds without an ack', async () => {
+      vi.useFakeTimers();
+      const client = connect();
+      const settled = vi.fn();
+      void client.castVote(5).then(settled);
+
+      await vi.advanceTimersByTimeAsync(ACK_TIMEOUT_MS - 1);
+      expect(settled).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(settled).toHaveBeenCalledExactlyOnceWith({ ok: false, code: 'TIMEOUT' });
+    });
+
+    it('ignores an ack that arrives after the timeout', async () => {
+      vi.useFakeTimers();
+      const client = connect();
+      const settled = vi.fn();
+      void client.setStory({ title: 'Login' }).then(settled);
+      await vi.advanceTimersByTimeAsync(ACK_TIMEOUT_MS);
+
+      emitted('story:set')[0]?.ack?.(OK_ACK);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(settled).toHaveBeenCalledExactlyOnceWith({ ok: false, code: 'TIMEOUT' });
+    });
+
+    it('does not time out after an ack', async () => {
+      vi.useFakeTimers();
+      const client = connect();
+      const settled = vi.fn();
+      void client.castVote(null).then(settled);
+      emitted('vote:cast')[0]?.ack?.(OK_ACK);
+
+      await vi.advanceTimersByTimeAsync(ACK_TIMEOUT_MS * 2);
+
+      expect(settled).toHaveBeenCalledExactlyOnceWith({ ok: true });
+    });
   });
 });

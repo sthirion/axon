@@ -1,5 +1,13 @@
-import { ERROR_MESSAGES, GAME_ID_PATTERN, type PublicGameState } from '@axon/shared';
+import {
+  ERROR_MESSAGES,
+  GAME_ID_PATTERN,
+  type Card,
+  type PlayerRole,
+  type PublicGameState,
+  type StorySetPayload,
+} from '@axon/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { GENERIC_ERROR_MESSAGE } from '../lib/actionErrors';
 import { gameExists } from '../services/gameApiService';
 import { connectGameSocket } from '../services/gameSocketService';
 import {
@@ -8,10 +16,13 @@ import {
   writePlayerToken,
 } from '../services/playerTokenStorage';
 import { useGameStore } from '../store/gameStore';
-import type { GameSocketClient, JoinResult } from '../types/game.types';
+import type { ActionResult, GameSocketClient, JoinResult } from '../types/game.types';
+import { useVoteAnnouncement } from './useVoteAnnouncement';
 
 export const LOAD_ERROR_MESSAGE = 'Could not load the game. Try again.';
-export const GENERIC_ERROR_MESSAGE = 'Something went wrong. Try again.';
+export { GENERIC_ERROR_MESSAGE };
+
+const NOT_CONNECTED: ActionResult = { ok: false, code: 'NOT_CONNECTED' };
 
 export type GamePhase =
   'checking' | 'joining' | 'prompt' | 'joined' | 'not-found' | 'load-error' | 'join-error';
@@ -25,11 +36,16 @@ export interface GameSession {
   readonly phase: GamePhase;
   readonly game: PublicGameState | null;
   readonly reconnecting: boolean;
+  readonly role: PlayerRole | null;
+  readonly myCard: Card | null;
+  readonly announcement: string;
   readonly submitting: boolean;
   readonly promptError: JoinPromptError | null;
   readonly errorMessage: string;
   readonly submitName: (name: string) => void;
   readonly retry: () => void;
+  readonly setStory: (story: StorySetPayload) => Promise<ActionResult>;
+  readonly castVote: (card: Card | null) => Promise<ActionResult>;
 }
 
 export function useGameSession(gameId: string): GameSession {
@@ -41,6 +57,9 @@ export function useGameSession(gameId: string): GameSession {
   const clientRef = useRef<GameSocketClient | null>(null);
   const game = useGameStore((state) => state.game);
   const reconnecting = useGameStore((state) => state.reconnecting);
+  const role = useGameStore((state) => state.role);
+  const myCard = useGameStore((state) => state.myCard);
+  const announcement = useVoteAnnouncement();
 
   const closeClient = useCallback(() => {
     clientRef.current?.close();
@@ -83,8 +102,10 @@ export function useGameSession(gameId: string): GameSession {
     clientRef.current ??= connectGameSocket({
       onJoined: (joined) => {
         if (joined.token) writePlayerToken(gameId, joined.token);
+        useGameStore.getState().applyJoined(joined);
       },
       onState: (state) => useGameStore.getState().applyState(state),
+      onVoteMine: (card) => useGameStore.getState().applyVoteMine(card),
       onDisconnect: () => useGameStore.getState().setReconnecting(true),
       onRejoinFailed: (code) => handleFailure(code, false),
     });
@@ -151,14 +172,30 @@ export function useGameSession(gameId: string): GameSession {
     setAttempt((value) => value + 1);
   }, []);
 
+  const setStory = useCallback(
+    (story: StorySetPayload) =>
+      clientRef.current?.setStory(story) ?? Promise.resolve(NOT_CONNECTED),
+    [],
+  );
+
+  const castVote = useCallback(
+    (card: Card | null) => clientRef.current?.castVote(card) ?? Promise.resolve(NOT_CONNECTED),
+    [],
+  );
+
   return {
     phase,
     game,
     reconnecting,
+    role,
+    myCard,
+    announcement,
     submitting,
     promptError,
     errorMessage: phase === 'load-error' ? LOAD_ERROR_MESSAGE : GENERIC_ERROR_MESSAGE,
     submitName,
     retry,
+    setStory,
+    castVote,
   };
 }

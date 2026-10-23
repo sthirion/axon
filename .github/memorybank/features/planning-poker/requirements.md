@@ -86,7 +86,9 @@ others.
 1. WHILE votes are hidden THE SYSTEM SHALL let a voter pick, change or withdraw their vote.
 1. WHILE votes are hidden THE SYSTEM SHALL show every player who has voted, but not the
    value.
-1. THE SYSTEM SHALL NOT send any vote value to any client before the reveal.
+1. THE SYSTEM SHALL NOT send any vote value to any client before the reveal, except that a
+   voter is sent their own current vote (and only to their own connections) so that their
+   deck shows it after a reload or reconnect (Requirement 2.5).
 1. IF the facilitator tries to vote THEN THE SYSTEM SHALL reject it.
 1. IF a vote is sent after the reveal THEN THE SYSTEM SHALL reject it.
 1. IF a vote value is not in the deck THEN THE SYSTEM SHALL reject it.

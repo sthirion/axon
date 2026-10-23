@@ -1,0 +1,124 @@
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { describeVoteChanges, useVoteAnnouncement } from './useVoteAnnouncement';
+import { useGameStore } from '../store/gameStore';
+import { gameState } from '../test/fakeSocket';
+
+const ANNA = { id: 'p1', name: 'Anna', connected: true, hasVoted: false };
+const BOB = { id: 'p2', name: 'Bob', connected: true, hasVoted: false };
+const STORY = { title: 'Login page' };
+
+const voting = (voters: object[]) => gameState({ phase: 'voting', story: STORY, voters });
+
+describe('describeVoteChanges', () => {
+  it('announces a voter who has voted', () => {
+    expect(describeVoteChanges(voting([ANNA]), voting([{ ...ANNA, hasVoted: true }]), null)).toBe(
+      'Anna has voted',
+    );
+  });
+
+  it('announces a voter who withdrew', () => {
+    expect(describeVoteChanges(voting([{ ...ANNA, hasVoted: true }]), voting([ANNA]), null)).toBe(
+      'Anna withdrew their vote',
+    );
+  });
+
+  it('announces that voting is open with the story title', () => {
+    expect(describeVoteChanges(gameState({ voters: [ANNA] }), voting([ANNA]), null)).toBe(
+      'Voting is open: Login page',
+    );
+  });
+
+  it('says nothing for a story edit while voting', () => {
+    const edited = gameState({ phase: 'voting', story: { title: 'Other' }, voters: [ANNA] });
+
+    expect(describeVoteChanges(voting([ANNA]), edited, null)).toBe('');
+  });
+
+  it('says nothing for a connection-only change', () => {
+    expect(describeVoteChanges(voting([ANNA]), voting([{ ...ANNA, connected: false }]), null)).toBe(
+      '',
+    );
+  });
+
+  it('does not announce the own vote', () => {
+    expect(describeVoteChanges(voting([ANNA]), voting([{ ...ANNA, hasVoted: true }]), 'p1')).toBe(
+      '',
+    );
+  });
+
+  it('ignores voters that were not in the previous state', () => {
+    expect(
+      describeVoteChanges(voting([ANNA]), voting([ANNA, { ...BOB, hasVoted: true }]), null),
+    ).toBe('');
+  });
+});
+
+describe('useVoteAnnouncement', () => {
+  const apply = (state: ReturnType<typeof gameState>) =>
+    act(() => useGameStore.getState().applyState(state));
+
+  beforeEach(() => {
+    useGameStore.getState().reset();
+  });
+
+  it('is silent for the first snapshot, even when someone already voted', () => {
+    const { result } = renderHook(() => useVoteAnnouncement());
+
+    apply(voting([{ ...ANNA, hasVoted: true }]));
+
+    expect(result.current).toBe('');
+  });
+
+  it('announces another voter voting and withdrawing', () => {
+    const { result } = renderHook(() => useVoteAnnouncement());
+    apply(voting([ANNA, BOB]));
+
+    apply(voting([ANNA, { ...BOB, hasVoted: true }]));
+    expect(result.current).toBe('Bob has voted');
+
+    apply(voting([ANNA, BOB]));
+    expect(result.current).toBe('Bob withdrew their vote');
+  });
+
+  it('announces when voting opens', () => {
+    const { result } = renderHook(() => useVoteAnnouncement());
+    apply(gameState({ voters: [ANNA] }));
+
+    apply(voting([ANNA]));
+
+    expect(result.current).toBe('Voting is open: Login page');
+  });
+
+  it('clears the announcement on a connection-only change', () => {
+    const { result } = renderHook(() => useVoteAnnouncement());
+    apply(voting([ANNA]));
+    apply(voting([{ ...ANNA, hasVoted: true }]));
+
+    apply(voting([{ ...ANNA, hasVoted: true, connected: false }]));
+
+    expect(result.current).toBe('');
+  });
+
+  it('does not announce the own vote', () => {
+    const { result } = renderHook(() => useVoteAnnouncement());
+    act(() => useGameStore.getState().applyJoined({ playerId: 'p1', role: 'voter' }));
+    apply(voting([ANNA]));
+
+    apply(voting([{ ...ANNA, hasVoted: true }]));
+
+    expect(result.current).toBe('');
+  });
+
+  it('treats the first state after a reconnect as a baseline', () => {
+    const { result } = renderHook(() => useVoteAnnouncement());
+    apply(voting([ANNA, BOB]));
+    act(() => useGameStore.getState().setReconnecting(true));
+
+    apply(voting([ANNA, { ...BOB, hasVoted: true }]));
+    expect(result.current).toBe('');
+
+    apply(voting([ANNA, BOB]));
+    expect(result.current).toBe('Bob withdrew their vote');
+  });
+});

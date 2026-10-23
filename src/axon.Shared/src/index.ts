@@ -10,6 +10,7 @@ export {
   type ErrorBody,
   type ErrorCode,
 } from './errors.js';
+export { cardSchema, DECK, type Card } from './deck.js';
 export {
   createGameBodySchema,
   createGameResponseSchema,
@@ -19,6 +20,7 @@ export {
   gameIdSchema,
   gameJoinedSchema,
   gameJoinPayloadSchema,
+  gamePhaseSchema,
   PLAYER_NAME_MAX_LENGTH,
   PLAYER_TOKEN_PATTERN,
   playerNameKey,
@@ -26,11 +28,25 @@ export {
   playerRoleSchema,
   playerTokenSchema,
   publicGameStateSchema,
+  voteCastEnvelopeSchema,
+  voteCastPayloadSchema,
+  voteMineSchema,
   type CreateGameBody,
   type CreateGameResponse,
   type GameExistsResponse,
   type GameJoined,
   type GameJoinPayload,
+  type GamePhase,
   type PlayerRole,
   type PublicGameState,
+  type VoteCastPayload,
+  type VoteMine,
 } from './game.js';
+export {
+  STORY_TITLE_MAX_LENGTH,
+  STORY_URL_MAX_LENGTH,
+  storySchema,
+  storySetEnvelopeSchema,
+  type Story,
+  type StorySetPayload,
+} from './story.js';

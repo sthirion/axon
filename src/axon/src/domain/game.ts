@@ -1,5 +1,14 @@
 import { timingSafeEqual } from 'node:crypto';
-import { playerNameKey, type PlayerRole, type PublicGameState } from '@axon/shared';
+import {
+  cardSchema,
+  playerNameKey,
+  storySchema,
+  type Card,
+  type GamePhase,
+  type PlayerRole,
+  type PublicGameState,
+  type Story,
+} from '@axon/shared';
 
 export interface Player {
   readonly id: string;
@@ -14,6 +23,10 @@ export interface Game {
   readonly facilitatorId: string;
   // Insertion order is join order.
   readonly players: Map<string, Player>;
+  phase: GamePhase;
+  story?: Story;
+  // Keyed by player id, not socket id, so a vote survives going offline and rejoining.
+  readonly votes: Map<string, Card>;
 }
 
 export interface NewPlayer {
@@ -26,13 +39,26 @@ export type AddVoterResult =
   | { readonly ok: true; readonly player: Player }
   | { readonly ok: false; readonly code: 'NAME_TAKEN' };
 
+export type ActionResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly code: 'FORBIDDEN' | 'WRONG_PHASE' | 'INVALID_STORY' | 'INVALID_CARD';
+    };
+
 function newPlayer(input: NewPlayer, role: PlayerRole): Player {
   return { ...input, role, socketIds: new Set() };
 }
 
 export function createGame(id: string, facilitator: NewPlayer): Game {
   const player = newPlayer(facilitator, 'facilitator');
-  return { id, facilitatorId: player.id, players: new Map([[player.id, player]]) };
+  return {
+    id,
+    facilitatorId: player.id,
+    players: new Map([[player.id, player]]),
+    phase: 'waiting',
+    votes: new Map(),
+  };
 }
 
 export function isNameTaken(game: Game, name: string): boolean {
@@ -78,6 +104,45 @@ export function disconnectSocket(player: Player, socketId: string): boolean {
   return !isConnected(player);
 }
 
+// Check order: role, phase, value. `input` is untrusted and only validated once the first two pass.
+export function setStory(game: Game, playerId: string, input: unknown): ActionResult {
+  if (game.players.get(playerId)?.role !== 'facilitator') {
+    return { ok: false, code: 'FORBIDDEN' };
+  }
+  const story = storySchema.safeParse(input);
+  if (!story.success) {
+    return { ok: false, code: 'INVALID_STORY' };
+  }
+  game.story = story.data;
+  game.phase = 'voting';
+  return { ok: true };
+}
+
+// `null` withdraws the vote; casting the same card again or withdrawing without a vote succeeds.
+export function castVote(game: Game, playerId: string, input: unknown): ActionResult {
+  if (game.players.get(playerId)?.role !== 'voter') {
+    return { ok: false, code: 'FORBIDDEN' };
+  }
+  if (game.phase !== 'voting') {
+    return { ok: false, code: 'WRONG_PHASE' };
+  }
+  if (input === null) {
+    game.votes.delete(playerId);
+    return { ok: true };
+  }
+  const card = cardSchema.safeParse(input);
+  if (!card.success) {
+    return { ok: false, code: 'INVALID_CARD' };
+  }
+  game.votes.set(playerId, card.data);
+  return { ok: true };
+}
+
+// Only the owner of the vote may ever be sent this.
+export function getVote(game: Game, playerId: string): Card | null {
+  return game.votes.get(playerId) ?? null;
+}
+
 export function toPublicState(game: Game): PublicGameState {
   const facilitator = game.players.get(game.facilitatorId);
   if (!facilitator) {
@@ -85,9 +150,16 @@ export function toPublicState(game: Game): PublicGameState {
   }
   return {
     gameId: game.id,
+    phase: game.phase,
+    story: game.story ? { ...game.story } : null,
     facilitator: { name: facilitator.name, connected: isConnected(facilitator) },
     voters: [...game.players.values()]
       .filter((player) => player.role === 'voter')
-      .map((player) => ({ id: player.id, name: player.name, connected: isConnected(player) })),
+      .map((player) => ({
+        id: player.id,
+        name: player.name,
+        connected: isConnected(player),
+        hasVoted: game.votes.has(player.id),
+      })),
   };
 }

@@ -1,16 +1,12 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 import { cn } from '../../lib/utils';
 
-export function Button({
-  className,
-  type = 'button',
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
+export function Button({ className, type = 'button', ...props }: ComponentProps<'button'>) {
   return (
     <button
       type={type}
       className={cn(
-        'rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-60',
+        'min-h-11 min-w-11 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-60',
         className,
       )}
       {...props}

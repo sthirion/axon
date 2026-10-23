@@ -35,14 +35,18 @@ export class FakeSocket {
     this.handlers.get(event)?.(...args);
   }
 
-  // Sends game:join and returns the ack the server answered with (undefined if none).
-  sendJoin(payload: unknown): unknown {
+  // Sends an event and returns the ack the server answered with (undefined if none).
+  send(event: string, payload: unknown): unknown {
     let result: unknown;
-    this.trigger('game:join', payload, (ack: unknown) => {
+    this.trigger(event, payload, (ack: unknown) => {
       result = ack;
       this.timeline.push('ack');
     });
     return result;
+  }
+
+  sendJoin(payload: unknown): unknown {
+    return this.send('game:join', payload);
   }
 }
 

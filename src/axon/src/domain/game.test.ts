@@ -190,15 +190,21 @@ describe('toPublicState', () => {
     expect(toPublicState(aGame()).voters).toEqual([]);
   });
 
-  it('contains only gameId, facilitator and voters', () => {
+  it('contains only gameId, phase, story, facilitator and voters', () => {
     const game = aGame();
     addVoter(game, aNewPlayer({ id: 'v1', name: 'Anna' }));
 
     const state = toPublicState(game);
 
-    expect(Object.keys(state).sort()).toEqual(['facilitator', 'gameId', 'voters']);
+    expect(Object.keys(state).sort()).toEqual([
+      'facilitator',
+      'gameId',
+      'phase',
+      'story',
+      'voters',
+    ]);
     expect(Object.keys(state.facilitator).sort()).toEqual(['connected', 'name']);
-    expect(Object.keys(state.voters[0]!).sort()).toEqual(['connected', 'id', 'name']);
+    expect(Object.keys(state.voters[0]!).sort()).toEqual(['connected', 'hasVoted', 'id', 'name']);
   });
 
   it('does not expose token hashes, socket ids or the facilitator id', () => {

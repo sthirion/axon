@@ -1,3 +1,4 @@
+import type { PublicGameState } from '@axon/shared';
 import type { Socket } from 'socket.io-client';
 
 type Listener = (...args: unknown[]) => void;
@@ -60,11 +61,18 @@ export function failAck(code: string) {
   return { ok: false, code, message: 'ignored' } as const;
 }
 
-export function gameState(overrides: Record<string, unknown> = {}) {
-  return {
+export function gameState(overrides: Record<string, unknown> = {}): PublicGameState {
+  const state = {
     gameId: GAME_ID,
+    phase: 'waiting',
+    story: null,
     facilitator: { name: 'Sven', connected: true },
-    voters: [],
+    voters: [] as object[],
     ...overrides,
   };
+  // Voters default to not voted so existing fixtures only list what they care about.
+  return {
+    ...state,
+    voters: state.voters.map((voter) => ({ hasVoted: false, ...voter })),
+  } as PublicGameState;
 }

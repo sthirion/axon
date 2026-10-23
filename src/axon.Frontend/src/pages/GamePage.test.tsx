@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateGamePage } from './CreateGamePage';
@@ -713,6 +714,161 @@ describe('GamePage', () => {
 
       expect(socket.closed).toBe(true);
       expect(useGameStore.getState().game).toBeNull();
+    });
+  });
+
+  describe('story and voting', () => {
+    const ANNA = { id: 'p1', name: 'Anna', connected: true, hasVoted: false };
+    const BOB = { id: 'p2', name: 'Bob', connected: true, hasVoted: false };
+    const VOTING = { phase: 'voting', story: { title: 'Login page' } };
+
+    async function joinAs(role: 'facilitator' | 'voter', state = gameState()) {
+      window.localStorage.setItem(TOKEN_KEY, TOKEN);
+      exists(true);
+      renderGame();
+      await waitForJoin();
+      await serverAck(OK_ACK);
+      await serverEmit('game:joined', { playerId: 'p1', role });
+      if (role === 'voter') await serverEmit('vote:mine', { card: null });
+      await serverEmit('game:state', state);
+      await screen.findByRole('region', { name: 'Voters' });
+    }
+
+    function lastRequest(event: string) {
+      return socket.emitted.filter((entry) => entry.event === event).at(-1);
+    }
+
+    it('shows the facilitator the story form, sends story:set and lets the server open voting', async () => {
+      const user = userEvent.setup();
+      await joinAs('facilitator');
+      expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+
+      await user.type(screen.getByLabelText('Title'), 'Login page');
+      await user.click(screen.getByRole('button', { name: 'Start voting' }));
+
+      expect(lastRequest('story:set')?.payload).toEqual({ title: 'Login page' });
+      expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
+      await act(async () => lastRequest('story:set')?.ack?.(OK_ACK));
+      await serverEmit('game:state', gameState({ ...VOTING, voters: [ANNA] }));
+
+      expect(screen.getByText('Login page')).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Edit story' })).toBeEnabled();
+    });
+
+    it('shows a voter the waiting message with a disabled deck, then the story', async () => {
+      await joinAs('voter', gameState({ voters: [ANNA] }));
+
+      expect(screen.getByText('Waiting for the facilitator to set the story.')).toBeVisible();
+      expect(
+        screen.getAllByRole('radio').every((card) => (card as HTMLInputElement).disabled),
+      ).toBe(true);
+
+      await serverEmit('game:state', gameState({ ...VOTING, voters: [ANNA] }));
+
+      expect(screen.getByText('Login page')).toBeVisible();
+      expect(screen.getByRole('radio', { name: '5' })).toBeEnabled();
+    });
+
+    it('selects a card only after the server confirms it with vote:mine', async () => {
+      const user = userEvent.setup();
+      await joinAs('voter', gameState({ ...VOTING, voters: [ANNA] }));
+
+      await user.click(screen.getByRole('radio', { name: '5' }));
+
+      expect(lastRequest('vote:cast')?.payload).toEqual({ card: 5 });
+      expect(screen.getByRole('radio', { name: '5' })).not.toBeChecked();
+      await act(async () => lastRequest('vote:cast')?.ack?.(OK_ACK));
+      await serverEmit('vote:mine', { card: 5 });
+      await serverEmit(
+        'game:state',
+        gameState({ ...VOTING, voters: [{ ...ANNA, hasVoted: true }] }),
+      );
+
+      expect(screen.getByRole('radio', { name: '5' })).toBeChecked();
+      expect(screen.getByText('Voted', { exact: false })).toBeVisible();
+    });
+
+    it('keeps the previous card and shows the error when the vote is rejected', async () => {
+      const user = userEvent.setup();
+      await joinAs('voter', gameState({ ...VOTING, voters: [ANNA] }));
+      await serverEmit('vote:mine', { card: 3 });
+
+      await user.click(screen.getByRole('radio', { name: '8' }));
+      await act(async () => lastRequest('vote:cast')?.ack?.(failAck('WRONG_PHASE')));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'That action is not available right now.',
+      );
+      expect(screen.getByRole('radio', { name: '3' })).toBeChecked();
+    });
+
+    it('re-enables the deck with a generic message when no ack arrives within 5 seconds', async () => {
+      await joinAs('voter', gameState({ ...VOTING, voters: [ANNA] }));
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        fireEvent.click(screen.getByRole('radio', { name: '8' }));
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+
+        expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
+        expect(screen.getByRole('radio', { name: '8' })).toBeEnabled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('restores the checked card after a reconnect from the vote:mine that follows the rejoin', async () => {
+      await joinAs('voter', gameState({ ...VOTING, voters: [ANNA] }));
+      await serverEmit('vote:mine', { card: 8 });
+      await serverEmit('disconnect', 'transport close');
+      await serverEmit('connect');
+      await serverAck(OK_ACK);
+
+      await serverEmit('game:joined', { playerId: 'p1', role: 'voter' });
+      await serverEmit('vote:mine', { card: 13 });
+      await serverEmit('game:state', gameState({ ...VOTING, voters: [ANNA] }));
+
+      expect(screen.getByRole('radio', { name: '13' })).toBeChecked();
+    });
+
+    it('ignores a vote:mine that fails validation', async () => {
+      await joinAs('voter', gameState({ ...VOTING, voters: [ANNA] }));
+      await serverEmit('vote:mine', { card: 8 });
+
+      await serverEmit('vote:mine', { card: 4 });
+
+      expect(screen.getByRole('radio', { name: '8' })).toBeChecked();
+    });
+
+    it('announces another voter voting but not the first snapshot or connection changes', async () => {
+      await joinAs('voter', gameState({ ...VOTING, voters: [ANNA, { ...BOB, hasVoted: true }] }));
+      const region = () => document.querySelector('[aria-atomic="true"]');
+      expect(region()).toHaveTextContent('');
+
+      await serverEmit('game:state', gameState({ ...VOTING, voters: [ANNA, BOB] }));
+      expect(region()).toHaveTextContent('Bob withdrew their vote');
+
+      await serverEmit(
+        'game:state',
+        gameState({ ...VOTING, voters: [ANNA, { ...BOB, connected: false }] }),
+      );
+      expect(region()).toHaveTextContent('');
+    });
+
+    it('does not announce a vote change that is part of the snapshot after a rejoin', async () => {
+      await joinAs('voter', gameState({ ...VOTING, voters: [ANNA, BOB] }));
+      await serverEmit('disconnect', 'transport close');
+      await serverEmit('connect');
+      await serverAck(OK_ACK);
+
+      await serverEmit(
+        'game:state',
+        gameState({ ...VOTING, voters: [ANNA, { ...BOB, hasVoted: true }] }),
+      );
+
+      expect(document.querySelector('[aria-atomic="true"]')).toHaveTextContent('');
     });
   });
 });

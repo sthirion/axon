@@ -3,12 +3,20 @@ import {
   GAME_EVENTS,
   gameJoinedSchema,
   publicGameStateSchema,
+  voteMineSchema,
   type GameJoinPayload,
 } from '@axon/shared';
 import { io, type Socket } from 'socket.io-client';
-import type { GameSocketClient, GameSocketHandlers, JoinResult } from '../types/game.types';
+import type {
+  ActionResult,
+  GameSocketClient,
+  GameSocketHandlers,
+  JoinResult,
+} from '../types/game.types';
 
+export const ACK_TIMEOUT_MS = 5000;
 const UNKNOWN_ACK_CODE = 'UNKNOWN';
+const TIMEOUT_ACK_CODE = 'TIMEOUT';
 
 // Same-origin connection; the token only ever travels in the game:join payload, never in auth or query.
 export function connectGameSocket(
@@ -30,6 +38,25 @@ export function connectGameSocket(
     });
   }
 
+  // Resolves with the ack, or TIMEOUT if the server stays silent.
+  function request(event: string, payload: unknown): Promise<ActionResult> {
+    return new Promise((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        settled = true;
+        resolve({ ok: false, code: TIMEOUT_ACK_CODE });
+      }, ACK_TIMEOUT_MS);
+      socket.emit(event, payload, (ack: unknown) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        const parsed = ackSchema.safeParse(ack);
+        if (!parsed.success) resolve({ ok: false, code: UNKNOWN_ACK_CODE });
+        else resolve(parsed.data.ok ? { ok: true } : { ok: false, code: parsed.data.code });
+      });
+    });
+  }
+
   socket.on(GAME_EVENTS.joined, (payload: unknown) => {
     const parsed = gameJoinedSchema.safeParse(payload);
     if (!parsed.success) return;
@@ -40,6 +67,11 @@ export function connectGameSocket(
   socket.on(GAME_EVENTS.state, (payload: unknown) => {
     const parsed = publicGameStateSchema.safeParse(payload);
     if (parsed.success) handlers.onState(parsed.data);
+  });
+
+  socket.on(GAME_EVENTS.voteMine, (payload: unknown) => {
+    const parsed = voteMineSchema.safeParse(payload);
+    if (parsed.success) handlers.onVoteMine(parsed.data.card);
   });
 
   socket.on('disconnect', () => {
@@ -63,6 +95,8 @@ export function connectGameSocket(
       if (result.ok && payload.token) seat = { gameId: payload.gameId, token: payload.token };
       return result;
     },
+    setStory: (payload) => request(GAME_EVENTS.storySet, payload),
+    castVote: (card) => request(GAME_EVENTS.voteCast, { card }),
     close() {
       socket.removeAllListeners();
       socket.disconnect();
