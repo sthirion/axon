@@ -418,6 +418,14 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
           (el) =>
             !(el as HTMLButtonElement).disabled &&
             el.getAttribute('tabindex') !== '-1' &&
+            // In a native radio group only the selected radio is a tab stop; arrows reach the rest.
+            !(
+              el instanceof HTMLInputElement &&
+              el.type === 'radio' &&
+              !el.checked &&
+              el.name !== '' &&
+              document.querySelector(`input[type=radio][name="${el.name}"]:checked`) !== null
+            ) &&
             (visible(el) || (el instanceof HTMLInputElement && el.type === 'radio')),
         );
         stops.forEach((el, i) => el.setAttribute('data-stop', String(i)));
@@ -436,7 +444,9 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
           if (!el || el === document.body || !el.hasAttribute('data-stop')) return null;
           // A radio is visually hidden inside its label; its card is the sibling that draws the ring.
           const target =
-            el instanceof HTMLInputElement && el.type === 'radio'
+            el instanceof HTMLInputElement &&
+            el.type === 'radio' &&
+            getComputedStyle(el).opacity === '0'
               ? (el.nextElementSibling as HTMLElement)
               : el;
           const style = getComputedStyle(target);

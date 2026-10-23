@@ -25,7 +25,6 @@ describe('cardSchema', () => {
 
   it.each([
     '5',
-    4,
     5.5,
     -1,
     '',
@@ -162,7 +161,7 @@ describe('voteCastPayloadSchema and voteMineSchema', () => {
     expect(voteMineSchema.safeParse({ card }).success).toBe(true);
   });
 
-  it.each(['5', 4, undefined])('reject card %j', (card) => {
+  it.each(['5', 11, 'xl', undefined])('reject card %j', (card) => {
     expect(voteCastPayloadSchema.safeParse({ card }).success).toBe(false);
     expect(voteMineSchema.safeParse({ card }).success).toBe(false);
   });

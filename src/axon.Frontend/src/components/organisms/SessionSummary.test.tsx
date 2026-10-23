@@ -1,3 +1,4 @@
+import type { HistoryEntry } from '@axon/shared';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,9 +9,9 @@ import {
   SessionSummary,
 } from './SessionSummary';
 
-const HISTORY = [
+const HISTORY: HistoryEntry[] = [
   { title: 'Login page', url: 'https://e.com/1', estimate: 5 },
-  { title: '<img src=x onerror=alert(1)>', estimate: 'skipped' as const },
+  { title: '<img src=x onerror=alert(1)>', estimate: 'skipped' },
 ];
 
 function stubClipboard(writeText: (text: string) => Promise<void>) {
@@ -87,5 +88,44 @@ describe('SessionSummary', () => {
     rerender(<SessionSummary history={[...HISTORY, { title: 'Next', estimate: 3 }]} total={8} />);
 
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+});
+
+describe('SessionSummary for t-shirt sizes', () => {
+  const SIZES: HistoryEntry[] = [
+    { title: 'Login page', estimate: 'M' },
+    { title: 'Checkout', estimate: 'skipped' },
+  ];
+
+  it('shows the sizes and no total', () => {
+    render(<SessionSummary history={SIZES} total={null} />);
+
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('Login pageM');
+    expect(items[1]).toHaveTextContent('Checkoutskipped');
+    expect(screen.queryByText(/Total/)).toBeNull();
+  });
+
+  it('shows no total and the empty message for an empty t-shirt history', () => {
+    render(<SessionSummary history={[]} total={null} />);
+
+    expect(screen.getByText(EMPTY_SUMMARY_MESSAGE)).toBeVisible();
+    expect(screen.queryByText(/Total/)).toBeNull();
+  });
+
+  it('copies the sizes without a total line', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    render(<SessionSummary history={SIZES} total={null} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Copy summary' }));
+
+    expect(writeText).toHaveBeenCalledWith('1. Login page - M\n2. Checkout - skipped');
+  });
+
+  it('still shows a total of 0 for a numeric session', () => {
+    render(<SessionSummary history={[]} total={0} />);
+
+    expect(screen.getByText('Total: 0')).toBeVisible();
   });
 });

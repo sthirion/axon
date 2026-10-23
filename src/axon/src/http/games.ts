@@ -5,6 +5,7 @@ import {
   errorBody,
   gameExistsResponseSchema,
   gameIdSchema,
+  scaleSchema,
 } from '@axon/shared';
 import { logEvent } from '../logging.js';
 import type { GameStore } from '../store/gameStore.js';
@@ -32,7 +33,13 @@ export function createGameHandler(store: GameStore): RequestHandler {
       res.status(400).json(errorBody('INVALID_NAME'));
       return;
     }
-    const created = createGameResponseSchema.parse(store.createGame(parsed.data.name));
+    // A missing scale means Fibonacci; any other value must be one of the three exact strings.
+    const scale = 'scale' in body ? scaleSchema.safeParse(body.scale) : undefined;
+    if (scale && !scale.success) {
+      res.status(400).json(errorBody('INVALID_SCALE'));
+      return;
+    }
+    const created = createGameResponseSchema.parse(store.createGame(parsed.data.name, scale?.data));
     logEvent('game.created', { gameId: created.gameId });
     res.status(201).json(created);
   };

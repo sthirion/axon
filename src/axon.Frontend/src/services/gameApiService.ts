@@ -1,13 +1,21 @@
-import { createGameResponseSchema, gameExistsResponseSchema } from '@axon/shared';
+import {
+  createGameResponseSchema,
+  DEFAULT_SCALE,
+  gameExistsResponseSchema,
+  type Scale,
+} from '@axon/shared';
 import type { CreateGameResult } from '../types/game.types';
 
-export async function createGame(name: string): Promise<CreateGameResult> {
+export async function createGame(
+  name: string,
+  scale: Scale = DEFAULT_SCALE,
+): Promise<CreateGameResult> {
   let response: Response;
   try {
     response = await fetch('/api/games', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, scale }),
     });
   } catch {
     return { ok: false, reason: 'unavailable' };

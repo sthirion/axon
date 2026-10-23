@@ -70,7 +70,7 @@ describe('/api/games', () => {
 
       // Then
       expect(res.status).toBe(201);
-      expect(createGame).toHaveBeenCalledExactlyOnceWith('Sven');
+      expect(createGame).toHaveBeenCalledExactlyOnceWith('Sven', undefined);
     });
 
     it('with a 30 code point name made of emoji returns 201', async () => {
@@ -370,5 +370,80 @@ describe('/api/games', () => {
       expect(after.status).toBe(200);
       expect(after.body).toEqual({ exists: false });
     });
+  });
+});
+
+describe('POST /api/games with a voting scale', () => {
+  let store: GameStore;
+  let app: ReturnType<typeof anApp>;
+
+  beforeEach(() => {
+    store = new GameStore();
+    app = anApp(store);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  it('creates a Fibonacci session when no scale is sent', async () => {
+    const res = await request(app).post('/api/games').send({ name: 'Sven' });
+
+    expect(res.status).toBe(201);
+    expect(store.get(res.body.gameId)?.scale).toBe('fibonacci');
+  });
+
+  it.each(['fibonacci', 'incremental', 'tshirt'])('creates a %s session', async (scale) => {
+    const res = await request(app).post('/api/games').send({ name: 'Sven', scale });
+
+    expect(res.status).toBe(201);
+    expect(Object.keys(res.body).sort()).toEqual(['gameId', 'token']);
+    expect(store.get(res.body.gameId)?.scale).toBe(scale);
+  });
+
+  it.each([
+    ['an unknown scale', 'huge'],
+    ['different case', 'Fibonacci'],
+    ['a hyphenated name', 't-shirt'],
+    ['an empty string', ''],
+    ['null', null],
+    ['a number', 5],
+    ['a boolean', true],
+    ['an object', {}],
+    ['an array', ['tshirt']],
+  ])('rejects %s with 400 INVALID_SCALE and creates nothing', async (_label, scale) => {
+    const before = store.get('x'.repeat(22));
+
+    const res = await request(app).post('/api/games').send({ name: 'Sven', scale });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(errorBody('INVALID_SCALE' as ErrorCode));
+    expect(res.body.message).toBe('Choose Fibonacci, incremental or t-shirt sizes.');
+    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(before).toBeUndefined();
+  });
+
+  it('reports a bad name before a bad scale', async () => {
+    const res = await request(app).post('/api/games').send({ name: '', scale: 'huge' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_NAME');
+  });
+
+  it('ignores other keys as before', async () => {
+    const res = await request(app)
+      .post('/api/games')
+      .send({ name: 'Sven', scale: 'tshirt', role: 'voter', total: 5 });
+
+    expect(res.status).toBe(201);
+    expect(store.get(res.body.gameId)?.scale).toBe('tshirt');
+  });
+
+  it('keeps the scale for the exists route, which still reveals nothing else', async () => {
+    const created = await request(app)
+      .post('/api/games')
+      .send({ name: 'Sven', scale: 'incremental' });
+
+    const res = await request(app).get(`/api/games/${created.body.gameId}/exists`);
+
+    expect(res.body).toEqual({ exists: true });
   });
 });

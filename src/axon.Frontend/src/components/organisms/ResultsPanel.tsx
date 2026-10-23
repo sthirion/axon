@@ -1,18 +1,29 @@
-import type { RoundStats } from '@axon/shared';
+import type { RoundStats, Scale } from '@axon/shared';
 import { memo, useId } from 'react';
 import { CardFace } from '../atoms/CardFace';
 
 export const NO_AVERAGE_MESSAGE = 'No average';
+export const NO_MEDIAN_MESSAGE = 'No median';
 
 interface ResultsPanelProps {
+  readonly scale: Scale;
   readonly results: RoundStats;
   // Names of the outlier voters, in vote order.
   readonly outlierNames: readonly string[];
 }
 
+// The consensus value is the proposed card (a number or a size); without sized votes there is none.
 export function consensusText(results: RoundStats): string | null {
-  if (results.consensus) return `Consensus: ${results.average}`;
-  return results.average === null ? null : 'No consensus';
+  if (results.consensus) return `Consensus: ${results.suggestedEstimate}`;
+  return results.median === null ? null : 'No consensus';
+}
+
+// Numbers have an average; sizes only have a middle one.
+export function centreText(results: RoundStats, scale: Scale): string {
+  if (scale === 'tshirt') {
+    return results.median === null ? NO_MEDIAN_MESSAGE : `Median: ${results.median}`;
+  }
+  return results.average === null ? NO_AVERAGE_MESSAGE : `Average: ${results.average}`;
 }
 
 function voteCount(count: number): string {
@@ -20,6 +31,7 @@ function voteCount(count: number): string {
 }
 
 export const ResultsPanel = memo(function ResultsPanel({
+  scale,
   results,
   outlierNames,
 }: ResultsPanelProps) {
@@ -48,9 +60,7 @@ export const ResultsPanel = memo(function ResultsPanel({
           </li>
         ))}
       </ul>
-      <p className="font-medium">
-        {results.average === null ? NO_AVERAGE_MESSAGE : `Average: ${results.average}`}
-      </p>
+      <p className="font-medium">{centreText(results, scale)}</p>
       {consensus && <p className="font-medium">{consensus}</p>}
       {outlierNames.length > 0 && <p>Outliers: {outlierNames.join(', ')}</p>}
     </section>

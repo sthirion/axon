@@ -25,3 +25,22 @@ describe('summaryText', () => {
     );
   });
 });
+
+describe('summaryText for t-shirt sizes', () => {
+  it('lists the sizes and leaves the total line out', () => {
+    expect(
+      summaryText(
+        [
+          { title: 'Login page', url: 'https://e.com/1', estimate: 'M' },
+          { title: 'Checkout', estimate: 'skipped' },
+          { title: 'Search', estimate: 'XL' },
+        ],
+        null,
+      ),
+    ).toBe('1. Login page (https://e.com/1) - M\n2. Checkout - skipped\n3. Search - XL');
+  });
+
+  it('is empty for an empty t-shirt history', () => {
+    expect(summaryText([], null)).toBe('');
+  });
+});

@@ -266,6 +266,7 @@ describe('game join over Socket.IO', () => {
         'gameId',
         'history',
         'phase',
+        'scale',
         'story',
         'total',
         'voters',

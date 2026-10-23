@@ -1,4 +1,11 @@
-import type { Card, PlayerRole, PublicGameState, RoundFinishPayload, Story } from '@axon/shared';
+import {
+  SCALE_LABELS,
+  type Card,
+  type PlayerRole,
+  type PublicGameState,
+  type RoundFinishPayload,
+  type Story,
+} from '@axon/shared';
 import type { ActionResult } from '../../types/game.types';
 import { JoinLink } from '../molecules/JoinLink';
 import { PlayerRow } from '../molecules/PlayerRow';
@@ -52,6 +59,9 @@ export function GameTable({
   return (
     <>
       <h1 className="type-title">Story Estimation</h1>
+      <p className="type-meta text-slate-600 dark:text-slate-400">
+        Voting scale: {SCALE_LABELS[game.scale]}
+      </p>
       <ReconnectingBanner visible={reconnecting} />
       <FacilitatorOfflineBanner visible={role === 'voter' && !game.facilitator.connected} />
       <div aria-live="polite" aria-atomic="true" className="sr-only">
@@ -67,7 +77,12 @@ export function GameTable({
             onSetStory={onSetStory}
           />
           {role === 'voter' && (
-            <CardDeck selected={myCard} disabled={reconnecting || !voting} onCast={onCastVote} />
+            <CardDeck
+              scale={game.scale}
+              selected={myCard}
+              disabled={reconnecting || !voting}
+              onCast={onCastVote}
+            />
           )}
           {role === 'facilitator' && voting && (
             <RevealButton
@@ -78,6 +93,7 @@ export function GameTable({
           )}
           {role === 'facilitator' && (voting || revealed) && (
             <FacilitatorControls
+              scale={game.scale}
               revealed={revealed}
               suggestedEstimate={game.results?.suggestedEstimate ?? null}
               disabled={reconnecting}
@@ -85,7 +101,9 @@ export function GameTable({
               onFinish={onFinish}
             />
           )}
-          {game.results && <ResultsPanel results={game.results} outlierNames={outlierNames} />}
+          {game.results && (
+            <ResultsPanel scale={game.scale} results={game.results} outlierNames={outlierNames} />
+          )}
         </div>
         <div className="min-w-0 space-y-6">
           <section aria-labelledby="facilitator-heading" className="space-y-2">

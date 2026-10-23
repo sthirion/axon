@@ -45,6 +45,9 @@ begin estimating right away.
 1. WHEN a game is created THE SYSTEM SHALL show the join link and a button that copies it.
 1. THE SYSTEM SHALL issue the facilitator a player token that marks them as facilitator for
    that game.
+1. WHEN a visitor creates a game THE SYSTEM SHALL let them choose the voting scale (Fibonacci,
+   incremental or t-shirt sizes; Fibonacci by default). The scale is fixed for the game and
+   shown to every player.
 1. THE SYSTEM SHALL NOT require an account, email or password.
 
 ## Requirement 2: Join a Game (F2)
@@ -82,7 +85,9 @@ knows what we are voting on.
 **User story:** As a voter, I want to pick a card in secret so that I am not influenced by
 others.
 
-1. THE SYSTEM SHALL offer the deck 0, 1, 2, 3, 5, 8, 13, 21, `?` and coffee.
+1. THE SYSTEM SHALL offer the deck of the game's scale: 0, 1, 2, 3, 5, 8, 13, 21 (Fibonacci),
+   0 to 10 (incremental) or XS, S, M, L, XL (t-shirt), plus `?` and coffee in every scale.
+1. IF a vote is not in the game's deck THEN THE SYSTEM SHALL reject it.
 1. WHILE votes are hidden THE SYSTEM SHALL let a voter pick, change or withdraw their vote.
 1. WHILE votes are hidden THE SYSTEM SHALL show every player who has voted, but not the
    value.
@@ -104,6 +109,7 @@ differences.
 1. WHEN the facilitator reveals THE SYSTEM SHALL show every player, within 1 second, each
    voter's card, the number of votes per card (distribution bars), and the average.
 1. THE SYSTEM SHALL calculate the average over numeric votes only, rounded to one decimal.
+   For t-shirt sizes it shows the median size instead of an average.
 1. THE SYSTEM SHALL show `?` and coffee votes but leave them out of the average and the
    consensus check.
 1. WHEN all numeric votes are equal and there are at least two of them THE SYSTEM SHALL
@@ -139,7 +145,8 @@ backlog after the session.
 
 1. THE SYSTEM SHALL show every player a list of the stories in this game in the order they
    were estimated, with title, link and final estimate or "skipped".
-1. THE SYSTEM SHALL show the total of the final estimates.
+1. THE SYSTEM SHALL show the total of the final estimates for the numeric scales (t-shirt
+   sizes have no total).
 1. THE SYSTEM SHALL let any player copy the summary as plain text.
 1. WHEN the game ends THE SYSTEM SHALL discard the summary.
 

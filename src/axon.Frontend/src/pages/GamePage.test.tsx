@@ -845,7 +845,7 @@ describe('GamePage', () => {
       await joinAs('voter', gameState({ ...VOTING, voters: [ANNA] }));
       await serverEmit('vote:mine', { card: 8 });
 
-      await serverEmit('vote:mine', { card: 4 });
+      await serverEmit('vote:mine', { card: 11 });
 
       expect(screen.getByRole('radio', { name: '8' })).toBeChecked();
     });

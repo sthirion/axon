@@ -69,6 +69,7 @@ export function gameState(overrides: Record<string, unknown> = {}): PublicGameSt
     facilitator: { name: 'Sven', connected: true },
     voters: [] as object[],
     history: [] as object[],
+    scale: 'fibonacci',
     total: 0,
     ...overrides,
   };

@@ -1,4 +1,9 @@
-import { FINAL_ESTIMATES, type FinalEstimate, type RoundFinishPayload } from '@axon/shared';
+import {
+  estimateCardsOf,
+  type EstimateCard,
+  type RoundFinishPayload,
+  type Scale,
+} from '@axon/shared';
 import { memo, useId, useState } from 'react';
 import { actionErrorMessage, GENERIC_ERROR_MESSAGE } from '../../lib/actionErrors';
 import type { ActionResult } from '../../types/game.types';
@@ -15,14 +20,22 @@ const PENDING_LABEL: Record<Action, string> = {
 };
 
 interface EstimateFormProps {
-  readonly suggestedEstimate: number | null;
+  readonly scale: Scale;
+  readonly suggestedEstimate: EstimateCard | null;
   readonly busy: boolean;
   readonly recordLabel: string;
-  readonly onRecord: (estimate: FinalEstimate) => void;
+  readonly onRecord: (estimate: EstimateCard) => void;
 }
 
 // Mounted only while revealed, so each reveal starts on its own suggestion.
-function EstimateForm({ suggestedEstimate, busy, recordLabel, onRecord }: EstimateFormProps) {
+function EstimateForm({
+  scale,
+  suggestedEstimate,
+  busy,
+  recordLabel,
+  onRecord,
+}: EstimateFormProps) {
+  const cards = estimateCardsOf(scale);
   const selectId = useId();
   const [estimate, setEstimate] = useState(
     suggestedEstimate === null ? '' : String(suggestedEstimate),
@@ -41,7 +54,7 @@ function EstimateForm({ suggestedEstimate, busy, recordLabel, onRecord }: Estima
           className="block min-h-11 w-full max-w-48 rounded-md border border-slate-500 dark:border-slate-400 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100"
         >
           <option value="">{NO_ESTIMATE_OPTION}</option>
-          {FINAL_ESTIMATES.map((value) => (
+          {cards.map((value) => (
             <option key={value} value={value}>
               {value}
             </option>
@@ -50,7 +63,11 @@ function EstimateForm({ suggestedEstimate, busy, recordLabel, onRecord }: Estima
       </div>
       <Button
         disabled={busy || estimate === ''}
-        onClick={() => onRecord(Number(estimate) as FinalEstimate)}
+        onClick={() => {
+          // The option value is text; send the card itself (a number or a size).
+          const card = cards.find((candidate) => String(candidate) === estimate);
+          if (card !== undefined) onRecord(card);
+        }}
       >
         {recordLabel}
       </Button>
@@ -61,8 +78,9 @@ function EstimateForm({ suggestedEstimate, busy, recordLabel, onRecord }: Estima
 interface FacilitatorControlsProps {
   // Controls that need the reveal (re-vote, final estimate) are shown only while revealed.
   readonly revealed: boolean;
-  // The consensus value or closest deck value; the select starts on it.
-  readonly suggestedEstimate: number | null;
+  readonly scale: Scale;
+  // The consensus card or the proposal of the scale; the select starts on it.
+  readonly suggestedEstimate: EstimateCard | null;
   readonly disabled: boolean;
   readonly onRevote: () => Promise<ActionResult>;
   readonly onFinish: (payload: RoundFinishPayload) => Promise<ActionResult>;
@@ -70,6 +88,7 @@ interface FacilitatorControlsProps {
 
 export const FacilitatorControls = memo(function FacilitatorControls({
   revealed,
+  scale,
   suggestedEstimate,
   disabled,
   onRevote,
@@ -100,6 +119,7 @@ export const FacilitatorControls = memo(function FacilitatorControls({
     <section aria-label="Round controls" className="space-y-3">
       {revealed && (
         <EstimateForm
+          scale={scale}
           suggestedEstimate={suggestedEstimate}
           busy={busy}
           recordLabel={label('record', 'Record estimate')}

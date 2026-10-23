@@ -229,7 +229,7 @@ describe('connectGameSocket', () => {
       expect(handlers.onVoteMine).toHaveBeenCalledExactlyOnceWith(card);
     });
 
-    it.each([{ card: 4 }, { card: '5' }, { card: 5, extra: 1 }, {}, null, 'coffee'])(
+    it.each([{ card: 11 }, { card: '5' }, { card: 5, extra: 1 }, {}, null, 'coffee'])(
       'ignores the invalid payload %j',
       (payload) => {
         connect();

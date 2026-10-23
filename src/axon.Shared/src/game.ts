@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cardSchema, finalEstimateSchema } from './deck.js';
+import { cardSchema, estimateCardSchema, isCardOf, isEstimateOf, scaleSchema } from './deck.js';
 
 export const GAME_EVENTS = {
   join: 'game:join',
@@ -50,6 +50,12 @@ export const createGameBodySchema = z.object({ name: playerNameSchema });
 
 export type CreateGameBody = z.infer<typeof createGameBodySchema>;
 
+// What a client sends: the scale is optional and defaults to Fibonacci.
+export interface CreateGamePayload {
+  readonly name: string;
+  readonly scale?: z.infer<typeof scaleSchema>;
+}
+
 export const createGameResponseSchema = z.object({
   gameId: gameIdSchema,
   token: playerTokenSchema,
@@ -92,9 +98,10 @@ export type GamePhase = z.infer<typeof gamePhaseSchema>;
 export const roundStatsSchema = z.strictObject({
   distribution: z.array(z.strictObject({ card: cardSchema, count: z.number().int().min(1) })),
   average: z.number().nullable(),
+  median: estimateCardSchema.nullable(),
   consensus: z.boolean(),
   outlierIds: z.array(z.string()),
-  suggestedEstimate: z.number().nullable(),
+  suggestedEstimate: estimateCardSchema.nullable(),
 });
 
 export type RoundStats = z.infer<typeof roundStatsSchema>;
@@ -102,7 +109,7 @@ export type RoundStats = z.infer<typeof roundStatsSchema>;
 export const historyEntrySchema = z.strictObject({
   title: z.string(),
   url: z.string().optional(),
-  estimate: z.union([z.number(), z.literal('skipped')]),
+  estimate: z.union([estimateCardSchema, z.literal('skipped')]),
 });
 
 export type HistoryEntry = z.infer<typeof historyEntrySchema>;
@@ -126,13 +133,34 @@ export const publicGameStateSchema = z
     ),
     results: roundStatsSchema.optional(),
     history: z.array(historyEntrySchema),
-    total: z.number(),
+    scale: scaleSchema,
+    // Sizes cannot be added up, so a t-shirt session has no total.
+    total: z.number().nullable(),
   })
   .refine(
     (state) =>
       state.phase === 'revealed' ||
       (state.results === undefined && state.voters.every((voter) => voter.card === undefined)),
-  );
+  )
+  .refine((state) =>
+    state.voters.every((voter) => voter.card === undefined || isCardOf(state.scale, voter.card)),
+  )
+  .refine((state) =>
+    state.history.every(
+      (entry) => entry.estimate === 'skipped' || isEstimateOf(state.scale, entry.estimate),
+    ),
+  )
+  .refine((state) => (state.scale === 'tshirt') === (state.total === null))
+  .refine((state) => {
+    // Every card in the results belongs to the session's scale.
+    const { results, scale } = state;
+    return (
+      results === undefined ||
+      (results.distribution.every((entry) => isCardOf(scale, entry.card)) &&
+        (results.median === null || isEstimateOf(scale, results.median)) &&
+        (results.suggestedEstimate === null || isEstimateOf(scale, results.suggestedEstimate)))
+    );
+  });
 
 export type PublicGameState = z.infer<typeof publicGameStateSchema>;
 
@@ -162,7 +190,7 @@ export const roundFinishEnvelopeSchema = z
 
 // What a client sends.
 export const roundFinishPayloadSchema = z.union([
-  z.object({ finalEstimate: finalEstimateSchema }),
+  z.object({ finalEstimate: estimateCardSchema }),
   z.object({ skip: z.literal(true) }),
 ]);
 

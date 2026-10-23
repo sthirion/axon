@@ -1,5 +1,5 @@
 import { ERROR_MESSAGES, playerNameSchema } from '@axon/shared';
-import { memo, useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { memo, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from '../atoms/Button';
 
 interface NameFormProps {
@@ -8,6 +8,8 @@ interface NameFormProps {
   readonly onSubmit: (name: string) => void;
   readonly fieldError?: string | null;
   readonly formError?: string | null;
+  // Extra fields shown between the name and the submit button (the create page's scale).
+  readonly children?: ReactNode;
 }
 
 export const NameForm = memo(function NameForm({
@@ -16,6 +18,7 @@ export const NameForm = memo(function NameForm({
   onSubmit,
   fieldError,
   formError,
+  children,
 }: NameFormProps) {
   const inputId = useId();
   const errorId = `${inputId}-error`;
@@ -67,6 +70,7 @@ export const NameForm = memo(function NameForm({
           </p>
         )}
       </div>
+      {children}
       {formError && (
         <p role="alert" className="type-meta text-red-700 dark:text-red-400">
           {formError}
