@@ -13,6 +13,7 @@ export const GAME_EVENTS = {
   roundFinish: 'round:finish',
   playerRemove: 'player:remove',
   playerRemoved: 'player:removed',
+  ended: 'game:ended',
 } as const;
 
 export const GAME_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
@@ -174,3 +175,17 @@ export const playerRemoveEnvelopeSchema = z.looseObject({});
 export const playerRemovePayloadSchema = z.object({ playerId: z.string() });
 
 export type PlayerRemovePayload = z.infer<typeof playerRemovePayloadSchema>;
+
+export const GAME_END_REASONS = ['server-restart', 'expired'] as const;
+
+export const gameEndedSchema = z.strictObject({ reason: z.enum(GAME_END_REASONS) });
+
+export type GameEnded = z.infer<typeof gameEndedSchema>;
+
+export type GameEndReason = GameEnded['reason'];
+
+// Fixed text, shown instead of anything the server could send.
+export const GAME_END_MESSAGES: Readonly<Record<GameEndReason, string>> = {
+  'server-restart': 'The game ended because the server restarted.',
+  expired: 'The game ended because it reached its 2-hour limit.',
+};

@@ -1,6 +1,7 @@
 import {
   ackSchema,
   GAME_EVENTS,
+  gameEndedSchema,
   gameJoinedSchema,
   publicGameStateSchema,
   voteMineSchema,
@@ -72,6 +73,13 @@ export function connectGameSocket(
   socket.on(GAME_EVENTS.voteMine, (payload: unknown) => {
     const parsed = voteMineSchema.safeParse(payload);
     if (parsed.success) handlers.onVoteMine(parsed.data.card);
+  });
+
+  // The event itself means the game is over; an unknown reason must not break the page.
+  socket.on(GAME_EVENTS.ended, (payload: unknown) => {
+    const parsed = gameEndedSchema.safeParse(payload);
+    seat = null;
+    handlers.onEnded(parsed.success ? parsed.data.reason : 'server-restart');
   });
 
   socket.on(GAME_EVENTS.playerRemoved, () => {

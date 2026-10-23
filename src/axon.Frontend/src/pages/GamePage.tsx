@@ -2,6 +2,7 @@ import { ERROR_MESSAGES } from '@axon/shared';
 import { useParams } from 'react-router';
 import { Button } from '../components/atoms/Button';
 import { NameForm } from '../components/molecules/NameForm';
+import { GameEnded } from '../components/organisms/GameEnded';
 import { GameNotFound } from '../components/organisms/GameNotFound';
 import { GameTable } from '../components/organisms/GameTable';
 import { PageLayout } from '../components/templates/PageLayout';
@@ -12,6 +13,8 @@ function GameSession({ gameId }: { readonly gameId: string }) {
   const { phase, game } = session;
 
   if (phase === 'not-found') return <GameNotFound />;
+
+  if (phase === 'ended') return <GameEnded message={session.endMessage} />;
 
   if (phase === 'removed') {
     return (

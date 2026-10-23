@@ -10,5 +10,5 @@ export function aNewPlayer(overrides: Partial<NewPlayer> & { token?: string } = 
 }
 
 export function aGame(facilitator: Parameters<typeof aNewPlayer>[0] = {}): Game {
-  return createGame(GAME_ID, aNewPlayer({ name: 'Sven', ...facilitator }));
+  return createGame(GAME_ID, aNewPlayer({ name: 'Sven', ...facilitator }), 0);
 }

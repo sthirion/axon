@@ -149,6 +149,7 @@ export function registerGateway(io: Server, store: GameStore): void {
 
       const { game, player, token } = decision;
       connectSocket(player, socket.id);
+      store.markConnected(game);
       session = { gameId: game.id, playerId: player.id };
       void socket.join(gameRoom(game.id));
       void socket.join(playerRoom(player.id));
@@ -301,6 +302,10 @@ export function registerGateway(io: Server, store: GameStore): void {
       const player = game?.players.get(session.playerId);
       if (game && player && disconnectSocket(player, socket.id)) {
         io.to(gameRoom(game.id)).emit(GAME_EVENTS.state, toPublicState(game));
+      }
+      // Also for a removed player's last socket: the game may now be empty.
+      if (game) {
+        store.markDisconnected(game);
       }
     });
   });

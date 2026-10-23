@@ -1,5 +1,6 @@
 import type {
   Card,
+  GameEndReason,
   CreateGameResponse,
   GameJoined,
   GameJoinPayload,
@@ -22,6 +23,7 @@ export interface GameSocketHandlers {
   readonly onState: (state: PublicGameState) => void;
   readonly onVoteMine: (card: Card | null) => void;
   readonly onRemoved: () => void;
+  readonly onEnded: (reason: GameEndReason) => void;
   readonly onDisconnect: () => void;
   readonly onRejoinFailed: (code: string) => void;
 }

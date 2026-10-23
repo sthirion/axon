@@ -923,4 +923,53 @@ describe('GamePage', () => {
       expect(window.localStorage.getItem(TOKEN_KEY)).toBe(TOKEN);
     });
   });
+
+  describe('game ended', () => {
+    const joinAsVoter = async () => {
+      window.localStorage.setItem(TOKEN_KEY, TOKEN);
+      exists(true);
+      renderGame();
+      await waitForJoin();
+      await serverAck(OK_ACK);
+      await serverEmit('game:joined', { playerId: 'p1', role: 'voter' });
+      await serverEmit(
+        'game:state',
+        gameState({ voters: [{ id: 'p1', name: 'Anna', connected: true }] }),
+      );
+      await screen.findByRole('region', { name: 'Voters' });
+    };
+
+    it.each([
+      ['server-restart', 'The game ended because the server restarted.'],
+      ['expired', 'The game ended because it reached its 2-hour limit.'],
+    ])('shows "Game ended" with the %s message', async (reason, message) => {
+      await joinAsVoter();
+
+      await serverEmit('game:ended', { reason });
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Game ended' })).toBeVisible();
+      expect(screen.getByText(message)).toBeVisible();
+      expect(screen.getByRole('link', { name: 'Create a new game' })).toHaveAttribute('href', '/');
+      expect(screen.queryByRole('region', { name: 'Voters' })).toBeNull();
+      expect(screen.queryByRole('radiogroup')).toBeNull();
+    });
+
+    it('falls back to the restart message for a reason it does not know', async () => {
+      await joinAsVoter();
+
+      await serverEmit('game:ended', { reason: 'from-the-future' });
+
+      expect(await screen.findByText('The game ended because the server restarted.')).toBeVisible();
+    });
+
+    it('closes the socket, clears the game and shows the temporary-games footer', async () => {
+      await joinAsVoter();
+
+      await serverEmit('game:ended', { reason: 'server-restart' });
+
+      expect(socket.closed).toBe(true);
+      expect(useGameStore.getState().game).toBeNull();
+      expect(screen.getByRole('contentinfo')).toHaveTextContent('Games are temporary.');
+    });
+  });
 });

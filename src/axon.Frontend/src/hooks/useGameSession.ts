@@ -1,5 +1,7 @@
 import {
   ERROR_MESSAGES,
+  GAME_END_MESSAGES,
+  type GameEndReason,
   GAME_ID_PATTERN,
   type Card,
   type PlayerRole,
@@ -31,6 +33,7 @@ export type GamePhase =
   | 'prompt'
   | 'joined'
   | 'removed'
+  | 'ended'
   | 'not-found'
   | 'load-error'
   | 'join-error';
@@ -50,6 +53,8 @@ export interface GameSession {
   readonly submitting: boolean;
   readonly promptError: JoinPromptError | null;
   readonly errorMessage: string;
+  // Set in the `ended` phase: the fixed text for why the game ended.
+  readonly endMessage: string;
   readonly submitName: (name: string) => void;
   readonly retry: () => void;
   readonly setStory: (story: StorySetPayload) => Promise<ActionResult>;
@@ -66,6 +71,7 @@ export function useGameSession(gameId: string): GameSession {
   const [promptError, setPromptError] = useState<JoinPromptError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [endReason, setEndReason] = useState<GameEndReason>('server-restart');
   const clientRef = useRef<GameSocketClient | null>(null);
   const game = useGameStore((state) => state.game);
   const reconnecting = useGameStore((state) => state.reconnecting);
@@ -126,6 +132,11 @@ export function useGameSession(gameId: string): GameSession {
       onRemoved: () => {
         closeClient();
         setPhase('removed');
+      },
+      onEnded: (reason) => {
+        closeClient();
+        setEndReason(reason);
+        setPhase('ended');
       },
       onDisconnect: () => useGameStore.getState().setReconnecting(true),
       onRejoinFailed: (code) => handleFailure(code, false),
@@ -235,6 +246,7 @@ export function useGameSession(gameId: string): GameSession {
     announcement,
     submitting,
     promptError,
+    endMessage: GAME_END_MESSAGES[endReason],
     errorMessage: phase === 'load-error' ? LOAD_ERROR_MESSAGE : GENERIC_ERROR_MESSAGE,
     submitName,
     retry,

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GAME_END_MESSAGES,
+  gameEndedSchema,
   finalEstimateSchema,
   roundFinishEnvelopeSchema,
   roundFinishPayloadSchema,
@@ -293,6 +295,7 @@ describe('GAME_EVENTS', () => {
       roundFinish: 'round:finish',
       playerRemove: 'player:remove',
       playerRemoved: 'player:removed',
+      ended: 'game:ended',
     });
   });
 });
@@ -369,5 +372,25 @@ describe('roundFinishPayloadSchema', () => {
     expect(roundFinishPayloadSchema.safeParse({ skip: true }).success).toBe(true);
     expect(roundFinishPayloadSchema.safeParse({ finalEstimate: '?' }).success).toBe(false);
     expect(roundFinishPayloadSchema.safeParse({ skip: false }).success).toBe(false);
+  });
+});
+
+describe('gameEndedSchema', () => {
+  it.each(['server-restart', 'expired'])('accepts the reason %s', (reason) => {
+    expect(gameEndedSchema.safeParse({ reason }).success).toBe(true);
+  });
+
+  it.each([{}, { reason: 'later' }, { reason: 'expired', names: ['Anna'] }, null, 'expired'])(
+    'rejects %j',
+    (value) => {
+      expect(gameEndedSchema.safeParse(value).success).toBe(false);
+    },
+  );
+
+  it('has a fixed message for every reason', () => {
+    expect(GAME_END_MESSAGES).toEqual({
+      'server-restart': 'The game ended because the server restarted.',
+      expired: 'The game ended because it reached its 2-hour limit.',
+    });
   });
 });
