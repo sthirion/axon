@@ -250,9 +250,16 @@ sequenceDiagram
   `StoryPanel` (story form for the facilitator, read-only for voters), `ResultsPanel`
   (distribution bars, average, consensus/outlier badges), `FacilitatorControls`,
   `SessionSummary` (with copy as text), `ThemeToggle`.
-- **Styling:** Tailwind CSS with `dark:` variants. The theme toggle sets
-  `<html class="dark">`, defaults to `prefers-color-scheme`, and is saved in `localStorage`
-  (Requirement 10).
+- **Styling:** Tailwind CSS with `dark:` variants (class strategy: `@custom-variant dark` in
+  `index.css`). The theme is light or dark; `<html class="dark">` and `color-scheme` follow it.
+  With no saved choice the page follows `prefers-color-scheme`, also while the OS setting
+  changes; the `ThemeToggle` (a "Dark mode" toggle button with `aria-pressed`, in the page
+  header) saves the choice in `localStorage` under `axon.theme` (`light` or `dark`; any other
+  value is ignored, and a storage error only means the choice is not remembered). A blocking
+  external script, `theme-init.js` in `<head>`, applies the theme before the first paint; it is
+  a file because the CSP allows `script-src 'self'` only. Every colour has a dark counterpart,
+  and `lib/palette.ts` lists them so a unit test can check WCAG AA contrast for both themes and
+  fail for a colour class that is not listed.
 - **Accessibility:** cards are a radio group (arrow keys and Space); an `aria-live` region
   announces "Anna voted", the reveal and the consensus result.
 - **Links:** story URLs are rendered as `<a target="_blank" rel="noopener noreferrer">` only

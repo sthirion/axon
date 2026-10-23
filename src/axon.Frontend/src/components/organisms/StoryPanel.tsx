@@ -24,7 +24,7 @@ function StoryDetails({ story }: { readonly story: Story }) {
           href={story.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block text-sm text-blue-800 underline wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+          className="block text-sm text-blue-800 dark:text-blue-300 underline wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100"
         >
           {story.url} <span className="sr-only">(opens in a new tab)</span>
         </a>

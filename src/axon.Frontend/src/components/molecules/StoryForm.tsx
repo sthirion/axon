@@ -8,7 +8,7 @@ export const TITLE_ERROR_MESSAGE = 'Enter a title of 1 to 200 characters.';
 export const LINK_ERROR_MESSAGE = 'Enter a full link starting with http:// or https://.';
 
 const INPUT_CLASS =
-  'block w-full min-w-0 rounded-md border border-slate-500 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900';
+  'block w-full min-w-0 rounded-md border border-slate-500 dark:border-slate-400 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100';
 
 interface StoryFormProps {
   readonly submitLabel: string;
@@ -94,7 +94,7 @@ export const StoryForm = memo(function StoryForm({
           className={INPUT_CLASS}
         />
         {titleError && (
-          <p id={titleErrorId} className="text-sm text-red-700">
+          <p id={titleErrorId} className="text-sm text-red-700 dark:text-red-400">
             {titleError}
           </p>
         )}
@@ -119,13 +119,13 @@ export const StoryForm = memo(function StoryForm({
           className={INPUT_CLASS}
         />
         {linkError && (
-          <p id={linkErrorId} className="text-sm text-red-700">
+          <p id={linkErrorId} className="text-sm text-red-700 dark:text-red-400">
             {linkError}
           </p>
         )}
       </div>
       {serverError && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
           {serverError}
         </p>
       )}
@@ -134,7 +134,7 @@ export const StoryForm = memo(function StoryForm({
           {pending ? 'Saving…' : submitLabel}
         </Button>
         {onCancel && (
-          <Button type="button" onClick={onCancel} className="bg-slate-600">
+          <Button type="button" onClick={onCancel} className="bg-slate-600 dark:bg-slate-400">
             Cancel
           </Button>
         )}

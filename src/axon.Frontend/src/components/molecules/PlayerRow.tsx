@@ -29,15 +29,17 @@ export const PlayerRow = memo(function PlayerRow({
       <span className="font-medium break-all">{name}</span>
       <span className="flex flex-wrap items-baseline gap-x-3">
         {revealedCard === undefined && hasVoted !== undefined && <VoteBadge voted={hasVoted} />}
-        {revealedCard === null && <span className="text-sm text-slate-600">No vote</span>}
+        {revealedCard === null && (
+          <span className="text-sm text-slate-600 dark:text-slate-400">No vote</span>
+        )}
         {revealedCard !== undefined && revealedCard !== null && (
-          <span className="inline-flex min-w-8 justify-center rounded border border-slate-500 px-2 font-semibold">
+          <span className="inline-flex min-w-8 justify-center rounded border border-slate-500 dark:border-slate-400 px-2 font-semibold">
             <span className="sr-only">Vote: </span>
             <CardFace card={revealedCard} />
           </span>
         )}
         {outlier && (
-          <span className="text-sm font-medium text-amber-900">
+          <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
             <span aria-hidden="true" className="mr-1">
               ▲
             </span>

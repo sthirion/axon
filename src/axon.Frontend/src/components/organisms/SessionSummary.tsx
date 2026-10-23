@@ -50,7 +50,7 @@ export const SessionSummary = memo(function SessionSummary({
                     href={entry.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block text-sm text-blue-800 underline wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                    className="block text-sm text-blue-800 dark:text-blue-300 underline wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100"
                   >
                     {entry.url} <span className="sr-only">(opens in a new tab)</span>
                   </a>
@@ -69,7 +69,7 @@ export const SessionSummary = memo(function SessionSummary({
         {current?.ok ? COPIED_MESSAGE : ''}
       </p>
       {current && !current.ok && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
           {COPY_ERROR_MESSAGE}
         </p>
       )}

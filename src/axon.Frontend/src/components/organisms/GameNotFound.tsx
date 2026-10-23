@@ -6,7 +6,10 @@ export function GameNotFound() {
     <>
       <h1 className="text-2xl font-semibold sm:text-3xl">Game not found</h1>
       <p>{ERROR_MESSAGES.GAME_NOT_FOUND}</p>
-      <Link to="/" className="inline-block text-slate-900 underline">
+      <Link
+        to="/"
+        className="inline-block text-slate-900 underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:text-slate-100 dark:focus-visible:outline-slate-100"
+      >
         Create a new game
       </Link>
     </>

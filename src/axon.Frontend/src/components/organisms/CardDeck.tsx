@@ -52,7 +52,7 @@ export const CardDeck = memo(function CardDeck({ selected, disabled, onCast }: C
                 onKeyDown={preventEnter}
                 className="peer absolute inset-0 m-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
               />
-              <span className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-slate-500 px-3 text-lg font-semibold peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-slate-900 peer-disabled:opacity-60">
+              <span className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-slate-500 dark:border-slate-400 px-3 text-lg font-semibold peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white dark:peer-checked:border-slate-100 dark:peer-checked:bg-slate-100 dark:peer-checked:text-slate-900 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-slate-900 dark:peer-focus-visible:outline-slate-100 peer-disabled:opacity-60">
                 <CardFace card={card} />
               </span>
             </label>
@@ -60,7 +60,7 @@ export const CardDeck = memo(function CardDeck({ selected, disabled, onCast }: C
         </div>
       </fieldset>
       {error && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
           {error}
         </p>
       )}
