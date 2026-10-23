@@ -1,5 +1,6 @@
-import type { RoundStats, Scale } from '@axon/shared';
+import { isTooLarge, type RoundStats, type Scale } from '@axon/shared';
 import { memo, useId } from 'react';
+import { sizeStyle } from '../../lib/sizeStyles';
 import { CardFace } from '../atoms/CardFace';
 
 export const NO_AVERAGE_MESSAGE = 'No average';
@@ -46,17 +47,24 @@ export const ResultsPanel = memo(function ResultsPanel({
       </h2>
       <ul className="space-y-1">
         {results.distribution.map(({ card, count }) => (
-          <li key={card} className="flex items-center gap-3">
+          <li key={card} className="flex flex-wrap items-center gap-x-3">
             <span className="w-8 shrink-0 text-right font-semibold">
               <CardFace card={card} />
             </span>
             <span aria-hidden="true" className="h-4 min-w-0 flex-1">
               <span
-                className="block h-full rounded bg-slate-700 dark:bg-slate-300"
+                className={`block h-full rounded ${
+                  sizeStyle(scale, card)?.bar ?? 'bg-slate-700 dark:bg-slate-300'
+                }`}
                 style={{ width: `${(count / max) * 100}%` }}
               />
             </span>
             <span className="shrink-0 type-meta">{voteCount(count)}</span>
+            {isTooLarge(scale, card) && (
+              <span className="basis-full pl-11 type-meta font-medium text-red-700 dark:text-red-400">
+                <span aria-hidden="true">⚠ </span>Too large
+              </span>
+            )}
           </li>
         ))}
       </ul>

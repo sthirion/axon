@@ -18,7 +18,7 @@ function sources(dir: string): string[] {
 
 // A colour class is text|bg|border|outline followed by white or a palette shade, with any variants.
 const COLOUR_CLASS =
-  /(?<![\w-])((?:[\w-]+:)*)(text|bg|border|outline|fill|stroke)-(white|(?:slate|red|green|blue|amber|indigo)-\d+)(?![\w-])/g;
+  /(?<![\w-])((?:[\w-]+:)*)(text|bg|border|outline|fill|stroke)-(white|(?:slate|red|green|blue|amber|indigo|emerald|lime|orange)-\d+)(?![\w-])/g;
 
 describe.each(['light', 'dark'] as const)('%s theme contrast (WCAG 2.1 AA)', (theme) => {
   it.each(PAIRS.map((p) => [p.name, p] as const))('%s meets its minimum ratio', (_name, pair) => {
@@ -46,7 +46,9 @@ describe('colour classes in the components', () => {
   });
 
   it.each([...used.entries()])('%s (in %s) is a known colour', (cls) => {
-    const shade = /-(white|(?:slate|red|green|blue|amber|indigo)-\d+)$/.exec(cls)?.[1] as string;
+    const shade = /-(white|(?:slate|red|green|blue|amber|indigo|emerald|lime|orange)-\d+)$/.exec(
+      cls,
+    )?.[1] as string;
     expect(Object.keys(SHADES), `${cls} is missing from palette SHADES`).toContain(shade);
   });
 

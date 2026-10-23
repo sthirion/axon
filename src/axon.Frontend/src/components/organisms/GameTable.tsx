@@ -123,6 +123,7 @@ export function GameTable({
                 {game.voters.map((voter) => (
                   <li key={voter.id}>
                     <PlayerRow
+                      scale={game.scale}
                       name={voter.name}
                       connected={voter.connected}
                       hasVoted={voting ? voter.hasVoted : undefined}
@@ -143,7 +144,7 @@ export function GameTable({
               </ul>
             )}
           </section>
-          <SessionSummary history={game.history} total={game.total} />
+          <SessionSummary scale={game.scale} history={game.history} total={game.total} />
           <section aria-labelledby="join-link-heading" className="space-y-2">
             <h2 id="join-link-heading" className="type-section">
               Join link

@@ -1,14 +1,18 @@
-import type { PublicGameState, RoundStats } from '@axon/shared';
+import { isTooLarge, type PublicGameState, type RoundStats, type Scale } from '@axon/shared';
 import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 
-function describeResults(results: RoundStats): string {
+function describeResults(results: RoundStats, scale: Scale): string {
   if (results.median === null) return 'No sized votes';
-  if (results.consensus) return `Consensus: ${results.suggestedEstimate}`;
-  // Numbers have an average; t-shirt sizes only a middle size.
-  return results.average === null
-    ? `No consensus, median ${results.median}`
-    : `No consensus, average ${results.average}`;
+  const base = results.consensus
+    ? `Consensus: ${results.suggestedEstimate}`
+    : // Numbers have an average; t-shirt sizes only a middle size.
+      results.average === null
+      ? `No consensus, median ${results.median}`
+      : `No consensus, average ${results.average}`;
+  return isTooLarge(scale, results.suggestedEstimate)
+    ? `${base}, too large to take as one story`
+    : base;
 }
 
 // Describes what changed between two consecutive snapshots; never includes a card value.
@@ -33,13 +37,15 @@ export function describeVoteChanges(
     messages.push(
       finished?.estimate === 'skipped'
         ? 'Story skipped'
-        : `Estimate recorded: ${finished?.estimate}`,
+        : `Estimate recorded: ${finished?.estimate}${
+            isTooLarge(next.scale, finished?.estimate) ? ', too large to take as one story' : ''
+          }`,
     );
   } else if (previous.phase === 'revealed' && next.phase === 'voting') {
     messages.push('Re-vote started');
   } else if (previous.phase !== 'revealed' && next.phase === 'revealed') {
     messages.push('Votes revealed');
-    if (next.results) messages.push(describeResults(next.results));
+    if (next.results) messages.push(describeResults(next.results, next.scale));
   } else {
     if (previous.phase === 'waiting' && next.phase === 'voting' && next.story) {
       // A link-only story has no title to read out.

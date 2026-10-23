@@ -295,6 +295,19 @@ sequenceDiagram
   The DOM order is the visual order, so tab order never differs from what is seen. On phones the
   deck is a grid of 5 columns (10 from 768 px), primary buttons are full width, and every
   control is at least 44 px with at least 8 px between neighbours.
+- **Size colours:** every sized card has a level from 0 (smallest) to 4 (largest), the same five
+  steps for every scale (`shared/size.ts`): Fibonacci 1-2, 3, 5, 8, 13-21; incremental 1-2,
+  3-4, 5-6, 7-8, 9-10; t-shirt XS, S, M, L, XL. Levels map to a green, lime, amber, orange and
+  red ramp (`lib/sizeStyles.ts`, with dark variants), used on deck cards (a tint, solid when
+  selected), revealed voter cards, distribution bars and summary estimates; `?` and coffee stay
+  neutral. Colour is never the only cue: every coloured card carries a five-segment size bar
+  (`level + 1` filled) and keeps its text value.
+- **Too large:** from Fibonacci 13, incremental 8 and t-shirt L a card is too large to take on as
+  one story (`isTooLarge`). It shows a ⚠ mark and is described, not renamed (the accessible name
+  stays the value), the deck has a visible legend, results and the summary say "Too large", the
+  facilitator sees "Too large: consider splitting this story." next to the Final estimate while
+  the select shows such a card, and the reveal announcement adds ", too large to take as one
+  story" when the proposal is too large.
 - **Story links:** when a story has a link the title itself is the link (new tab, `noopener
   noreferrer`); the address is not shown.
 - **Accessibility:** cards are a radio group (arrow keys and Space); an `aria-live` region

@@ -314,11 +314,11 @@ describe('describeVoteChanges for t-shirt sizes', () => {
   it('announces the median size, never an average, when there is no consensus', () => {
     const message = describeVoteChanges(
       tshirtVoting,
-      sized({ ...base, consensus: false, median: 'L', suggestedEstimate: 'L' }),
+      sized({ ...base, consensus: false, median: 'M', suggestedEstimate: 'M' }),
       null,
     );
 
-    expect(message).toBe('Votes revealed. No consensus, median L');
+    expect(message).toBe('Votes revealed. No consensus, median M');
     expect(message).not.toMatch(/average/);
   });
 
@@ -330,7 +330,9 @@ describe('describeVoteChanges for t-shirt sizes', () => {
       history: [{ title: 'Login page', estimate: 'XL' }],
     });
 
-    expect(describeVoteChanges(sized(base), waiting, null)).toBe('Estimate recorded: XL');
+    expect(describeVoteChanges(sized(base), waiting, null)).toBe(
+      'Estimate recorded: XL, too large to take as one story',
+    );
   });
 });
 
@@ -344,6 +346,149 @@ describe('describeVoteChanges for a link-only story', () => {
 
     expect(describeVoteChanges(gameState({ voters: [ANNA] }), linkOnly, null)).toBe(
       'Voting is open',
+    );
+  });
+});
+
+describe('describeVoteChanges and a too-large proposal', () => {
+  const revealedAs = (scale: 'fibonacci' | 'incremental' | 'tshirt', results: object) =>
+    gameState({
+      scale,
+      total: scale === 'tshirt' ? null : 0,
+      phase: 'revealed',
+      story: STORY,
+      voters: [ANNA],
+      results,
+    });
+  const votingIn = (scale: 'fibonacci' | 'incremental' | 'tshirt') =>
+    gameState({
+      scale,
+      total: scale === 'tshirt' ? null : 0,
+      phase: 'voting',
+      story: STORY,
+      voters: [ANNA],
+    });
+
+  it.each([
+    [
+      'fibonacci',
+      false,
+      11.5,
+      13,
+      13,
+      'Votes revealed. No consensus, average 11.5, too large to take as one story',
+    ],
+    [
+      'fibonacci',
+      true,
+      13,
+      13,
+      13,
+      'Votes revealed. Consensus: 13, too large to take as one story',
+    ],
+    [
+      'incremental',
+      false,
+      8.5,
+      9,
+      9,
+      'Votes revealed. No consensus, average 8.5, too large to take as one story',
+    ],
+  ] as const)(
+    'adds the too-large suffix for %s (consensus %s)',
+    (scale, consensus, average, median, suggestedEstimate, expected) => {
+      const results = {
+        distribution: [{ card: median, count: 1 }],
+        average,
+        median,
+        consensus,
+        outlierIds: [],
+        suggestedEstimate,
+      };
+
+      expect(describeVoteChanges(votingIn(scale), revealedAs(scale, results), null)).toBe(expected);
+    },
+  );
+
+  it('adds it for a too-large t-shirt median', () => {
+    const results = {
+      distribution: [{ card: 'XL', count: 1 }],
+      average: null,
+      median: 'XL',
+      consensus: false,
+      outlierIds: [],
+      suggestedEstimate: 'XL',
+    };
+
+    expect(describeVoteChanges(votingIn('tshirt'), revealedAs('tshirt', results), null)).toBe(
+      'Votes revealed. No consensus, median XL, too large to take as one story',
+    );
+  });
+
+  it.each([
+    ['fibonacci', 5, 'Votes revealed. Consensus: 5'],
+    ['fibonacci', 8, 'Votes revealed. Consensus: 8'],
+    ['tshirt', 'M', 'Votes revealed. Consensus: M'],
+  ] as const)('adds nothing for a small %s proposal %s', (scale, card, expected) => {
+    const results = {
+      distribution: [{ card, count: 2 }],
+      average: scale === 'tshirt' ? null : card,
+      median: card,
+      consensus: true,
+      outlierIds: [],
+      suggestedEstimate: card,
+    };
+
+    expect(describeVoteChanges(votingIn(scale), revealedAs(scale, results), null)).toBe(expected);
+  });
+
+  it('adds nothing when there are no sized votes', () => {
+    const results = {
+      distribution: [{ card: '?', count: 1 }],
+      average: null,
+      median: null,
+      consensus: false,
+      outlierIds: [],
+      suggestedEstimate: null,
+    };
+
+    expect(describeVoteChanges(votingIn('fibonacci'), revealedAs('fibonacci', results), null)).toBe(
+      'Votes revealed. No sized votes',
+    );
+  });
+});
+
+describe('describeVoteChanges for a recorded estimate and its size', () => {
+  const recordedAs = (scale: 'fibonacci' | 'incremental' | 'tshirt', estimate: number | string) =>
+    gameState({
+      scale,
+      total: scale === 'tshirt' ? null : 0,
+      voters: [ANNA],
+      history: [{ title: 'Login page', url: 'https://example.com/1', estimate }],
+    });
+  const before = (scale: 'fibonacci' | 'incremental' | 'tshirt') =>
+    gameState({
+      scale,
+      total: scale === 'tshirt' ? null : 0,
+      phase: 'revealed',
+      story: STORY,
+      voters: [ANNA],
+    });
+
+  it.each([
+    ['fibonacci', 13, 'Estimate recorded: 13, too large to take as one story'],
+    ['fibonacci', 8, 'Estimate recorded: 8'],
+    ['incremental', 8, 'Estimate recorded: 8, too large to take as one story'],
+    ['incremental', 7, 'Estimate recorded: 7'],
+    ['tshirt', 'L', 'Estimate recorded: L, too large to take as one story'],
+    ['tshirt', 'M', 'Estimate recorded: M'],
+  ] as const)('%s %s announces "%s"', (scale, estimate, expected) => {
+    expect(describeVoteChanges(before(scale), recordedAs(scale, estimate), null)).toBe(expected);
+  });
+
+  it('does not add the suffix when a story is skipped', () => {
+    expect(describeVoteChanges(before('fibonacci'), recordedAs('fibonacci', 'skipped'), null)).toBe(
+      'Story skipped',
     );
   });
 });

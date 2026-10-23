@@ -1,5 +1,6 @@
-import type { Card } from '@axon/shared';
+import { isTooLarge, type Card, type Scale } from '@axon/shared';
 import { memo, type ReactNode } from 'react';
+import { sizeStyle } from '../../lib/sizeStyles';
 import { CardFace } from '../atoms/CardFace';
 import { StatusBadge } from '../atoms/StatusBadge';
 import { VoteBadge } from '../atoms/VoteBadge';
@@ -12,6 +13,8 @@ interface PlayerRowProps {
   // Set only after the reveal: the voter's card, or `null` for "No vote". Replaces the badge.
   readonly revealedCard?: Card | null;
   readonly outlier?: boolean;
+  // The session's scale, so the revealed card gets its size colour.
+  readonly scale?: Scale;
   // Extra controls for this row, shown after the status (for example "Remove").
   readonly action?: ReactNode;
 }
@@ -22,6 +25,7 @@ export const PlayerRow = memo(function PlayerRow({
   hasVoted,
   revealedCard,
   outlier = false,
+  scale,
   action,
 }: PlayerRowProps) {
   return (
@@ -33,9 +37,22 @@ export const PlayerRow = memo(function PlayerRow({
           <span className="type-meta text-slate-600 dark:text-slate-400">No vote</span>
         )}
         {revealedCard !== undefined && revealedCard !== null && (
-          <span className="inline-flex min-w-8 justify-center rounded border border-slate-500 dark:border-slate-400 px-2 font-semibold">
+          <span
+            className={`inline-flex min-w-8 justify-center rounded border px-2 font-semibold ${
+              (scale !== undefined && sizeStyle(scale, revealedCard)?.chip) ||
+              'border-slate-500 dark:border-slate-400'
+            }`}
+          >
             <span className="sr-only">Vote: </span>
             <CardFace card={revealedCard} />
+            {scale !== undefined && isTooLarge(scale, revealedCard) && (
+              <>
+                <span aria-hidden="true" className="ml-1">
+                  ⚠
+                </span>
+                <span className="sr-only"> (too large)</span>
+              </>
+            )}
           </span>
         )}
         {outlier && (
