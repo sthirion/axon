@@ -701,3 +701,169 @@ describe('round:reveal', () => {
     expect(facilitator).toBeDefined();
   });
 });
+
+describe('round:revote and round:finish', () => {
+  function aRevealedRound() {
+    const setup = aSetup();
+    const anna = setup.join('anna', 'Anna');
+    const bob = setup.join('bob', 'Bob');
+    send(setup.facilitator, 'story:set', { title: 'Login page' });
+    send(anna.socket, 'vote:cast', { card: 3 });
+    send(bob.socket, 'vote:cast', { card: 8 });
+    send(setup.facilitator, 'round:reveal', undefined);
+    return { ...setup, anna, bob };
+  }
+
+  it('re-vote acks, clears each voter deck, then broadcasts voting state, in that order', () => {
+    const { io, facilitator, anna, bob } = aRevealedRound();
+    io.timeline.length = 0;
+    const before = mark(io);
+    const annaMines = voteMines(anna.socket).length;
+
+    const ack = send(facilitator, 'round:revote', undefined);
+
+    expect(ack).toEqual({ ok: true });
+    expect(io.timeline).toEqual([
+      'ack',
+      'broadcast:vote:mine',
+      'broadcast:vote:mine',
+      'broadcast:game:state',
+    ]);
+    const sent = since(io, before);
+    expect(sent.filter((b) => b.event === 'vote:mine').map((b) => [b.room, b.payload])).toEqual([
+      [playerRoom(anna.playerId), { card: null }],
+      [playerRoom(bob.playerId), { card: null }],
+    ]);
+    const state = sent.at(-1)?.payload as PublicGameState;
+    expect(state.phase).toBe('voting');
+    expect(state.story).toEqual({ title: 'Login page' });
+    expect(state).not.toHaveProperty('results');
+    expect(state.voters.every((v) => !v.hasVoted && !('card' in v))).toBe(true);
+    expect(voteMines(anna.socket).length).toBe(annaMines);
+  });
+
+  it('re-vote sends nothing to the facilitator room as vote:mine and ignores any payload', () => {
+    const { io, facilitator } = aRevealedRound();
+    const before = mark(io);
+
+    expect(send(facilitator, 'round:revote', { phase: 'waiting' })).toEqual({ ok: true });
+
+    expect(
+      since(io, before).some((b) => b.event === 'vote:mine' && b.room.startsWith('player:')),
+    ).toBe(true);
+    expect(since(io, before).filter((b) => b.event === 'vote:mine')).toHaveLength(2);
+  });
+
+  it.each([
+    ['round:revote', undefined],
+    ['round:finish', { finalEstimate: 5 }],
+    ['round:finish', { skip: true }],
+  ])('rejects %s from a voter with FORBIDDEN and no broadcast', (event, payload) => {
+    const { io, anna } = aRevealedRound();
+    const before = mark(io);
+
+    expect(send(anna.socket, event, payload)).toEqual(failure('FORBIDDEN'));
+    expect(since(io, before)).toEqual([]);
+  });
+
+  it.each(['round:revote', 'round:finish'])(
+    'rejects %s from a socket that never joined',
+    (event) => {
+      const { io } = aRevealedRound();
+
+      expect(send(io.connect('stranger'), event, { skip: true })).toEqual(failure('FORBIDDEN'));
+    },
+  );
+
+  it('rejects a re-vote while voting with WRONG_PHASE and no broadcast', () => {
+    const { io, facilitator } = aSetup();
+    send(facilitator, 'story:set', { title: 'T' });
+    const before = mark(io);
+
+    expect(send(facilitator, 'round:revote', undefined)).toEqual(failure('WRONG_PHASE'));
+    expect(since(io, before)).toEqual([]);
+  });
+
+  it('records the estimate, clears the story and decks, and broadcasts history and total', () => {
+    const { io, facilitator, anna, bob } = aRevealedRound();
+    io.timeline.length = 0;
+    const before = mark(io);
+
+    const ack = send(facilitator, 'round:finish', { finalEstimate: 5 });
+
+    expect(ack).toEqual({ ok: true });
+    expect(io.timeline).toEqual([
+      'ack',
+      'broadcast:vote:mine',
+      'broadcast:vote:mine',
+      'broadcast:game:state',
+    ]);
+    const state = since(io, before).at(-1)?.payload as PublicGameState;
+    expect(state.phase).toBe('waiting');
+    expect(state.story).toBeNull();
+    expect(state.history).toEqual([{ title: 'Login page', estimate: 5 }]);
+    expect(state.total).toBe(5);
+    expect(state).not.toHaveProperty('results');
+    expect(state.voters.every((v) => !v.hasVoted)).toBe(true);
+    expect(anna.playerId).not.toBe(bob.playerId);
+  });
+
+  it('skips while voting and records "skipped"', () => {
+    const { io, facilitator } = aSetup();
+    send(facilitator, 'story:set', { title: 'T', url: 'https://e.com/x' });
+    const before = mark(io);
+
+    expect(send(facilitator, 'round:finish', { skip: true })).toEqual({ ok: true });
+
+    const state = since(io, before).at(-1)?.payload as PublicGameState;
+    expect(state.history).toEqual([{ title: 'T', url: 'https://e.com/x', estimate: 'skipped' }]);
+    expect(state.total).toBe(0);
+  });
+
+  it.each([
+    [{ finalEstimate: '?' }, 'INVALID_CARD'],
+    [{ finalEstimate: 'coffee' }, 'INVALID_CARD'],
+    [{ finalEstimate: 4 }, 'INVALID_CARD'],
+    [{ finalEstimate: '5' }, 'INVALID_CARD'],
+    [{ finalEstimate: null }, 'INVALID_CARD'],
+    [{}, 'INVALID_PAYLOAD'],
+    [{ finalEstimate: 5, skip: true }, 'INVALID_PAYLOAD'],
+    [{ skip: false }, 'INVALID_PAYLOAD'],
+    [{ skip: 'true' }, 'INVALID_PAYLOAD'],
+    ['skip', 'INVALID_PAYLOAD'],
+    [null, 'INVALID_PAYLOAD'],
+    [undefined, 'INVALID_PAYLOAD'],
+  ] as const)('rejects round:finish %j with %s and records nothing', (payload, code) => {
+    const { io, facilitator } = aRevealedRound();
+    const before = mark(io);
+
+    expect(send(facilitator, 'round:finish', payload)).toEqual(failure(code));
+    expect(since(io, before)).toEqual([]);
+  });
+
+  it('rejects a second finish and a finish while waiting with WRONG_PHASE', () => {
+    const { facilitator } = aRevealedRound();
+    send(facilitator, 'round:finish', { finalEstimate: 5 });
+
+    expect(send(facilitator, 'round:finish', { finalEstimate: 5 })).toEqual(failure('WRONG_PHASE'));
+    expect(send(facilitator, 'round:finish', { skip: true })).toEqual(failure('WRONG_PHASE'));
+  });
+
+  it('is processed without an ack callback', () => {
+    const { io, facilitator } = aRevealedRound();
+
+    facilitator.trigger('round:finish', { skip: true });
+
+    expect((states(io).at(-1) as PublicGameState).history).toHaveLength(1);
+  });
+
+  it('logs only the event name, gameId and code', () => {
+    const { anna } = aRevealedRound();
+    const log = vi.spyOn(console, 'warn');
+
+    send(anna.socket, 'round:finish', { finalEstimate: 13 });
+
+    expect(JSON.stringify(log.mock.calls)).toContain('FORBIDDEN');
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/13|Anna|Login/);
+  });
+});

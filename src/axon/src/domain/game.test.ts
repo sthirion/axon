@@ -190,7 +190,7 @@ describe('toPublicState', () => {
     expect(toPublicState(aGame()).voters).toEqual([]);
   });
 
-  it('contains only gameId, phase, story, facilitator and voters', () => {
+  it('contains only gameId, phase, story, facilitator, voters, history and total', () => {
     const game = aGame();
     addVoter(game, aNewPlayer({ id: 'v1', name: 'Anna' }));
 
@@ -199,8 +199,10 @@ describe('toPublicState', () => {
     expect(Object.keys(state).sort()).toEqual([
       'facilitator',
       'gameId',
+      'history',
       'phase',
       'story',
+      'total',
       'voters',
     ]);
     expect(Object.keys(state.facilitator).sort()).toEqual(['connected', 'name']);

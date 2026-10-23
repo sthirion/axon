@@ -1,10 +1,12 @@
 import { timingSafeEqual } from 'node:crypto';
 import {
   cardSchema,
+  finalEstimateSchema,
   playerNameKey,
   storySchema,
   type Card,
   type GamePhase,
+  type HistoryEntry,
   type PlayerRole,
   type PublicGameState,
   type Story,
@@ -28,6 +30,8 @@ export interface Game {
   story?: Story;
   // Keyed by player id, not socket id, so a vote survives going offline and rejoining.
   readonly votes: Map<string, Card>;
+  // Finished stories, oldest first; skipped stories carry the estimate 'skipped'.
+  readonly history: HistoryEntry[];
 }
 
 export interface NewPlayer {
@@ -59,6 +63,7 @@ export function createGame(id: string, facilitator: NewPlayer): Game {
     players: new Map([[player.id, player]]),
     phase: 'waiting',
     votes: new Map(),
+    history: [],
   };
 }
 
@@ -134,6 +139,50 @@ export function revealRound(game: Game, playerId: string): ActionResult {
   return { ok: true };
 }
 
+// Back to voting on the same story with every vote cleared.
+export function revoteRound(game: Game, playerId: string): ActionResult {
+  if (game.players.get(playerId)?.role !== 'facilitator') {
+    return { ok: false, code: 'FORBIDDEN' };
+  }
+  if (game.phase !== 'revealed') {
+    return { ok: false, code: 'WRONG_PHASE' };
+  }
+  game.votes.clear();
+  game.phase = 'voting';
+  return { ok: true };
+}
+
+// `input` has already passed the envelope check: exactly one of `skip: true` or `finalEstimate`.
+// An estimate needs the reveal; a skip is also allowed while voting. Either way the story goes to
+// the history, the votes are cleared and the game waits for the next story.
+export function finishRound(game: Game, playerId: string, input: object): ActionResult {
+  if (game.players.get(playerId)?.role !== 'facilitator') {
+    return { ok: false, code: 'FORBIDDEN' };
+  }
+  const skipping = 'skip' in input;
+  const allowed = skipping
+    ? game.phase === 'voting' || game.phase === 'revealed'
+    : game.phase === 'revealed';
+  if (!allowed || !game.story) {
+    return { ok: false, code: 'WRONG_PHASE' };
+  }
+  let estimate: HistoryEntry['estimate'] = 'skipped';
+  if (!skipping) {
+    const parsed = finalEstimateSchema.safeParse(
+      (input as { finalEstimate?: unknown }).finalEstimate,
+    );
+    if (!parsed.success) {
+      return { ok: false, code: 'INVALID_CARD' };
+    }
+    estimate = parsed.data;
+  }
+  game.history.push({ ...game.story, estimate });
+  game.votes.clear();
+  game.story = undefined;
+  game.phase = 'waiting';
+  return { ok: true };
+}
+
 // `null` withdraws the vote; casting the same card again or withdrawing without a vote succeeds.
 export function castVote(game: Game, playerId: string, input: unknown): ActionResult {
   if (game.players.get(playerId)?.role !== 'voter') {
@@ -183,5 +232,10 @@ export function toPublicState(game: Game): PublicGameState {
         };
       }),
     ...(revealed ? { results: calculateStats(game.votes) } : {}),
+    history: game.history.map((entry) => ({ ...entry })),
+    total: game.history.reduce(
+      (sum, entry) => (typeof entry.estimate === 'number' ? sum + entry.estimate : sum),
+      0,
+    ),
   };
 }

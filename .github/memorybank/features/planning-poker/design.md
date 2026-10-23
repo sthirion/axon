@@ -81,8 +81,8 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
 | S→C | `vote:mine` | `{ card: Card \| null }` | only the sockets of the voter who owns the vote (room `player:<id>`) |
 | C→S | `story:set` | `{ title, url? }` | facilitator, phase `waiting` or `voting` |
 | C→S | `round:reveal` | — (any payload ignored) | facilitator, phase `voting`, ≥1 vote |
-| C→S | `round:revote` | — | facilitator, phase `revealed` |
-| C→S | `round:finish` | finalEstimate (numeric card) or `skip` | facilitator, phase `revealed` (or `voting` for skip) |
+| C→S | `round:revote` | — (any payload ignored) | facilitator, phase `revealed` |
+| C→S | `round:finish` | `{ finalEstimate: 0\|1\|2\|3\|5\|8\|13\|21 }` or `{ skip: true }` | facilitator, phase `revealed` (or `voting` for skip) |
 | C→S | `player:remove` | playerId | facilitator |
 | S→C | `player:removed` | — | the removed player, then disconnect |
 | S→C | `game:ended` | reason | everyone (server shutdown) |
@@ -96,6 +96,11 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
 - `game:join` by a voter also emits `vote:mine` (the current card or `null`) to the joining
   socket, after `game:joined` and before the room `game:state`. The facilitator never
   receives `vote:mine`.
+- `round:revote` and `round:finish` success: ack, then `vote:mine { card: null }` to every
+  voter's `player:<id>` room (their decks clear in all tabs), then `game:state` to the game room.
+  A re-vote goes back to `voting` on the same story; a finish appends `{ title, url?, estimate }`
+  to `history` (estimate is the number or `'skipped'`), clears all votes and the story, and
+  moves to `waiting`.
 - A missing ack callback is tolerated: the event is still processed.
 
 ### `PublicGameState`
@@ -304,6 +309,13 @@ Paths follow the source paths in [project-config.md](../../../project-config.md)
   - In phase `revealed`, `vote:cast` and `story:set` return `WRONG_PHASE` (role checks still come
     first, so a voter setting the story or the facilitator voting is `FORBIDDEN`).
   - `story:set` is allowed in phase `waiting` or `voting` only.
+- Added by story #5 (`round:revote` and `round:finish` acks; no new codes):
+  - `round:revote` check order: not joined (`FORBIDDEN`), game missing (`GAME_NOT_FOUND`), role
+    (`FORBIDDEN`), phase `revealed` (`WRONG_PHASE`).
+  - `round:finish` check order: not joined, game missing, payload envelope (`INVALID_PAYLOAD`:
+    not an object, or not exactly one of `finalEstimate` / `skip: true`), role (`FORBIDDEN`),
+    phase (`WRONG_PHASE`: an estimate needs `revealed`, a skip needs `voting` or `revealed`),
+    value (`INVALID_CARD`: the estimate is not a numeric deck value; `?` and coffee are rejected).
 - The client shows a friendly message for each code; unknown errors show a generic message.
 - Socket.IO reconnects automatically; on reconnect the client sends `game:join` again with
   its token and gets the full `game:state`, so missed updates don't matter.

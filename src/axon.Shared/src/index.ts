@@ -10,7 +10,14 @@ export {
   type ErrorBody,
   type ErrorCode,
 } from './errors.js';
-export { cardSchema, DECK, type Card } from './deck.js';
+export {
+  cardSchema,
+  DECK,
+  FINAL_ESTIMATES,
+  finalEstimateSchema,
+  type Card,
+  type FinalEstimate,
+} from './deck.js';
 export {
   createGameBodySchema,
   createGameResponseSchema,
@@ -21,6 +28,7 @@ export {
   gameJoinedSchema,
   gameJoinPayloadSchema,
   gamePhaseSchema,
+  historyEntrySchema,
   PLAYER_NAME_MAX_LENGTH,
   PLAYER_TOKEN_PATTERN,
   playerNameKey,
@@ -28,6 +36,8 @@ export {
   playerRoleSchema,
   playerTokenSchema,
   publicGameStateSchema,
+  roundFinishEnvelopeSchema,
+  roundFinishPayloadSchema,
   roundStatsSchema,
   voteCastEnvelopeSchema,
   voteCastPayloadSchema,
@@ -38,8 +48,10 @@ export {
   type GameJoined,
   type GameJoinPayload,
   type GamePhase,
+  type HistoryEntry,
   type PlayerRole,
   type PublicGameState,
+  type RoundFinishPayload,
   type RoundStats,
   type VoteCastPayload,
   type VoteMine,

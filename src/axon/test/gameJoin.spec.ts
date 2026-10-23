@@ -264,8 +264,10 @@ describe('game join over Socket.IO', () => {
       expect(Object.keys(state).sort()).toEqual([
         'facilitator',
         'gameId',
+        'history',
         'phase',
         'story',
+        'total',
         'voters',
       ]);
       expect(state.phase).toBe('waiting');

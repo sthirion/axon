@@ -1,5 +1,5 @@
 import { memo, useId, useState } from 'react';
-import { actionErrorMessage } from '../../lib/actionErrors';
+import { actionErrorMessage, GENERIC_ERROR_MESSAGE } from '../../lib/actionErrors';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
 
@@ -24,9 +24,14 @@ export const RevealButton = memo(function RevealButton({
     if (pending) return;
     setError(null);
     setPending(true);
-    const result = await onReveal();
-    setPending(false);
-    if (!result.ok) setError(actionErrorMessage(result.code));
+    try {
+      const result = await onReveal();
+      if (!result.ok) setError(actionErrorMessage(result.code));
+    } catch {
+      setError(GENERIC_ERROR_MESSAGE);
+    } finally {
+      setPending(false);
+    }
   }
 
   return (

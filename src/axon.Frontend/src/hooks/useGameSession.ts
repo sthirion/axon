@@ -4,6 +4,7 @@ import {
   type Card,
   type PlayerRole,
   type PublicGameState,
+  type RoundFinishPayload,
   type StorySetPayload,
 } from '@axon/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -47,6 +48,8 @@ export interface GameSession {
   readonly setStory: (story: StorySetPayload) => Promise<ActionResult>;
   readonly castVote: (card: Card | null) => Promise<ActionResult>;
   readonly revealRound: () => Promise<ActionResult>;
+  readonly revoteRound: () => Promise<ActionResult>;
+  readonly finishRound: (payload: RoundFinishPayload) => Promise<ActionResult>;
 }
 
 export function useGameSession(gameId: string): GameSession {
@@ -189,6 +192,17 @@ export function useGameSession(gameId: string): GameSession {
     [],
   );
 
+  const revoteRound = useCallback(
+    () => clientRef.current?.revoteRound() ?? Promise.resolve(NOT_CONNECTED),
+    [],
+  );
+
+  const finishRound = useCallback(
+    (payload: RoundFinishPayload) =>
+      clientRef.current?.finishRound(payload) ?? Promise.resolve(NOT_CONNECTED),
+    [],
+  );
+
   return {
     phase,
     game,
@@ -204,5 +218,7 @@ export function useGameSession(gameId: string): GameSession {
     setStory,
     castVote,
     revealRound,
+    revoteRound,
+    finishRound,
   };
 }

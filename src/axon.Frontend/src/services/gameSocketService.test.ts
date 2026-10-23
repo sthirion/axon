@@ -1,4 +1,4 @@
-import type { Card } from '@axon/shared';
+import type { Card, RoundFinishPayload } from '@axon/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACK_TIMEOUT_MS, connectGameSocket } from './gameSocketService';
 import type { GameSocketHandlers } from '../types/game.types';
@@ -252,6 +252,29 @@ describe('connectGameSocket', () => {
       expect(emitted('round:reveal')[0]?.payload).toBeUndefined();
       expect(await result).toEqual({ ok: true });
     });
+
+    it('emits round:revote with no payload', async () => {
+      const client = connect();
+
+      const result = client.revoteRound();
+      emitted('round:revote')[0]?.ack?.(OK_ACK);
+
+      expect(emitted('round:revote')[0]?.payload).toBeUndefined();
+      expect(await result).toEqual({ ok: true });
+    });
+
+    it.each<RoundFinishPayload>([{ finalEstimate: 8 }, { skip: true }])(
+      'emits round:finish with %j',
+      async (payload) => {
+        const client = connect();
+
+        const result = client.finishRound(payload);
+        emitted('round:finish')[0]?.ack?.(failAck('WRONG_PHASE'));
+
+        expect(emitted('round:finish')[0]?.payload).toEqual(payload);
+        expect(await result).toEqual({ ok: false, code: 'WRONG_PHASE' });
+      },
+    );
 
     it('resolves the failure code of a rejected reveal', async () => {
       const client = connect();

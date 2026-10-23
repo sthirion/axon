@@ -48,6 +48,8 @@ function GameSession({ gameId }: { readonly gameId: string }) {
         onSetStory={session.setStory}
         onCastVote={session.castVote}
         onReveal={session.revealRound}
+        onRevote={session.revoteRound}
+        onFinish={session.finishRound}
       />
     );
   }

@@ -58,6 +58,15 @@ describe('RevealButton', () => {
     expect(screen.getByRole('button', { name: 'Reveal votes' })).toBeEnabled();
   });
 
+  it('shows the generic message and re-enables the button when the request rejects', async () => {
+    renderButton(() => Promise.reject(new Error('socket closed')));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reveal votes' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
+    expect(screen.getByRole('button', { name: 'Reveal votes' })).toBeEnabled();
+  });
+
   it('clears the previous error on the next attempt', async () => {
     const onReveal = vi
       .fn<() => Promise<ActionResult>>()

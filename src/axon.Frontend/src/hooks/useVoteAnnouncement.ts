@@ -19,6 +19,13 @@ export function describeVoteChanges(
   if (previous.phase === 'waiting' && next.phase === 'voting' && next.story) {
     messages.push(`Voting is open: ${next.story.title}`);
   }
+  if (next.history.length > previous.history.length) {
+    const finished = next.history[next.history.length - 1];
+    return finished?.estimate === 'skipped'
+      ? 'Story skipped'
+      : `Estimate recorded: ${finished?.estimate}`;
+  }
+  if (previous.phase === 'revealed' && next.phase === 'voting') return 'Re-vote started';
   if (previous.phase !== 'revealed' && next.phase === 'revealed') {
     messages.push('Votes revealed');
     if (next.results) messages.push(describeResults(next.results));
