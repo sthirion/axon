@@ -5,6 +5,7 @@ import {
   gameIdSchema,
   gameJoinPayloadSchema,
   playerNameSchema,
+  roundFinishEnvelopeSchema,
   playerTokenSchema,
   storySetEnvelopeSchema,
   voteCastEnvelopeSchema,
@@ -17,8 +18,10 @@ import {
   castVote,
   connectSocket,
   disconnectSocket,
+  finishRound,
   getVote,
   revealRound,
+  revoteRound,
   setStory,
   toPublicState,
   type ActionResult,
@@ -210,6 +213,46 @@ export function registerGateway(io: Server, store: GameStore): void {
 
       reply({ ok: true });
       io.to(gameRoom(decision.game.id)).emit(GAME_EVENTS.state, toPublicState(decision.game));
+    });
+
+    // Votes were cleared: every voter's own deck (all tabs) must forget its selection.
+    function clearOwnVotes(game: Game): void {
+      const mine: VoteMine = { card: null };
+      for (const player of game.players.values()) {
+        if (player.role === 'voter') {
+          io.to(playerRoom(player.id)).emit(GAME_EVENTS.voteMine, mine);
+        }
+      }
+    }
+
+    // Shared by the commands that empty the round: ack, clear every deck, then broadcast.
+    function finishCommand(decision: CommandDecision, reply: (result: Ack) => void): void {
+      if (!decision.ok) {
+        logEvent('round.rejected', { gameId: decision.gameId, code: decision.code }, 'warn');
+        reply(failedAck(decision.code));
+        return;
+      }
+      reply({ ok: true });
+      clearOwnVotes(decision.game);
+      io.to(gameRoom(decision.game.id)).emit(GAME_EVENTS.state, toPublicState(decision.game));
+    }
+
+    socket.on(GAME_EVENTS.roundRevote, (payload: unknown, ack?: unknown) => {
+      finishCommand(
+        decideCommand(store, session, payload, ANY_PAYLOAD, (game, playerId) =>
+          revoteRound(game, playerId),
+        ),
+        replyTo(ack),
+      );
+    });
+
+    socket.on(GAME_EVENTS.roundFinish, (payload: unknown, ack?: unknown) => {
+      finishCommand(
+        decideCommand(store, session, payload, roundFinishEnvelopeSchema, (game, playerId, data) =>
+          finishRound(game, playerId, data),
+        ),
+        replyTo(ack),
+      );
     });
 
     socket.on('disconnect', () => {

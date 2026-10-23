@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  finalEstimateSchema,
+  roundFinishEnvelopeSchema,
+  roundFinishPayloadSchema,
   ackSchema,
   createGameBodySchema,
   createGameResponseSchema,
@@ -148,6 +151,8 @@ describe('publicGameStateSchema', () => {
       { id: 'p3', name: 'Bob', connected: false, hasVoted: false },
     ],
     results: STATS,
+    history: [],
+    total: 0,
   };
 
   it('accepts a revealed state with cards and results', () => {
@@ -172,6 +177,8 @@ describe('publicGameStateSchema', () => {
     story: null,
     facilitator: { name: 'Sven', connected: true },
     voters: [{ id: 'p2', name: 'Anna', connected: false, hasVoted: false }],
+    history: [],
+    total: 0,
   };
 
   it('accepts a waiting state', () => {
@@ -282,6 +289,83 @@ describe('GAME_EVENTS', () => {
       voteCast: 'vote:cast',
       voteMine: 'vote:mine',
       roundReveal: 'round:reveal',
+      roundRevote: 'round:revote',
+      roundFinish: 'round:finish',
     });
+  });
+});
+
+describe('publicGameStateSchema history', () => {
+  const state = {
+    gameId: GAME_ID,
+    phase: 'waiting',
+    story: null,
+    facilitator: { name: 'Sven', connected: true },
+    voters: [],
+    history: [
+      { title: 'A', url: 'https://e.com/a', estimate: 5 },
+      { title: 'B', estimate: 'skipped' },
+    ],
+    total: 5,
+  };
+
+  it('accepts numeric and skipped entries', () => {
+    expect(publicGameStateSchema.safeParse(state).success).toBe(true);
+  });
+
+  it.each([
+    ['a missing history', { ...state, history: undefined }],
+    ['a missing total', { ...state, total: undefined }],
+    ['an extra entry key', { ...state, history: [{ title: 'A', estimate: 5, votes: [] }] }],
+    ['an unknown estimate string', { ...state, history: [{ title: 'A', estimate: 'later' }] }],
+    ['a null estimate', { ...state, history: [{ title: 'A', estimate: null }] }],
+    ['a string total', { ...state, total: '5' }],
+  ])('rejects %s', (_label, value) => {
+    expect(publicGameStateSchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('finalEstimateSchema', () => {
+  it.each([0, 1, 2, 3, 5, 8, 13, 21])('accepts %d', (value) => {
+    expect(finalEstimateSchema.safeParse(value).success).toBe(true);
+  });
+
+  it.each(['?', 'coffee', '5', 4, 5.5, -1, null, true, {}, []])('rejects %j', (value) => {
+    expect(finalEstimateSchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('roundFinishEnvelopeSchema', () => {
+  it.each([
+    { finalEstimate: 5 },
+    { finalEstimate: 'coffee' },
+    { skip: true },
+    { finalEstimate: null },
+  ])('accepts %j (the value is checked later)', (value) => {
+    expect(roundFinishEnvelopeSchema.safeParse(value).success).toBe(true);
+  });
+
+  it.each([
+    {},
+    { finalEstimate: 5, skip: true },
+    { skip: false },
+    { skip: 'true' },
+    { skip: 1 },
+    null,
+    undefined,
+    'skip',
+    5,
+    [],
+  ])('rejects %j', (value) => {
+    expect(roundFinishEnvelopeSchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('roundFinishPayloadSchema', () => {
+  it('accepts an estimate or a skip and rejects the rest', () => {
+    expect(roundFinishPayloadSchema.safeParse({ finalEstimate: 13 }).success).toBe(true);
+    expect(roundFinishPayloadSchema.safeParse({ skip: true }).success).toBe(true);
+    expect(roundFinishPayloadSchema.safeParse({ finalEstimate: '?' }).success).toBe(false);
+    expect(roundFinishPayloadSchema.safeParse({ skip: false }).success).toBe(false);
   });
 });

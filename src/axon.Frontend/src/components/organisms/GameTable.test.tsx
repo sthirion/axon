@@ -13,6 +13,8 @@ const IDLE = {
   onSetStory: () => Promise.resolve({ ok: true as const }),
   onCastVote: () => Promise.resolve({ ok: true as const }),
   onReveal: () => Promise.resolve({ ok: true as const }),
+  onRevote: () => Promise.resolve({ ok: true as const }),
+  onFinish: () => Promise.resolve({ ok: true as const }),
 } as const;
 
 function renderTable(game: Game, reconnecting = false) {
@@ -329,5 +331,76 @@ describe('GameTable after voting', () => {
     facilitator(gameState(REVEALED) as Game);
     expect(screen.queryByRole('button', { name: 'Edit story' })).toBeNull();
     expect(screen.getByText('Login page')).toBeVisible();
+  });
+});
+
+describe('GameTable round controls and summary', () => {
+  const STATS = {
+    distribution: [{ card: 5, count: 2 }],
+    average: 5,
+    consensus: true,
+    outlierIds: [],
+    suggestedEstimate: 5,
+  };
+  const REVEALED = {
+    phase: 'revealed',
+    story: { title: 'Login page' },
+    voters: [
+      { id: 'v1', name: 'Anna', connected: true, hasVoted: true, card: 5 },
+      { id: 'v2', name: 'Bob', connected: true, hasVoted: true, card: 5 },
+    ],
+    results: STATS,
+  };
+  const VOTING = { phase: 'voting', story: { title: 'Login page' } };
+  const facilitator = (game: Game, props: Partial<Parameters<typeof GameTable>[0]> = {}) =>
+    render(<GameTable game={game} reconnecting={false} {...IDLE} role="facilitator" {...props} />);
+
+  it('shows the facilitator Skip story while voting, but no estimate or re-vote', () => {
+    facilitator(gameState(VOTING) as Game);
+
+    expect(screen.getByRole('button', { name: 'Skip story' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Record estimate' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Re-vote' })).toBeNull();
+  });
+
+  it('shows the facilitator the suggested estimate, Record estimate, Re-vote and Skip after the reveal', () => {
+    facilitator(gameState(REVEALED) as Game);
+
+    expect(screen.getByLabelText('Final estimate')).toHaveValue('5');
+    expect(screen.getByRole('button', { name: 'Record estimate' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Re-vote' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Skip story' })).toBeEnabled();
+  });
+
+  it('shows no round controls to voters, while waiting', () => {
+    renderTable(gameState(REVEALED) as Game);
+    expect(screen.queryByRole('region', { name: 'Round controls' })).toBeNull();
+    cleanup();
+    facilitator(gameState() as Game);
+    expect(screen.queryByRole('region', { name: 'Round controls' })).toBeNull();
+  });
+
+  it('shows the summary with its empty message to everyone', () => {
+    renderTable(gameState() as Game);
+
+    const summary = screen.getByRole('region', { name: 'Summary' });
+    expect(within(summary).getByText('No stories estimated yet.')).toBeVisible();
+    expect(within(summary).getByText('Total: 0')).toBeVisible();
+  });
+
+  it('shows the history in order with the total', () => {
+    const game = gameState({
+      history: [
+        { title: 'Login', url: 'https://e.com/1', estimate: 5 },
+        { title: 'Checkout', estimate: 'skipped' },
+      ],
+      total: 5,
+    }) as Game;
+    renderTable(game);
+
+    const items = within(screen.getByRole('region', { name: 'Summary' })).getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('Loginhttps://e.com/1 (opens in a new tab)5');
+    expect(items[1]).toHaveTextContent('Checkoutskipped');
+    expect(screen.getByText('Total: 5')).toBeVisible();
   });
 });

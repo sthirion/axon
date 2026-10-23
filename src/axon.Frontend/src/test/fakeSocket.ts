@@ -68,6 +68,8 @@ export function gameState(overrides: Record<string, unknown> = {}): PublicGameSt
     story: null,
     facilitator: { name: 'Sven', connected: true },
     voters: [] as object[],
+    history: [] as object[],
+    total: 0,
     ...overrides,
   };
   // Voters default to not voted so existing fixtures only list what they care about.

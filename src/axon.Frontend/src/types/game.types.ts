@@ -4,6 +4,7 @@ import type {
   GameJoined,
   GameJoinPayload,
   PublicGameState,
+  RoundFinishPayload,
   StorySetPayload,
 } from '@axon/shared';
 
@@ -29,5 +30,7 @@ export interface GameSocketClient {
   readonly setStory: (payload: StorySetPayload) => Promise<ActionResult>;
   readonly castVote: (card: Card | null) => Promise<ActionResult>;
   readonly revealRound: () => Promise<ActionResult>;
+  readonly revoteRound: () => Promise<ActionResult>;
+  readonly finishRound: (payload: RoundFinishPayload) => Promise<ActionResult>;
   readonly close: () => void;
 }

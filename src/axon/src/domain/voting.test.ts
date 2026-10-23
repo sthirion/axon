@@ -291,8 +291,10 @@ describe('toPublicState with story and votes', () => {
     expect(Object.keys(state).sort()).toEqual([
       'facilitator',
       'gameId',
+      'history',
       'phase',
       'story',
+      'total',
       'voters',
     ]);
     expect(state.voters.map((voter) => Object.keys(voter).sort())).toEqual([

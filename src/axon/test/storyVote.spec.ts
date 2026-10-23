@@ -1773,4 +1773,308 @@ describe('story and vote over Socket.IO', () => {
       expect(logged.join('\n')).not.toMatch(/Anna|Login page/);
     });
   });
+
+  describe('round:revote and round:finish (Story #5)', () => {
+    async function aRevealedRound(
+      cards: Array<['anna' | 'bob', Card]> = [
+        ['anna', 3],
+        ['bob', 8],
+      ],
+    ) {
+      const round = await aRound();
+      for (const [who, card] of cards) {
+        await castAndSync(round, round[who], card);
+      }
+      const marks = round.everyone.map((c) => c.events.length);
+      expect(await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined)).toEqual({
+        ok: true,
+      });
+      await Promise.all(round.everyone.map((c, i) => c.nextState(marks[i] as number)));
+      return round;
+    }
+
+    // Sends the command and returns each client's next game:state.
+    async function command(round: Round, event: string, payload?: unknown) {
+      const marks = round.everyone.map((c) => c.events.length);
+      const ack = await round.facilitator.emit(event, payload);
+      const states = await Promise.all(
+        round.everyone.map((c, i) => c.nextState(marks[i] as number)),
+      );
+      return { ack, states, marks };
+    }
+
+    describe('round:revote', () => {
+      it('clears votes, keeps the story and tells every voter their deck is empty', async () => {
+        // Given
+        const round = await aRevealedRound();
+
+        // When
+        const started = Date.now();
+        const { ack, states, marks } = await command(round, GAME_EVENTS.roundRevote);
+
+        // Then
+        expect(ack).toEqual({ ok: true });
+        expect(Date.now() - started).toBeLessThan(BROADCAST_BUDGET_MS);
+        states.forEach((state) => {
+          expect(publicGameStateSchema.safeParse(state).success).toBe(true);
+          expect(state.phase).toBe('voting');
+          expect(state.story).toEqual({ title: 'Login page' });
+          expect(state).not.toHaveProperty('results');
+          expect(state.voters.every((v) => !v.hasVoted && !('card' in v))).toBe(true);
+          expect(state.history).toEqual([]);
+        });
+        expect(round.anna.client.mineSince(marks[1] as number)).toEqual([null]);
+        expect(round.bob.client.mineSince(marks[2] as number)).toEqual([null]);
+        expect(round.facilitator.mineSince(marks[0] as number)).toEqual([]);
+      });
+
+      it('clears the deck in every tab of a voter and lets everyone vote and reveal again', async () => {
+        // Given
+        const round = await aRevealedRound();
+        const tab = await aTabOf(round.table, round.anna);
+        const tabMark = tab.events.length;
+
+        // When
+        await command(round, GAME_EVENTS.roundRevote);
+        await tab.when(() => (tab.mineSince(tabMark).length > 0 ? true : undefined));
+        await castAndSync(round, round.bob, 13);
+        const marks = round.everyone.map((c) => c.events.length);
+        expect(await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined)).toEqual({
+          ok: true,
+        });
+        const states = await Promise.all(
+          round.everyone.map((c, i) => c.nextState(marks[i] as number)),
+        );
+
+        // Then
+        expect(tab.mineSince(tabMark)).toEqual([null]);
+        expect(voterOf(states[0] as PublicGameState, 'Bob').card).toBe(13);
+        expect(voterOf(states[0] as PublicGameState, 'Anna')).not.toHaveProperty('card');
+        expect(states[0]?.results?.distribution).toEqual([{ card: 13, count: 1 }]);
+      });
+
+      it('rejects a voter with FORBIDDEN, and a re-vote outside revealed with WRONG_PHASE, silently', async () => {
+        const voting = await aRound();
+        await castAndSync(voting, voting.anna, 5);
+        const revealed = await aRevealedRound();
+
+        const wrongPhase = await expectSilent(voting.table, [voting.anna.client], () =>
+          voting.facilitator.emit(GAME_EVENTS.roundRevote, undefined),
+        );
+        const forbidden = await expectSilent(revealed.table, [revealed.bob.client], () =>
+          revealed.anna.client.emit(GAME_EVENTS.roundRevote, undefined),
+        );
+
+        expect(wrongPhase.result).toEqual(failedAck('WRONG_PHASE'));
+        expect(forbidden.result).toEqual(failedAck('FORBIDDEN'));
+        expect(forbidden.state.phase).toBe('revealed');
+      });
+
+      it('rejects a socket that never joined with FORBIDDEN', async () => {
+        const stranger = await connect();
+
+        expect(await stranger.emit(GAME_EVENTS.roundRevote, undefined)).toEqual(
+          failedAck('FORBIDDEN'),
+        );
+      });
+    });
+
+    describe('round:finish', () => {
+      it('records the estimate, empties the round and sends history and total to everyone', async () => {
+        // Given
+        const round = await aRevealedRound();
+
+        // When
+        const started = Date.now();
+        const { ack, states, marks } = await command(round, GAME_EVENTS.roundFinish, {
+          finalEstimate: 5,
+        });
+
+        // Then
+        expect(ack).toEqual({ ok: true });
+        expect(Date.now() - started).toBeLessThan(BROADCAST_BUDGET_MS);
+        states.forEach((state) => {
+          expect(publicGameStateSchema.safeParse(state).success).toBe(true);
+          expect(state.phase).toBe('waiting');
+          expect(state.story).toBeNull();
+          expect(state).not.toHaveProperty('results');
+          expect(state.history).toEqual([{ title: 'Login page', estimate: 5 }]);
+          expect(state.total).toBe(5);
+          expect(state.voters.every((v) => !v.hasVoted && !('card' in v))).toBe(true);
+        });
+        expect(round.anna.client.mineSince(marks[1] as number)).toEqual([null]);
+        expect(round.bob.client.mineSince(marks[2] as number)).toEqual([null]);
+      });
+
+      it('keeps the link in the history and skips from voting with "skipped" and no total', async () => {
+        const round = await aRound();
+        await round.facilitator.emit(GAME_EVENTS.storySet, {
+          title: 'Checkout',
+          url: 'https://e.com/c',
+        });
+        await Promise.all(
+          round.everyone.map((c) => c.stateWhere((s) => s.story?.title === 'Checkout')),
+        );
+        await castAndSync(round, round.anna, 8);
+
+        const { ack, states } = await command(round, GAME_EVENTS.roundFinish, { skip: true });
+
+        expect(ack).toEqual({ ok: true });
+        expect(states[0]?.history).toEqual([
+          { title: 'Checkout', url: 'https://e.com/c', estimate: 'skipped' },
+        ]);
+        expect(states[0]?.total).toBe(0);
+        expect(states[0]?.phase).toBe('waiting');
+      });
+
+      it('skips from revealed too', async () => {
+        const round = await aRevealedRound();
+
+        const { states } = await command(round, GAME_EVENTS.roundFinish, { skip: true });
+
+        expect(states[0]?.history).toEqual([{ title: 'Login page', estimate: 'skipped' }]);
+      });
+
+      it('plays a second round from a clean start and keeps the summary in order', async () => {
+        // Given
+        const round = await aRevealedRound();
+        await command(round, GAME_EVENTS.roundFinish, { finalEstimate: 5 });
+
+        // When
+        await startVoting(round, 'Checkout');
+        const fresh = await round.anna.client.stateWhere((s) => s.story?.title === 'Checkout');
+        await castAndSync(round, round.anna, 8);
+        const marks = round.everyone.map((c) => c.events.length);
+        await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined);
+        await Promise.all(round.everyone.map((c, i) => c.nextState(marks[i] as number)));
+        const { states } = await command(round, GAME_EVENTS.roundFinish, { finalEstimate: 8 });
+
+        // Then
+        expect(fresh.voters.every((v) => !v.hasVoted)).toBe(true);
+        expect(states[0]?.history).toEqual([
+          { title: 'Login page', estimate: 5 },
+          { title: 'Checkout', estimate: 8 },
+        ]);
+        expect(states[0]?.total).toBe(13);
+      });
+
+      it.each([
+        [{ finalEstimate: '?' }, 'INVALID_CARD'],
+        [{ finalEstimate: 'coffee' }, 'INVALID_CARD'],
+        [{ finalEstimate: 4 }, 'INVALID_CARD'],
+        [{ finalEstimate: '5' }, 'INVALID_CARD'],
+        [{ finalEstimate: 5.5 }, 'INVALID_CARD'],
+        [{ finalEstimate: -1 }, 'INVALID_CARD'],
+        [{ finalEstimate: null }, 'INVALID_CARD'],
+        [{ finalEstimate: true }, 'INVALID_CARD'],
+        [{}, 'INVALID_PAYLOAD'],
+        [{ finalEstimate: 5, skip: true }, 'INVALID_PAYLOAD'],
+        [{ skip: false }, 'INVALID_PAYLOAD'],
+        [{ skip: 'true' }, 'INVALID_PAYLOAD'],
+        ['skip', 'INVALID_PAYLOAD'],
+        [null, 'INVALID_PAYLOAD'],
+        [[], 'INVALID_PAYLOAD'],
+      ] as Array<[unknown, ErrorCode]>)(
+        'rejects %j with %s and changes nothing',
+        async (payload, code) => {
+          const round = await aRevealedRound();
+
+          const { result, state } = await expectSilent(round.table, [round.anna.client], () =>
+            round.facilitator.emit(GAME_EVENTS.roundFinish, payload),
+          );
+
+          expect(result).toEqual(failedAck(code));
+          expect(state.phase).toBe('revealed');
+          expect(state.history).toEqual([]);
+          expect(voterOf(state, 'Anna').card).toBe(3);
+        },
+      );
+
+      it('rejects an estimate while voting and any finish while waiting with WRONG_PHASE', async () => {
+        const voting = await aRound();
+        const waiting = await aRound({ voting: false });
+
+        expect(
+          await voting.facilitator.emit(GAME_EVENTS.roundFinish, { finalEstimate: 5 }),
+        ).toEqual(failedAck('WRONG_PHASE'));
+        expect(await waiting.facilitator.emit(GAME_EVENTS.roundFinish, { skip: true })).toEqual(
+          failedAck('WRONG_PHASE'),
+        );
+        expect(
+          await waiting.facilitator.emit(GAME_EVENTS.roundFinish, { finalEstimate: 5 }),
+        ).toEqual(failedAck('WRONG_PHASE'));
+      });
+
+      it('rejects a second finish with WRONG_PHASE and records one entry', async () => {
+        const round = await aRevealedRound();
+        await command(round, GAME_EVENTS.roundFinish, { finalEstimate: 5 });
+
+        const { result, state } = await expectSilent(round.table, [round.anna.client], () =>
+          round.facilitator.emit(GAME_EVENTS.roundFinish, { finalEstimate: 5 }),
+        );
+
+        expect(result).toEqual(failedAck('WRONG_PHASE'));
+        expect(state.history).toHaveLength(1);
+      });
+
+      it('rejects a voter with FORBIDDEN even for an invalid payload, and a stranger too', async () => {
+        const round = await aRevealedRound();
+        const stranger = await connect();
+
+        const { result, state } = await expectSilent(round.table, [round.bob.client], async () => [
+          await round.anna.client.emit(GAME_EVENTS.roundFinish, { finalEstimate: 5 }),
+          await round.anna.client.emit(GAME_EVENTS.roundFinish, { skip: true }),
+          await round.anna.client.emit(GAME_EVENTS.roundFinish, { finalEstimate: 'coffee' }),
+          await stranger.emit(GAME_EVENTS.roundFinish, { skip: true }),
+        ]);
+
+        expect(result).toEqual(Array(4).fill(failedAck('FORBIDDEN')));
+        expect(state.phase).toBe('revealed');
+        expect(state.history).toEqual([]);
+      });
+
+      it('is processed without an ack callback', async () => {
+        const round = await aRevealedRound();
+        const marks = round.everyone.map((c) => c.events.length);
+
+        round.facilitator.socket.emit(GAME_EVENTS.roundFinish, { skip: true });
+
+        const states = await Promise.all(
+          round.everyone.map((c, i) => c.nextState(marks[i] as number)),
+        );
+        expect(states[0]?.history).toHaveLength(1);
+      });
+
+      it('shows the history to a voter who joins or rejoins afterwards', async () => {
+        const round = await aRevealedRound();
+        await command(round, GAME_EVENTS.roundFinish, { finalEstimate: 13 });
+
+        const tab = await aTabOf(round.table, round.anna);
+        const late = await aVoter(round.table, 'Cy');
+
+        const rejoined = await tab.stateWhere(() => true);
+        expect(rejoined.history).toEqual([{ title: 'Login page', estimate: 13 }]);
+        expect(tab.mine).toEqual([null]);
+        const joined = await late.client.stateWhere(hasVoter('Cy', true));
+        expect(joined.total).toBe(13);
+      });
+
+      it('logs only the event name, gameId and code, never a title or card', async () => {
+        const round = await aRevealedRound();
+
+        await round.anna.client.emit(GAME_EVENTS.roundFinish, { finalEstimate: 13 });
+        await round.facilitator.emit(GAME_EVENTS.roundFinish, { finalEstimate: 'coffee' });
+
+        const rejected = logged
+          .filter((line) => line.startsWith('{'))
+          .map((line) => JSON.parse(line) as Record<string, unknown>)
+          .filter((e) => e.event === 'round.rejected');
+        expect(rejected.map((e) => e.code)).toEqual(['FORBIDDEN', 'INVALID_CARD']);
+        rejected.forEach((e) =>
+          expect(Object.keys(e).sort()).toEqual(['code', 'event', 'gameId', 'level']),
+        );
+        expect(logged.join('\n')).not.toMatch(/Anna|Login page|coffee/);
+      });
+    });
+  });
 });

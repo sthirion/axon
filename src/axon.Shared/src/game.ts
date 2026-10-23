@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cardSchema } from './deck.js';
+import { cardSchema, finalEstimateSchema } from './deck.js';
 
 export const GAME_EVENTS = {
   join: 'game:join',
@@ -9,6 +9,8 @@ export const GAME_EVENTS = {
   voteCast: 'vote:cast',
   voteMine: 'vote:mine',
   roundReveal: 'round:reveal',
+  roundRevote: 'round:revote',
+  roundFinish: 'round:finish',
 } as const;
 
 export const GAME_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
@@ -94,6 +96,14 @@ export const roundStatsSchema = z.strictObject({
 
 export type RoundStats = z.infer<typeof roundStatsSchema>;
 
+export const historyEntrySchema = z.strictObject({
+  title: z.string(),
+  url: z.string().optional(),
+  estimate: z.union([z.number(), z.literal('skipped')]),
+});
+
+export type HistoryEntry = z.infer<typeof historyEntrySchema>;
+
 // Strict on purpose: an unexpected key (for example a vote value) must fail validation, not be stripped.
 // `card` and `results` exist only once the round is revealed.
 export const publicGameStateSchema = z
@@ -112,6 +122,8 @@ export const publicGameStateSchema = z
       }),
     ),
     results: roundStatsSchema.optional(),
+    history: z.array(historyEntrySchema),
+    total: z.number(),
   })
   .refine(
     (state) =>
@@ -134,3 +146,21 @@ export type VoteCastPayload = z.infer<typeof voteCastPayloadSchema>;
 export const voteMineSchema = z.strictObject({ card: cardSchema.nullable() });
 
 export type VoteMine = z.infer<typeof voteMineSchema>;
+
+// Only the shape: exactly one of `finalEstimate` or `skip: true`. The estimate itself is checked
+// later so a bad card is INVALID_CARD while a bad envelope is INVALID_PAYLOAD.
+export const roundFinishEnvelopeSchema = z
+  .looseObject({ finalEstimate: z.unknown().optional(), skip: z.unknown().optional() })
+  .refine((payload) => {
+    const hasEstimate = 'finalEstimate' in payload;
+    const hasSkip = 'skip' in payload;
+    return hasEstimate !== hasSkip && (!hasSkip || payload.skip === true);
+  });
+
+// What a client sends.
+export const roundFinishPayloadSchema = z.union([
+  z.object({ finalEstimate: finalEstimateSchema }),
+  z.object({ skip: z.literal(true) }),
+]);
+
+export type RoundFinishPayload = z.infer<typeof roundFinishPayloadSchema>;

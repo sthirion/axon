@@ -54,6 +54,46 @@ describe('describeVoteChanges', () => {
   });
 });
 
+describe('describeVoteChanges after reveal', () => {
+  const revealed = gameState({
+    phase: 'revealed',
+    story: STORY,
+    voters: [ANNA],
+    results: {
+      distribution: [{ card: 5, count: 1 }],
+      average: 5,
+      consensus: false,
+      outlierIds: [],
+      suggestedEstimate: 5,
+    },
+  });
+
+  it('announces a re-vote', () => {
+    expect(describeVoteChanges(revealed, voting([ANNA]), null)).toBe('Re-vote started');
+  });
+
+  it('announces a recorded estimate and a skip, without a card or a voter name', () => {
+    const recorded = gameState({
+      voters: [ANNA],
+      history: [{ title: 'Login page', estimate: 5 }],
+      total: 5,
+    });
+    const skipped = gameState({
+      voters: [ANNA],
+      history: [{ title: 'Login page', estimate: 'skipped' }],
+    });
+
+    expect(describeVoteChanges(revealed, recorded, null)).toBe('Estimate recorded: 5');
+    expect(describeVoteChanges(voting([ANNA]), skipped, null)).toBe('Story skipped');
+  });
+
+  it('says nothing when the history is unchanged', () => {
+    const waiting = gameState({ voters: [ANNA], history: [{ title: 'A', estimate: 3 }] });
+
+    expect(describeVoteChanges(waiting, waiting, null)).toBe('');
+  });
+});
+
 describe('describeVoteChanges on reveal', () => {
   const stats = (overrides: object) => ({
     distribution: [{ card: 5, count: 2 }],
