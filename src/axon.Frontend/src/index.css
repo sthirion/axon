@@ -87,9 +87,25 @@
   animation-delay: var(--delay, 0ms);
 }
 
+@keyframes fade-out {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The copy check mark: fully visible for most of the 5 seconds, then it fades. */
+.animate-fade-out {
+  animation: fade-out 5s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-deal,
-  .animate-flip {
+  .animate-flip,
+  .animate-fade-out {
     animation: none;
   }
 }

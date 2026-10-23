@@ -226,8 +226,9 @@ test.describe('Section panels @TEST', () => {
 
         const voterNames = ['Story', 'Facilitator', 'Voters', 'Summary'];
         const boxes = await check(anna, voterNames, true, `${tag} voter voting`);
-        await check(fac, [...voterNames, 'Round controls'], false, `${tag} facilitator voting`);
-        await expect(fac.getByRole('region', { name: 'Round controls' })).toHaveCount(1);
+        await check(fac, voterNames, false, `${tag} facilitator voting`);
+        // While voting Reveal and Skip live in the Story panel; Round controls come with the reveal.
+        await expect(fac.getByRole('region', { name: 'Round controls' })).toHaveCount(0);
 
         // Two groups on a wide screen, one stack on a narrow one.
         const story = boxes.find(([n]) => n === 'Story')![1];

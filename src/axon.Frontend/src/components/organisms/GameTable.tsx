@@ -14,6 +14,7 @@ import { FacilitatorOfflineBanner } from '../molecules/FacilitatorOfflineBanner'
 import { FacilitatorControls } from '../molecules/FacilitatorControls';
 import { RemovePlayerButton } from '../molecules/RemovePlayerButton';
 import { RevealButton } from '../molecules/RevealButton';
+import { SkipStoryButton } from '../molecules/SkipStoryButton';
 import { CardDeck } from './CardDeck';
 import { ResultsPanel } from './ResultsPanel';
 import { SessionSummary } from './SessionSummary';
@@ -74,6 +75,23 @@ export function GameTable({
             disabled={reconnecting}
             locked={revealed}
             onSetStory={onSetStory}
+            actions={
+              voting ? (
+                <>
+                  <SkipStoryButton
+                    disabled={reconnecting}
+                    onSkip={() => onFinish({ skip: true })}
+                  />
+                  <div className="sm:ml-4">
+                    <RevealButton
+                      hasVotes={game.voters.some((voter) => voter.hasVoted)}
+                      disabled={reconnecting}
+                      onReveal={onReveal}
+                    />
+                  </div>
+                </>
+              ) : undefined
+            }
           />
           {role === 'voter' && (
             <CardDeck
@@ -83,15 +101,8 @@ export function GameTable({
               onCast={onCastVote}
             />
           )}
-          {role === 'facilitator' && (voting || revealed) && (
+          {role === 'facilitator' && revealed && (
             <Panel aria-label="Round controls">
-              {voting && (
-                <RevealButton
-                  hasVotes={game.voters.some((voter) => voter.hasVoted)}
-                  disabled={reconnecting}
-                  onReveal={onReveal}
-                />
-              )}
               <FacilitatorControls
                 scale={game.scale}
                 revealed={revealed}

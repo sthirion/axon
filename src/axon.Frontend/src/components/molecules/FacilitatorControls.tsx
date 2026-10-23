@@ -47,25 +47,23 @@ function EstimateForm({
 
   return (
     <div className="space-y-1">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="space-y-1">
-          <label htmlFor={selectId} className="block type-body font-medium">
-            Final estimate
-          </label>
-          <select
-            id={selectId}
-            value={estimate}
-            onChange={(event) => setEstimate(event.target.value)}
-            className="block min-h-11 w-full max-w-48 rounded-md border border-slate-500 dark:border-slate-400 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100"
-          >
-            <option value="">{NO_ESTIMATE_OPTION}</option>
-            {cards.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </div>
+      <label htmlFor={selectId} className="block type-body font-medium">
+        Final estimate
+      </label>
+      <div className="flex flex-wrap items-start gap-2">
+        <select
+          id={selectId}
+          value={estimate}
+          onChange={(event) => setEstimate(event.target.value)}
+          className="block min-h-11 w-full max-w-48 rounded-md border border-slate-500 dark:border-slate-400 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100"
+        >
+          <option value="">{NO_ESTIMATE_OPTION}</option>
+          {cards.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
         <Button
           disabled={busy || estimate === ''}
           onClick={() => {

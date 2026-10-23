@@ -628,7 +628,7 @@ describe('GameTable panels', () => {
     expect(screen.queryByRole('region', { name: 'Results' })).toBeNull();
   });
 
-  it('gives the facilitator one Round controls panel with Reveal in it while voting', () => {
+  it('puts Edit story, Skip story and Reveal votes in the Story panel, in that order, while voting', () => {
     render(
       <GameTable
         game={gameState(VOTING) as Game}
@@ -638,11 +638,41 @@ describe('GameTable panels', () => {
       />,
     );
 
-    const controls = screen.getAllByRole('region', { name: 'Round controls' });
-    expect(controls).toHaveLength(1);
-    expect(within(controls[0]!).getByRole('button', { name: 'Reveal votes' })).toBeVisible();
-    expect(within(controls[0]!).getByRole('button', { name: 'Skip story' })).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Round controls' })).toBeNull();
+    const story = screen.getByRole('region', { name: 'Story' });
+    expect(
+      within(story)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Edit story', 'Skip story', 'Reveal votes']);
     expect(screen.queryByRole('radiogroup')).toBeNull();
+  });
+
+  it('skips from the Story panel with { skip: true }', async () => {
+    const onFinish = vi.fn(() => Promise.resolve({ ok: true as const }));
+    render(
+      <GameTable
+        game={gameState(VOTING) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+        onFinish={onFinish}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Skip story' }));
+
+    expect(onFinish).toHaveBeenCalledWith({ skip: true });
+  });
+
+  it('shows a voter and a waiting facilitator no Skip or Reveal in the Story panel', () => {
+    render(<GameTable game={gameState(VOTING) as Game} reconnecting={false} {...IDLE} />);
+    expect(screen.queryByRole('button', { name: /Skip story|Reveal votes/ })).toBeNull();
+    cleanup();
+    render(
+      <GameTable game={gameState() as Game} reconnecting={false} {...IDLE} role="facilitator" />,
+    );
+    expect(screen.queryByRole('button', { name: /Skip story|Reveal votes/ })).toBeNull();
   });
 
   it('keeps one Round controls panel after the reveal, with the estimate controls and no Reveal', () => {
@@ -657,8 +687,10 @@ describe('GameTable panels', () => {
 
     const controls = screen.getAllByRole('region', { name: 'Round controls' });
     expect(controls).toHaveLength(1);
-    expect(within(controls[0]!).queryByRole('button', { name: 'Reveal votes' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reveal votes' })).toBeNull();
     expect(within(controls[0]!).getByRole('button', { name: 'Record estimate' })).toBeVisible();
+    expect(within(controls[0]!).getByRole('button', { name: 'Skip story' })).toBeVisible();
+    expect(within(screen.getByRole('region', { name: 'Story' })).queryByRole('button')).toBeNull();
     expect(screen.getByRole('region', { name: 'Results' })).toBeVisible();
   });
 
