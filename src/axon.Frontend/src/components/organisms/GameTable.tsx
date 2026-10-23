@@ -7,7 +7,6 @@ import {
   type Story,
 } from '@axon/shared';
 import type { ActionResult } from '../../types/game.types';
-import { JoinLink } from '../molecules/JoinLink';
 import { Panel } from '../atoms/Panel';
 import { PlayerRow } from '../molecules/PlayerRow';
 import { ReconnectingBanner } from '../molecules/ReconnectingBanner';
@@ -52,7 +51,6 @@ export function GameTable({
   onRemovePlayer,
   onTransferFacilitator,
 }: GameTableProps) {
-  const joinLink = `${window.location.origin}/g/${game.gameId}`;
   const voting = game.phase === 'voting';
   const revealed = game.phase === 'revealed';
   const outlierIds = new Set(game.results?.outlierIds);
@@ -161,12 +159,6 @@ export function GameTable({
             )}
           </Panel>
           <SessionSummary scale={game.scale} history={game.history} total={game.total} />
-          <Panel aria-labelledby="join-link-heading">
-            <h2 id="join-link-heading" className="type-section">
-              Join link
-            </h2>
-            <JoinLink link={joinLink} />
-          </Panel>
         </div>
       </div>
     </>

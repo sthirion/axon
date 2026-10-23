@@ -224,7 +224,7 @@ test.describe('Section panels @TEST', () => {
           return boxes;
         };
 
-        const voterNames = ['Story', 'Facilitator', 'Voters', 'Summary', 'Join link'];
+        const voterNames = ['Story', 'Facilitator', 'Voters', 'Summary'];
         const boxes = await check(anna, voterNames, true, `${tag} voter voting`);
         await check(fac, [...voterNames, 'Round controls'], false, `${tag} facilitator voting`);
         await expect(fac.getByRole('region', { name: 'Round controls' })).toHaveCount(1);

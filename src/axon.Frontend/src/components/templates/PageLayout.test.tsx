@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -23,6 +23,17 @@ describe('PageLayout', () => {
     expect(TEMPORARY_SESSIONS_NOTICE).toBe(
       'Sessions are temporary. They are kept in memory only and end when the server restarts.',
     );
+  });
+
+  it('shows extra header content before the theme toggle, and none by default', () => {
+    renderLayout({ headerExtra: <button type="button">Extra</button> });
+
+    const buttons = within(screen.getByRole('banner')).getAllByRole('button');
+    expect(buttons[0]).toHaveTextContent('Extra');
+    expect(buttons).toHaveLength(2);
+    cleanup();
+    renderLayout();
+    expect(within(screen.getByRole('banner')).getAllByRole('button')).toHaveLength(1);
   });
 
   it('keeps the footer free of interactive elements', () => {

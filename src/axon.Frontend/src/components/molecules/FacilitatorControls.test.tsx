@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '../../types/game.types';
@@ -84,6 +84,21 @@ describe('FacilitatorControls', () => {
 
     expect(onRevote).toHaveBeenCalledTimes(1);
     expect(onFinish).toHaveBeenCalledWith({ skip: true });
+  });
+
+  it('puts Record estimate, Re-vote and Skip story in one row to the right of the select', () => {
+    renderControls();
+
+    const select = screen.getByLabelText('Final estimate');
+    const row = select.closest('div.flex')!;
+    const names = within(row as HTMLElement)
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+    expect(names).toEqual(['Record estimate', 'Re-vote', 'Skip story']);
+    expect(row).toHaveClass('flex-wrap');
+    expect(
+      select.compareDocumentPosition(screen.getByRole('button', { name: 'Record estimate' })),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it('shows only Skip story before the reveal', () => {

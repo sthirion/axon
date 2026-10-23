@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -272,6 +272,44 @@ describe('GamePage', () => {
       expect(await screen.findByRole('region', { name: 'Voters' })).toHaveTextContent('Anna');
       expect(window.localStorage.getItem(TOKEN_KEY)).toBe(TOKEN);
       expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
+    });
+
+    async function openTable(role: 'facilitator' | 'voter') {
+      window.localStorage.setItem(TOKEN_KEY, TOKEN);
+      exists(true);
+      renderGame();
+      await waitForJoin();
+      await serverAck(OK_ACK);
+      await serverEmit('game:joined', { playerId: 'p1', role });
+      await serverEmit('game:state', gameState());
+      await screen.findByRole('region', { name: 'Voters' });
+    }
+
+    it('puts the session id and Copy link in the header for the facilitator, not in a panel', async () => {
+      await openTable('facilitator');
+
+      const header = screen.getByRole('banner');
+      expect(within(header).getByText(GAME_ID)).toBeVisible();
+      expect(within(header).queryByText(/\/g\//)).toBeNull();
+      expect(within(header).getByRole('button', { name: 'Copy link' })).toBeEnabled();
+      expect(screen.queryByRole('region', { name: 'Join link' })).toBeNull();
+    });
+
+    it('shows a voter neither the session id nor Copy link', async () => {
+      await openTable('voter');
+
+      expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
+      expect(within(screen.getByRole('banner')).queryByText(GAME_ID)).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Join link' })).toBeNull();
+    });
+
+    it('has no join link in the header before joining', async () => {
+      exists(true);
+      renderGame();
+
+      await screen.findByRole('heading', { name: 'Join session' });
+
+      expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
     });
 
     it('shows INVALID_NAME from the server and stays usable', async () => {
