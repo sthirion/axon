@@ -325,6 +325,7 @@ test.describe('Colour-coded cards by size @TEST', () => {
         expect(selected.violations).toEqual([]);
         await button(fac, 'Reveal votes').click();
         for (const page of all) await expect(region(page, 'Results')).toBeVisible();
+        await anna.waitForTimeout(900); // the flip is partly transparent while it runs
         for (const page of [fac, anna]) {
           const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
           expect(results.violations).toEqual([]);

@@ -308,6 +308,21 @@ sequenceDiagram
   facilitator sees "Too large: consider splitting this story." next to the Final estimate while
   the select shows such a card, and the reveal announcement adds ", too large to take as one
   story" when the proposal is too large.
+- **Playing cards:** deck cards are portrait cards (5:7 on phones, 64 x 90 px from 768 px) with
+  the value in the top-left corner and again, rotated 180 degrees and hidden from assistive
+  technology, in the bottom-right corner, plus a small drawing in the middle
+  (`components/art/CardArt.tsx`, inline SVG in `currentColor`, no images, fonts or requests).
+  Five drawings follow the size levels (terminal, laptop, server rack, bug, server on fire);
+  `?` is a speech bubble and coffee is a mug that replaces the emoji. The radio input stays
+  the real control (invisible, on top, `z-10`), so the accessible name is still the value.
+  Other voters show a 32 x 45 px mini card next to the unchanged text badge: an empty slot
+  (not voted), a patterned card back (voted) or the face (revealed). The raised card, deal-in
+  and flip are CSS only: a selected card moves up 10 px and scales to 1.08 in 150 ms (a
+  transform, so nothing else moves), a back deals in over 200 ms, faces flip over 400 ms with
+  an 80 ms stagger per voter capped at 640 ms. The animation is chosen once when the card
+  mounts, so a first paint, reload or late join shows the end state at once. With
+  `prefers-reduced-motion: reduce` there are no transitions or animations; the state is shown
+  immediately (the raised card is still raised, without movement).
 - **Panels:** every section is its own panel (`Panel`: shaded background, thin border, rounded
   corners, 16 to 20 px padding, 24 px between panels, a very light shadow in light mode only,
   never `overflow-hidden` so focus rings are not cut off). Work area: Story, Your vote, Round
