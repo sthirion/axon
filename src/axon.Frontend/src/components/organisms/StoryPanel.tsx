@@ -2,6 +2,7 @@ import type { PlayerRole, Story } from '@axon/shared';
 import { memo, useEffect, useId, useRef, useState } from 'react';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
+import { StoryTitle } from '../atoms/StoryTitle';
 import { StoryForm } from '../molecules/StoryForm';
 
 export const WAITING_MESSAGE = 'Waiting for the facilitator to set the story.';
@@ -17,19 +18,9 @@ interface StoryPanelProps {
 
 function StoryDetails({ story }: { readonly story: Story }) {
   return (
-    <div className="min-w-0 space-y-1">
-      <p className="font-medium wrap-anywhere">{story.title}</p>
-      {story.url && (
-        <a
-          href={story.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block text-sm text-blue-800 dark:text-blue-300 underline wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100"
-        >
-          {story.url} <span className="sr-only">(opens in a new tab)</span>
-        </a>
-      )}
-    </div>
+    <p className="min-w-0">
+      <StoryTitle title={story.title} url={story.url} />
+    </p>
   );
 }
 
@@ -86,7 +77,7 @@ export const StoryPanel = memo(function StoryPanel({
 
   return (
     <section aria-labelledby={headingId} className="min-w-0 space-y-2">
-      <h2 id={headingId} className="text-lg font-semibold">
+      <h2 id={headingId} className="type-section">
         Story
       </h2>
       {renderBody()}

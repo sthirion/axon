@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-const NAME_TAKEN_MESSAGE = 'That name is already taken in this game. Choose another.';
+const NAME_TAKEN_MESSAGE = 'That name is already taken in this session. Choose another.';
 const XSS_NAME = '<img src=x onerror=alert(1)>';
 const DESKTOP = { width: 1280, height: 800 };
 const MOBILE = { width: 390, height: 844 };
@@ -61,8 +61,8 @@ test.describe('Create and join a game @TEST', () => {
   async function createGame(page: Page, name: string): Promise<string> {
     await page.goto('/');
     await page.getByLabel('Your name').fill(name);
-    await page.getByRole('button', { name: 'Create game' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await page.getByRole('button', { name: 'Create session' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
     const match = /\/g\/([A-Za-z0-9_-]{22})$/.exec(new URL(page.url()).pathname);
     expect(match).not.toBeNull();
     return match![1];
@@ -70,7 +70,7 @@ test.describe('Create and join a game @TEST', () => {
 
   async function openJoinPrompt(page: Page, gameId: string): Promise<void> {
     await page.goto(`/g/${gameId}`);
-    await expect(page.getByRole('heading', { level: 1, name: 'Join game' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Join session' })).toBeVisible();
   }
 
   async function submitName(page: Page, name: string): Promise<void> {
@@ -81,7 +81,7 @@ test.describe('Create and join a game @TEST', () => {
   async function joinGame(page: Page, gameId: string, name: string): Promise<void> {
     await openJoinPrompt(page, gameId);
     await submitName(page, name);
-    await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
   }
 
   const voterRows = (page: Page): Locator =>
@@ -200,7 +200,9 @@ test.describe('Create and join a game @TEST', () => {
     await submitName(second.page, 'Anna B');
 
     // Then
-    await expect(second.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await expect(
+      second.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+    ).toBeVisible();
     await expect(voterRows(facilitator.page)).toHaveCount(2);
     await expect(voterRows(facilitator.page).nth(1)).toContainText('Anna B');
   });
@@ -217,7 +219,9 @@ test.describe('Create and join a game @TEST', () => {
 
     // Then
     await expect(visitor.page.getByText(NAME_TAKEN_MESSAGE)).toBeVisible();
-    await expect(visitor.page.getByRole('heading', { level: 1, name: 'Join game' })).toBeVisible();
+    await expect(
+      visitor.page.getByRole('heading', { level: 1, name: 'Join session' }),
+    ).toBeVisible();
   });
 
   test('an empty name on the create page shows a validation message and creates nothing', async ({
@@ -233,7 +237,7 @@ test.describe('Create and join a game @TEST', () => {
 
     // When
     await facilitator.page.getByLabel('Your name').fill('   ');
-    await facilitator.page.getByRole('button', { name: 'Create game' }).click();
+    await facilitator.page.getByRole('button', { name: 'Create session' }).click();
 
     // Then
     await expect(facilitator.page.getByText('Enter a name of 1 to 30 characters.')).toBeVisible();
@@ -254,8 +258,10 @@ test.describe('Create and join a game @TEST', () => {
     await anna.page.reload();
 
     // Then
-    await expect(anna.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
-    await expect(anna.page.getByRole('heading', { name: 'Join game' })).toHaveCount(0);
+    await expect(
+      anna.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+    ).toBeVisible();
+    await expect(anna.page.getByRole('heading', { name: 'Join session' })).toHaveCount(0);
     await expect(voterRows(anna.page)).toHaveCount(1);
     await expect(voterRows(anna.page).first()).toContainText('Anna');
     await expect(voterRows(anna.page).first()).toContainText('online');
@@ -273,7 +279,7 @@ test.describe('Create and join a game @TEST', () => {
 
     // Then
     await expect(
-      facilitator.page.getByRole('heading', { level: 1, name: 'Game table' }),
+      facilitator.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
     ).toBeVisible();
     await expect(facilitatorRegion(facilitator.page)).toContainText('Sven');
     await expect(facilitatorRegion(facilitator.page)).toContainText('online');
@@ -380,13 +386,17 @@ test.describe('Create and join a game @TEST', () => {
 
     // When
     await facilitator.page.goto('/');
-    await expect(facilitator.page.getByRole('heading', { level: 1, name: 'Axon' })).toBeVisible();
+    await expect(
+      facilitator.page.getByRole('heading', { level: 1, name: 'Planning Poker' }),
+    ).toBeVisible();
     const gameId = await createGame(facilitator.page, 'Sven');
     await openJoinPrompt(anna.page, gameId);
     await submitName(anna.page, 'sven');
     await expect(anna.page.getByText(NAME_TAKEN_MESSAGE)).toBeVisible();
     await submitName(anna.page, 'Anna');
-    await expect(anna.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await expect(
+      anna.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+    ).toBeVisible();
     await expect(voterRows(facilitator.page)).toHaveCount(1);
 
     // Then
@@ -405,10 +415,10 @@ test.describe('Create and join a game @TEST', () => {
 
     // Then
     await expect(
-      visitor.page.getByRole('heading', { level: 1, name: 'Game not found' }),
+      visitor.page.getByRole('heading', { level: 1, name: 'Session not found' }),
     ).toBeVisible();
-    await expect(visitor.page.getByText('This game does not exist or has ended.')).toBeVisible();
-    await expect(visitor.page.getByRole('link', { name: 'Create a new game' })).toHaveAttribute(
+    await expect(visitor.page.getByText('This session does not exist or has ended.')).toBeVisible();
+    await expect(visitor.page.getByRole('link', { name: 'Create a new session' })).toHaveAttribute(
       'href',
       '/',
     );
@@ -425,7 +435,7 @@ test.describe('Create and join a game @TEST', () => {
       });
       const { page } = facilitator;
       await page.goto('/');
-      await expect(page.getByRole('heading', { level: 1, name: 'Axon' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Planning Poker' })).toBeVisible();
 
       // When
       await tabTo(page, page.getByLabel('Your name'));
@@ -434,7 +444,7 @@ test.describe('Create and join a game @TEST', () => {
       await page.keyboard.press('Enter');
 
       // Then
-      await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
       await expect(facilitatorRegion(page)).toContainText('Sven');
       const gameId = /\/g\/([A-Za-z0-9_-]{22})$/.exec(new URL(page.url()).pathname)?.[1];
       expect(gameId).toBeDefined();
@@ -475,7 +485,9 @@ test.describe('Create and join a game @TEST', () => {
       await voter.page.keyboard.press('Enter');
 
       // Then
-      await expect(voter.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await expect(
+        voter.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+      ).toBeVisible();
       await expect(voterRows(voter.page)).toHaveCount(1);
       await expect(voterRows(voter.page).first()).toContainText('Anna');
       await expect(voterRows(facilitator.page)).toHaveCount(1);
@@ -542,7 +554,9 @@ test.describe('Create and join a game @TEST', () => {
       await submitName(voter.page, 'Anna');
 
       // Then
-      await expect(voter.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await expect(
+        voter.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+      ).toBeVisible();
       await expect(voterRows(voter.page).first()).toContainText('Anna');
       await expect(voterRows(page)).toHaveCount(1);
       await expect(voterRows(page).first()).toContainText('Anna');
@@ -559,12 +573,15 @@ test.describe('Create and join a game @TEST', () => {
 
         // When
         await page.goto('/');
-        await expect(page.getByRole('heading', { level: 1, name: 'Axon' })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1, name: 'Planning Poker' })).toBeVisible();
 
         // Then
         await expectNoHorizontalScroll(page);
         await expectWithinWidth(page.getByLabel('Your name'), viewport.width);
-        await expectWithinWidth(page.getByRole('button', { name: 'Create game' }), viewport.width);
+        await expectWithinWidth(
+          page.getByRole('button', { name: 'Create session' }),
+          viewport.width,
+        );
       });
 
       test(`join prompt fits the ${label} viewport`, async ({ browser }) => {
@@ -615,7 +632,7 @@ test.describe('Create and join a game @TEST', () => {
       // Given
       const { page } = await newPlayer(browser);
       await page.goto('/');
-      await expect(page.getByRole('heading', { level: 1, name: 'Axon' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Planning Poker' })).toBeVisible();
 
       // When
       const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
@@ -665,7 +682,9 @@ test.describe('Create and join a game @TEST', () => {
       // Given
       const { page } = await newPlayer(browser);
       await page.goto('/g/abc123');
-      await expect(page.getByRole('heading', { level: 1, name: 'Game not found' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Session not found' }),
+      ).toBeVisible();
 
       // When
       const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();

@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { actionErrorMessage, GENERIC_ERROR_MESSAGE } from '../../lib/actionErrors';
 
-export const PLAYER_GONE_MESSAGE = 'That player is no longer in the game.';
+export const PLAYER_GONE_MESSAGE = 'That player is no longer in the session.';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
 
@@ -62,7 +62,7 @@ export const RemovePlayerButton = memo(function RemovePlayerButton({
           Remove <span className="sr-only">{name}</span>
         </Button>
         {error && (
-          <span role="alert" className="block text-sm text-red-700 dark:text-red-400">
+          <span role="alert" className="block type-meta text-red-700 dark:text-red-400">
             {error}
           </span>
         )}
@@ -72,7 +72,7 @@ export const RemovePlayerButton = memo(function RemovePlayerButton({
 
   return (
     <span role="group" aria-label={`Remove ${name}`} className="flex flex-wrap items-center gap-2">
-      <span className="text-sm wrap-anywhere">Remove {name} from the game?</span>
+      <span className="type-meta wrap-anywhere">Remove {name} from the session?</span>
       <Button disabled={disabled || pending} onClick={() => void confirm()}>
         {pending ? 'Removing…' : 'Confirm remove'}
       </Button>
@@ -87,7 +87,7 @@ export const RemovePlayerButton = memo(function RemovePlayerButton({
         Cancel
       </Button>
       {error && (
-        <span role="alert" className="block w-full text-sm text-red-700 dark:text-red-400">
+        <span role="alert" className="block w-full type-meta text-red-700 dark:text-red-400">
           {error}
         </span>
       )}

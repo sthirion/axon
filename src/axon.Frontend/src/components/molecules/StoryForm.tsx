@@ -8,7 +8,7 @@ export const TITLE_ERROR_MESSAGE = 'Enter a title of 1 to 200 characters.';
 export const LINK_ERROR_MESSAGE = 'Enter a full link starting with http:// or https://.';
 
 const INPUT_CLASS =
-  'block w-full min-w-0 rounded-md border border-slate-500 dark:border-slate-400 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100';
+  'block min-h-11 w-full min-w-0 rounded-md border border-slate-500 dark:border-slate-400 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100';
 
 interface StoryFormProps {
   readonly submitLabel: string;
@@ -75,7 +75,7 @@ export const StoryForm = memo(function StoryForm({
       className="space-y-4"
     >
       <div className="space-y-1">
-        <label htmlFor={`${id}-title`} className="block text-sm font-medium">
+        <label htmlFor={`${id}-title`} className="block type-body font-medium">
           Title
         </label>
         <input
@@ -94,13 +94,13 @@ export const StoryForm = memo(function StoryForm({
           className={INPUT_CLASS}
         />
         {titleError && (
-          <p id={titleErrorId} className="text-sm text-red-700 dark:text-red-400">
+          <p id={titleErrorId} className="type-meta text-red-700 dark:text-red-400">
             {titleError}
           </p>
         )}
       </div>
       <div className="space-y-1">
-        <label htmlFor={`${id}-link`} className="block text-sm font-medium">
+        <label htmlFor={`${id}-link`} className="block type-body font-medium">
           Link
         </label>
         <input
@@ -119,13 +119,13 @@ export const StoryForm = memo(function StoryForm({
           className={INPUT_CLASS}
         />
         {linkError && (
-          <p id={linkErrorId} className="text-sm text-red-700 dark:text-red-400">
+          <p id={linkErrorId} className="type-meta text-red-700 dark:text-red-400">
             {linkError}
           </p>
         )}
       </div>
       {serverError && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="type-meta text-red-700 dark:text-red-400">
           {serverError}
         </p>
       )}

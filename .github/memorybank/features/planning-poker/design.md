@@ -260,6 +260,23 @@ sequenceDiagram
   a file because the CSP allows `script-src 'self'` only. Every colour has a dark counterpart,
   and `lib/palette.ts` lists them so a unit test can check WCAG AA contrast for both themes and
   fail for a colour class that is not listed.
+- **Name, logo and wording:** the product is "Planning Poker" with the subtitle "Story
+  refinement". The create page shows the name as its heading; every other page shows it as plain
+  text at the left of the header, and every page shows the original SVG logo (also the favicon)
+  at the top right as the only link home, with the theme toggle to its left. The UI never says
+  "game": the word is "session" (identifiers, URLs, events and storage keys keep their names).
+  The estimation page heading is "Story Estimation".
+- **Type scale:** one scale in `index.css` (`type-display`, `type-title`, `type-brand`,
+  `type-section`, `type-body`, `type-name`, `type-meta`); section headings are clearly larger
+  than the names below them and status text is smaller and muted. Nothing is under 14 px.
+- **Layout:** one column below 1024 px (centred, up to 48 rem from 640 px); from 1024 px the
+  estimation page is two columns inside 72 rem: the work area (story, deck, controls, results)
+  on the left and the people area (facilitator and voters, summary, join link) on the right.
+  The DOM order is the visual order, so tab order never differs from what is seen. On phones the
+  deck is a grid of 5 columns (10 from 768 px), primary buttons are full width, and every
+  control is at least 44 px with at least 8 px between neighbours.
+- **Story links:** when a story has a link the title itself is the link (new tab, `noopener
+  noreferrer`); the address is not shown.
 - **Accessibility:** cards are a radio group (arrow keys and Space); an `aria-live` region
   announces "Anna voted", the reveal and the consensus result.
 - **Links:** story URLs are rendered as `<a target="_blank" rel="noopener noreferrer">` only

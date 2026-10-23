@@ -9,3 +9,48 @@
     @apply bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100;
   }
 }
+
+/* Type scale (one place; see design.md): display, title, brand, section, body, name, meta. */
+@layer components {
+  .type-display {
+    font-size: 2.25rem;
+    line-height: 1.1;
+    font-weight: 700;
+  }
+  .type-title {
+    font-size: 1.75rem;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  .type-brand {
+    font-size: 1.25rem;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  .type-section {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  .type-body {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .type-name {
+    font-size: 1rem;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  .type-meta {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  @media (min-width: 40rem) {
+    .type-display {
+      font-size: 3rem;
+    }
+    .type-title {
+      font-size: 2rem;
+    }
+  }
+}

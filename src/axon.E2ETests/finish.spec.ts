@@ -74,9 +74,9 @@ test.describe('Re-vote, record the final estimate and keep a session summary @TE
     const facilitator = await newPlayer(browser, viewport);
     await facilitator.page.goto('/');
     await facilitator.page.getByLabel('Your name').fill('Sven');
-    await button(facilitator.page, 'Create game').click();
+    await button(facilitator.page, 'Create session').click();
     await expect(
-      facilitator.page.getByRole('heading', { level: 1, name: 'Game table' }),
+      facilitator.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
     ).toBeVisible();
     const gameId = /\/g\/([A-Za-z0-9_-]{22})$/.exec(new URL(facilitator.page.url()).pathname)![1];
     const voters: Record<string, Player> = {};
@@ -86,7 +86,7 @@ test.describe('Re-vote, record the final estimate and keep a session summary @TE
       await player.page.getByLabel('Your name').fill(name);
       await button(player.page, 'Join').click();
       await expect(
-        player.page.getByRole('heading', { level: 1, name: 'Game table' }),
+        player.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
       ).toBeVisible();
       voters[name] = player;
     }

@@ -1,4 +1,4 @@
-# Planning Poker Axon
+# Planning Poker (Axon)
 
 Real-time Planning Poker for agile teams. A facilitator creates a game and shares a link;
 voters join with just a name, pick a Fibonacci card in secret, and see every vote at once

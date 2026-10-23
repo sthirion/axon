@@ -8,7 +8,7 @@ export function ThemeToggle() {
     <Button
       aria-pressed={theme === 'dark'}
       onClick={toggle}
-      className="bg-slate-600 dark:bg-slate-400"
+      className="w-auto bg-slate-600 dark:bg-slate-400"
     >
       <span aria-hidden="true" className="mr-1">
         {theme === 'dark' ? '☾' : '☀'}

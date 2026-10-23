@@ -13,7 +13,7 @@ const MOBILE = { width: 390, height: 844 };
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 const MIN_TARGET = 44;
 const OFFLINE_TEXT = /The facilitator is offline\./;
-const REMOVED_TEXT = 'You were removed from this game.';
+const REMOVED_TEXT = 'You were removed from this session.';
 
 interface Player {
   readonly context: BrowserContext;
@@ -77,9 +77,9 @@ test.describe('Facilitator reconnect and removing players @TEST', () => {
     const facilitator = await newPlayer(browser, viewport);
     await facilitator.page.goto('/');
     await facilitator.page.getByLabel('Your name').fill('Sven');
-    await button(facilitator.page, 'Create game').click();
+    await button(facilitator.page, 'Create session').click();
     await expect(
-      facilitator.page.getByRole('heading', { level: 1, name: 'Game table' }),
+      facilitator.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
     ).toBeVisible();
     const gameUrl = facilitator.page.url();
     const voters: Record<string, Player> = {};
@@ -89,7 +89,7 @@ test.describe('Facilitator reconnect and removing players @TEST', () => {
       await player.page.getByLabel('Your name').fill(name);
       await button(player.page, 'Join').click();
       await expect(
-        player.page.getByRole('heading', { level: 1, name: 'Game table' }),
+        player.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
       ).toBeVisible();
       voters[name] = player;
     }
@@ -128,7 +128,7 @@ test.describe('Facilitator reconnect and removing players @TEST', () => {
     track(page, table.facilitator.errors);
     table.facilitator.page = page;
     await page.goto(table.gameUrl);
-    await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
   }
 
   async function removeVoter(table: Table, name: string): Promise<void> {
@@ -149,7 +149,7 @@ test.describe('Facilitator reconnect and removing players @TEST', () => {
 
       await fac.reload();
 
-      await expect(fac.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await expect(fac.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
       await expect(fac.getByRole('region', { name: 'Story' })).toContainText('Login page');
       await expect(row(fac, 'Anna')).toContainText('Voted');
       await expect(button(fac, 'Reveal votes')).toBeEnabled();
@@ -213,7 +213,7 @@ test.describe('Facilitator reconnect and removing players @TEST', () => {
       await expect(button(table.voters['Anna']!.page, /^Remove/)).toHaveCount(0);
 
       await button(fac, 'Remove Anna').click();
-      await expect(fac.getByText('Remove Anna from the game?')).toBeVisible();
+      await expect(fac.getByText('Remove Anna from the session?')).toBeVisible();
       await button(fac, 'Cancel').click();
 
       await expect(button(fac, 'Remove Anna')).toBeFocused();

@@ -186,6 +186,6 @@ export type GameEndReason = GameEnded['reason'];
 
 // Fixed text, shown instead of anything the server could send.
 export const GAME_END_MESSAGES: Readonly<Record<GameEndReason, string>> = {
-  'server-restart': 'The game ended because the server restarted.',
-  expired: 'The game ended because it reached its 2-hour limit.',
+  'server-restart': 'The session ended because the server restarted.',
+  expired: 'The session ended because it reached its 2-hour limit.',
 };

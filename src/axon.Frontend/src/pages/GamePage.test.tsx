@@ -130,9 +130,14 @@ describe('GamePage', () => {
 
       renderGame('/g/abc123');
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Game not found' })).toBeInTheDocument();
-      expect(screen.getByText('This game does not exist or has ended.')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Create a new game' })).toHaveAttribute('href', '/');
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Session not found' }),
+      ).toBeInTheDocument();
+      expect(screen.getByText('This session does not exist or has ended.')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Create a new session' })).toHaveAttribute(
+        'href',
+        '/',
+      );
       expect(fetchMock).not.toHaveBeenCalled();
       expect(mocks.io).not.toHaveBeenCalled();
     });
@@ -142,8 +147,11 @@ describe('GamePage', () => {
 
       renderGame();
 
-      expect(await screen.findByRole('heading', { name: 'Game not found' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Create a new game' })).toHaveAttribute('href', '/');
+      expect(await screen.findByRole('heading', { name: 'Session not found' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Create a new session' })).toHaveAttribute(
+        'href',
+        '/',
+      );
       expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
     });
 
@@ -155,28 +163,28 @@ describe('GamePage', () => {
 
       await serverAck(failAck('GAME_NOT_FOUND'));
 
-      expect(await screen.findByRole('heading', { name: 'Game not found' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Session not found' })).toBeInTheDocument();
       expect(socket.closed).toBe(true);
     });
   });
 
   describe('loading and load errors', () => {
-    it('shows "Loading game…" as a status while the exists check is pending', () => {
+    it('shows "Loading session…" as a status while the exists check is pending', () => {
       stubExists(() => new Promise<Response>(() => {}));
 
       renderGame();
 
-      expect(screen.getByRole('status')).toHaveTextContent('Loading game…');
+      expect(screen.getByRole('status')).toHaveTextContent('Loading session…');
     });
 
-    it('shows "Loading game…" while the first token join is pending', async () => {
+    it('shows "Loading session…" while the first token join is pending', async () => {
       exists(true);
       window.localStorage.setItem(TOKEN_KEY, TOKEN);
 
       renderGame();
       await waitForJoin();
 
-      expect(screen.getByRole('status')).toHaveTextContent('Loading game…');
+      expect(screen.getByRole('status')).toHaveTextContent('Loading session…');
     });
 
     it('shows an error with Retry, not the not-found view, when the exists check returns 5xx', async () => {
@@ -184,9 +192,9 @@ describe('GamePage', () => {
 
       renderGame();
 
-      expect(await screen.findByText('Could not load the game. Try again.')).toBeInTheDocument();
+      expect(await screen.findByText('Could not load the session. Try again.')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-      expect(screen.queryByRole('heading', { name: 'Game not found' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Session not found' })).not.toBeInTheDocument();
     });
 
     it('shows the load error when the exists check fails on the network', async () => {
@@ -194,7 +202,7 @@ describe('GamePage', () => {
 
       renderGame();
 
-      expect(await screen.findByText('Could not load the game. Try again.')).toBeInTheDocument();
+      expect(await screen.findByText('Could not load the session. Try again.')).toBeInTheDocument();
     });
 
     it('checks again when Retry is pressed and continues to the join prompt', async () => {
@@ -206,8 +214,8 @@ describe('GamePage', () => {
       );
       fireEvent.click(retry);
 
-      expect(screen.getByRole('status')).toHaveTextContent('Loading game…');
-      expect(await screen.findByRole('heading', { name: 'Join game' })).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Loading session…');
+      expect(await screen.findByRole('heading', { name: 'Join session' })).toBeInTheDocument();
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
   });
@@ -219,7 +227,7 @@ describe('GamePage', () => {
       renderGame();
 
       expect(
-        await screen.findByRole('heading', { level: 1, name: 'Join game' }),
+        await screen.findByRole('heading', { level: 1, name: 'Join session' }),
       ).toBeInTheDocument();
       expect(screen.getByLabelText('Your name')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Join' })).toBeInTheDocument();
@@ -290,7 +298,7 @@ describe('GamePage', () => {
 
       const input = await screen.findByLabelText('Your name');
       expect(
-        screen.getByText('That name is already taken in this game. Choose another.'),
+        screen.getByText('That name is already taken in this session. Choose another.'),
       ).toBeInTheDocument();
       expect(input).toHaveValue('anna');
       expect(input).toHaveFocus();
@@ -331,7 +339,7 @@ describe('GamePage', () => {
 
       await serverAck(failAck('GAME_NOT_FOUND'));
 
-      expect(await screen.findByRole('heading', { name: 'Game not found' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Session not found' })).toBeInTheDocument();
     });
   });
 
@@ -373,7 +381,7 @@ describe('GamePage', () => {
 
       await serverAck(failAck('INVALID_TOKEN'));
 
-      expect(await screen.findByRole('heading', { name: 'Join game' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Join session' })).toBeInTheDocument();
       expect(window.localStorage.getItem(TOKEN_KEY)).toBeNull();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
@@ -430,7 +438,7 @@ describe('GamePage', () => {
       clearPlayerTokenMemory();
       renderGame();
 
-      expect(await screen.findByRole('heading', { name: 'Join game' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Join session' })).toBeInTheDocument();
     });
 
     it('opens the table as facilitator in the same tab after create, and asks for a name after a reload', async () => {
@@ -463,7 +471,7 @@ describe('GamePage', () => {
       );
 
       fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Sven' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Create game' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Create session' }));
       await waitForJoin();
 
       expect(socket.joins()[0]?.payload).toEqual({ gameId: GAME_ID, token: TOKEN });
@@ -472,7 +480,7 @@ describe('GamePage', () => {
       await serverEmit('game:joined', { playerId: 'p0', role: 'facilitator' });
       await serverEmit('game:state', gameState());
 
-      expect(await screen.findByRole('heading', { name: 'Game table' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Story Estimation' })).toBeInTheDocument();
       expect(screen.getByRole('region', { name: 'Facilitator' })).toHaveTextContent('Sven');
       expect(screen.getByTestId('location')).toHaveTextContent(
         JSON.stringify({ pathname: `/g/${GAME_ID}`, search: '', hash: '', state: null }),
@@ -482,7 +490,7 @@ describe('GamePage', () => {
       clearPlayerTokenMemory();
       renderGame();
 
-      expect(await screen.findByRole('heading', { name: 'Join game' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Join session' })).toBeInTheDocument();
     });
 
     it('still rejoins on reconnect using the token kept in memory', async () => {
@@ -527,11 +535,11 @@ describe('GamePage', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Other game' }));
       await settleExists(OTHER_GAME_ID, true);
-      expect(await screen.findByRole('heading', { name: 'Join game' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Join session' })).toBeInTheDocument();
       await settleExists(GAME_ID, true);
 
       expect(mocks.io).not.toHaveBeenCalled();
-      expect(screen.getByRole('heading', { name: 'Join game' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Join session' })).toBeInTheDocument();
     });
 
     it('leaves the stored token and store alone when a join ack arrives after unmount', async () => {
@@ -629,7 +637,7 @@ describe('GamePage', () => {
 
       await serverAck(OK_ACK);
 
-      expect(screen.getByRole('status')).toHaveTextContent('Loading game…');
+      expect(screen.getByRole('status')).toHaveTextContent('Loading session…');
     });
 
     it('updates the table from every game:state', async () => {
@@ -687,7 +695,7 @@ describe('GamePage', () => {
 
       await serverAck(failAck('GAME_NOT_FOUND'));
 
-      expect(await screen.findByRole('heading', { name: 'Game not found' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Session not found' })).toBeInTheDocument();
     });
 
     it('drops the table and shows the join prompt when the rejoin acks INVALID_TOKEN', async () => {
@@ -697,7 +705,7 @@ describe('GamePage', () => {
 
       await serverAck(failAck('INVALID_TOKEN'));
 
-      expect(await screen.findByRole('heading', { name: 'Join game' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Join session' })).toBeInTheDocument();
       expect(window.localStorage.getItem(TOKEN_KEY)).toBeNull();
       expect(screen.queryByRole('region', { name: 'Voters' })).not.toBeInTheDocument();
     });
@@ -893,7 +901,7 @@ describe('GamePage', () => {
       await serverEmit('player:removed');
 
       expect(await screen.findByRole('heading', { level: 1, name: 'Removed' })).toBeVisible();
-      expect(screen.getByText('You were removed from this game.')).toBeVisible();
+      expect(screen.getByText('You were removed from this session.')).toBeVisible();
       expect(screen.queryByRole('radiogroup')).toBeNull();
       expect(screen.queryByLabelText('Your name')).toBeNull();
       expect(screen.queryByRole('region', { name: 'Voters' })).toBeNull();
@@ -917,7 +925,7 @@ describe('GamePage', () => {
 
       await serverAck(failAck('REMOVED'));
 
-      expect(await screen.findByText('You were removed from this game.')).toBeVisible();
+      expect(await screen.findByText('You were removed from this session.')).toBeVisible();
       expect(screen.queryByLabelText('Your name')).toBeNull();
       expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
       expect(window.localStorage.getItem(TOKEN_KEY)).toBe(TOKEN);
@@ -940,16 +948,19 @@ describe('GamePage', () => {
     };
 
     it.each([
-      ['server-restart', 'The game ended because the server restarted.'],
-      ['expired', 'The game ended because it reached its 2-hour limit.'],
-    ])('shows "Game ended" with the %s message', async (reason, message) => {
+      ['server-restart', 'The session ended because the server restarted.'],
+      ['expired', 'The session ended because it reached its 2-hour limit.'],
+    ])('shows "Session ended" with the %s message', async (reason, message) => {
       await joinAsVoter();
 
       await serverEmit('game:ended', { reason });
 
-      expect(await screen.findByRole('heading', { level: 1, name: 'Game ended' })).toBeVisible();
+      expect(await screen.findByRole('heading', { level: 1, name: 'Session ended' })).toBeVisible();
       expect(screen.getByText(message)).toBeVisible();
-      expect(screen.getByRole('link', { name: 'Create a new game' })).toHaveAttribute('href', '/');
+      expect(screen.getByRole('link', { name: 'Create a new session' })).toHaveAttribute(
+        'href',
+        '/',
+      );
       expect(screen.queryByRole('region', { name: 'Voters' })).toBeNull();
       expect(screen.queryByRole('radiogroup')).toBeNull();
     });
@@ -959,7 +970,9 @@ describe('GamePage', () => {
 
       await serverEmit('game:ended', { reason: 'from-the-future' });
 
-      expect(await screen.findByText('The game ended because the server restarted.')).toBeVisible();
+      expect(
+        await screen.findByText('The session ended because the server restarted.'),
+      ).toBeVisible();
     });
 
     it('closes the socket, clears the game and shows the temporary-games footer', async () => {
@@ -969,7 +982,7 @@ describe('GamePage', () => {
 
       expect(socket.closed).toBe(true);
       expect(useGameStore.getState().game).toBeNull();
-      expect(screen.getByRole('contentinfo')).toHaveTextContent('Games are temporary.');
+      expect(screen.getByRole('contentinfo')).toHaveTextContent('Sessions are temporary.');
     });
   });
 });

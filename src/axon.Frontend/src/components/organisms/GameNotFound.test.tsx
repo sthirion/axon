@@ -11,8 +11,10 @@ describe('GameNotFound', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Game not found' })).toBeInTheDocument();
-    expect(screen.getByText('This game does not exist or has ended.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Create a new game' })).toHaveAttribute('href', '/');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Session not found' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('This session does not exist or has ended.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Create a new session' })).toHaveAttribute('href', '/');
   });
 });

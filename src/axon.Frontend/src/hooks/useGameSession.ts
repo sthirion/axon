@@ -22,7 +22,7 @@ import { useGameStore } from '../store/gameStore';
 import type { ActionResult, GameSocketClient, JoinResult } from '../types/game.types';
 import { useVoteAnnouncement } from './useVoteAnnouncement';
 
-export const LOAD_ERROR_MESSAGE = 'Could not load the game. Try again.';
+export const LOAD_ERROR_MESSAGE = 'Could not load the session. Try again.';
 export { GENERIC_ERROR_MESSAGE };
 
 const NOT_CONNECTED: ActionResult = { ok: false, code: 'NOT_CONNECTED' };

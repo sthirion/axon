@@ -92,12 +92,12 @@ describe('NameForm', () => {
 
   it('shows a server field error, links it to the field and moves focus there', () => {
     const { input } = renderForm({
-      fieldError: 'That name is already taken in this game. Choose another.',
+      fieldError: 'That name is already taken in this session. Choose another.',
     });
 
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(input).toHaveAccessibleDescription(
-      'That name is already taken in this game. Choose another.',
+      'That name is already taken in this session. Choose another.',
     );
     expect(input).toHaveFocus();
   });

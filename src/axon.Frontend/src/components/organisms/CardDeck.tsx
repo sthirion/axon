@@ -36,10 +36,10 @@ export const CardDeck = memo(function CardDeck({ selected, disabled, onCast }: C
   return (
     <div className="space-y-3">
       <fieldset role="radiogroup" className="min-w-0 space-y-2">
-        <legend className="text-lg font-semibold">Your vote</legend>
-        <div className="flex flex-wrap gap-2">
+        <legend className="type-section">Your vote</legend>
+        <div className="grid grid-cols-5 gap-2 md:grid-cols-10 lg:flex lg:flex-wrap">
           {DECK.map((card, index) => (
-            <label key={card} className="relative inline-flex min-h-11 min-w-11">
+            <label key={card} className="relative inline-flex min-h-14 min-w-11 lg:min-h-11">
               <input
                 ref={index === 0 ? firstCardRef : undefined}
                 type="radio"
@@ -52,7 +52,7 @@ export const CardDeck = memo(function CardDeck({ selected, disabled, onCast }: C
                 onKeyDown={preventEnter}
                 className="peer absolute inset-0 m-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
               />
-              <span className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-slate-500 dark:border-slate-400 px-3 text-lg font-semibold peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white dark:peer-checked:border-slate-100 dark:peer-checked:bg-slate-100 dark:peer-checked:text-slate-900 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-slate-900 dark:peer-focus-visible:outline-slate-100 peer-disabled:opacity-60">
+              <span className="flex min-h-14 w-full min-w-11 items-center lg:min-h-11 lg:w-auto justify-center rounded-md border border-slate-500 dark:border-slate-400 px-3 text-lg font-semibold peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white dark:peer-checked:border-slate-100 dark:peer-checked:bg-slate-100 dark:peer-checked:text-slate-900 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-slate-900 dark:peer-focus-visible:outline-slate-100 peer-disabled:opacity-60">
                 <CardFace card={card} />
               </span>
             </label>
@@ -60,7 +60,7 @@ export const CardDeck = memo(function CardDeck({ selected, disabled, onCast }: C
         </div>
       </fieldset>
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="type-meta text-red-700 dark:text-red-400">
           {error}
         </p>
       )}

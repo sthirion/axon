@@ -44,12 +44,12 @@ export const RevealButton = memo(function RevealButton({
         {pending ? 'Revealing…' : 'Reveal votes'}
       </Button>
       {!hasVotes && (
-        <p id={hintId} className="text-sm text-slate-700 dark:text-slate-300">
+        <p id={hintId} className="type-meta text-slate-700 dark:text-slate-300">
           {NO_VOTES_HINT}
         </p>
       )}
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="type-meta text-red-700 dark:text-red-400">
           {error}
         </p>
       )}

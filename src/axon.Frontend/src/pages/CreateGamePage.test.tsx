@@ -17,7 +17,7 @@ function renderCreate() {
 
 function submit(name: string) {
   fireEvent.change(screen.getByLabelText('Your name'), { target: { value: name } });
-  fireEvent.click(screen.getByRole('button', { name: 'Create game' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create session' }));
 }
 
 function created() {
@@ -34,13 +34,13 @@ describe('CreateGamePage', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows the Axon heading, a labelled name field and the Create game button', () => {
+  it('shows the Planning Poker heading, a labelled name field and the Create session button', () => {
     renderCreate();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Axon' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Planning Poker' })).toBeInTheDocument();
     expect(screen.getAllByRole('heading')).toHaveLength(1);
     expect(screen.getByLabelText('Your name')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create game' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Create session' })).toBeEnabled();
   });
 
   it('asks for no email or password', () => {
@@ -85,7 +85,9 @@ describe('CreateGamePage', () => {
 
     submit('Sven');
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Create game' })).toBeDisabled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create session' })).toBeDisabled(),
+    );
   });
 
   it.each([
@@ -100,10 +102,10 @@ describe('CreateGamePage', () => {
       submit('Sven');
 
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        'Could not create the game. Try again.',
+        'Could not create the session. Try again.',
       );
       expect(screen.getByLabelText('Your name')).toHaveValue('Sven');
-      expect(screen.getByRole('button', { name: 'Create game' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Create session' })).toBeEnabled();
       expect(screen.queryByText('Game route')).not.toBeInTheDocument();
     },
   );

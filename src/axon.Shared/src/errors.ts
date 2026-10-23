@@ -24,17 +24,17 @@ export type ErrorCode = z.infer<typeof errorCodeSchema>;
 
 // Fixed strings: never echo input, paths or internal IDs.
 export const ERROR_MESSAGES: Readonly<Record<ErrorCode, string>> = {
-  GAME_NOT_FOUND: 'This game does not exist or has ended.',
+  GAME_NOT_FOUND: 'This session does not exist or has ended.',
   INVALID_NAME: 'Enter a name of 1 to 30 characters.',
-  NAME_TAKEN: 'That name is already taken in this game. Choose another.',
+  NAME_TAKEN: 'That name is already taken in this session. Choose another.',
   INVALID_TOKEN: 'Your saved seat is no longer valid. Join again with a name.',
   INVALID_PAYLOAD: 'The request is not valid.',
-  ALREADY_JOINED: 'This connection has already joined a game.',
+  ALREADY_JOINED: 'This connection has already joined a session.',
   INVALID_STORY: 'Enter a title of 1 to 200 characters and an optional http or https link.',
   INVALID_CARD: 'That card is not in the deck.',
   FORBIDDEN: 'You are not allowed to do that.',
   WRONG_PHASE: 'That action is not available right now.',
-  REMOVED: 'You were removed from this game.',
+  REMOVED: 'You were removed from this session.',
   INVALID_REQUEST: 'The request body must be a JSON object.',
   PAYLOAD_TOO_LARGE: 'The request body is too large.',
   NOT_FOUND: 'Not found',

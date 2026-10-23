@@ -6,10 +6,10 @@ import { GameEnded } from '../components/organisms/GameEnded';
 import { GameNotFound } from '../components/organisms/GameNotFound';
 import { GameTable } from '../components/organisms/GameTable';
 import { PageLayout } from '../components/templates/PageLayout';
-import { useGameSession } from '../hooks/useGameSession';
+import { useGameSession, type GameSession } from '../hooks/useGameSession';
+import { PRODUCT_NAME } from '../lib/brand';
 
-function GameSession({ gameId }: { readonly gameId: string }) {
-  const session = useGameSession(gameId);
+function SessionView({ session }: { readonly session: GameSession }) {
   const { phase, game } = session;
 
   if (phase === 'not-found') return <GameNotFound />;
@@ -19,7 +19,7 @@ function GameSession({ gameId }: { readonly gameId: string }) {
   if (phase === 'removed') {
     return (
       <>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Removed</h1>
+        <h1 className="type-title">Removed</h1>
         <p role="status">{ERROR_MESSAGES.REMOVED}</p>
       </>
     );
@@ -28,7 +28,7 @@ function GameSession({ gameId }: { readonly gameId: string }) {
   if (phase === 'load-error' || phase === 'join-error') {
     return (
       <>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Axon</h1>
+        <h1 className="type-title">{PRODUCT_NAME}</h1>
         <p role="alert">{session.errorMessage}</p>
         <Button onClick={session.retry}>Retry</Button>
       </>
@@ -38,7 +38,7 @@ function GameSession({ gameId }: { readonly gameId: string }) {
   if (phase === 'prompt') {
     return (
       <>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Join game</h1>
+        <h1 className="type-title">Join session</h1>
         <NameForm
           submitLabel="Join"
           submitting={session.submitting}
@@ -70,17 +70,24 @@ function GameSession({ gameId }: { readonly gameId: string }) {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold sm:text-3xl">Axon</h1>
-      <p role="status">Loading game…</p>
+      <h1 className="type-title">{PRODUCT_NAME}</h1>
+      <p role="status">Loading session…</p>
     </>
+  );
+}
+
+function SessionPage({ gameId }: { readonly gameId: string }) {
+  const session = useGameSession(gameId);
+  // The estimation page uses the full width; every other view stays narrow.
+  const wide = session.phase === 'joined' && session.game !== null;
+  return (
+    <PageLayout wide={wide}>
+      <SessionView session={session} />
+    </PageLayout>
   );
 }
 
 export function GamePage() {
   const { gameId = '' } = useParams();
-  return (
-    <PageLayout>
-      <GameSession key={gameId} gameId={gameId} />
-    </PageLayout>
-  );
+  return <SessionPage key={gameId} gameId={gameId} />;
 }

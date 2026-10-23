@@ -43,8 +43,9 @@ describe('StoryPanel as facilitator', () => {
   it('shows the story read-only with "Edit story" once voting is open', () => {
     setup('facilitator', STORY);
 
-    expect(screen.getByText('Login page')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /example\.com\/1/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Login page (opens in a new tab)' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit story' })).toBeEnabled();
     expect(screen.queryByRole('form', { name: 'Story' })).not.toBeInTheDocument();
   });
@@ -144,14 +145,15 @@ describe('StoryPanel as voter', () => {
     expect(screen.queryByText(WAITING_MESSAGE)).not.toBeInTheDocument();
   });
 
-  it('renders the link as a safe new-tab anchor showing the URL', () => {
+  it('makes the title the safe new-tab link and does not show the address', () => {
     setup('voter', STORY);
 
-    const anchor = screen.getByRole('link', { name: 'https://example.com/1 (opens in a new tab)' });
+    const anchor = screen.getByRole('link', { name: /^Login page.*\(opens in a new tab\)$/ });
     expect(anchor).toHaveAttribute('href', 'https://example.com/1');
     expect(anchor).toHaveAttribute('target', '_blank');
     expect(anchor).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(anchor).toHaveTextContent('https://example.com/1');
+    expect(anchor).toHaveTextContent('Login page');
+    expect(screen.queryByText(/example\.com/)).toBeNull();
   });
 
   it('renders no anchor when the story has no link', () => {
@@ -169,13 +171,13 @@ describe('StoryPanel as voter', () => {
     expect(container.querySelector('img')).toBeNull();
   });
 
-  it('lets a 200-character title and a 2048-character link wrap instead of overflowing', () => {
+  it('shows a 200-character title as the link text and never the 2048-character address', () => {
     const url = `https://example.com/${'a'.repeat(2028)}`;
     setup('voter', { title: 'T'.repeat(200), url });
 
-    expect(screen.getByText('T'.repeat(200))).toHaveClass('wrap-anywhere');
-    expect(screen.getByRole('link')).toHaveClass('wrap-anywhere');
-    expect(screen.getByRole('link')).toHaveTextContent(url);
+    expect(screen.getByRole('link')).toHaveTextContent('T'.repeat(200));
+    expect(screen.getByRole('link')).toHaveAttribute('href', url);
+    expect(document.body).not.toHaveTextContent('aaaaaaaaaa');
   });
 });
 

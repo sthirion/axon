@@ -400,7 +400,7 @@ describe('GameTable round controls and summary', () => {
     renderTable(game);
 
     const items = within(screen.getByRole('region', { name: 'Summary' })).getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('Loginhttps://e.com/1 (opens in a new tab)5');
+    expect(items[0]).toHaveTextContent('Login ↗ (opens in a new tab)5');
     expect(items[1]).toHaveTextContent('Checkoutskipped');
     expect(screen.getByText('Total: 5')).toBeVisible();
   });

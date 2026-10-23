@@ -31,7 +31,7 @@ function EstimateForm({ suggestedEstimate, busy, recordLabel, onRecord }: Estima
   return (
     <div className="space-y-2">
       <div className="space-y-1">
-        <label htmlFor={selectId} className="block text-sm font-medium">
+        <label htmlFor={selectId} className="block type-body font-medium">
           Final estimate
         </label>
         <select
@@ -125,7 +125,7 @@ export const FacilitatorControls = memo(function FacilitatorControls({
         </Button>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="type-meta text-red-700 dark:text-red-400">
           {error}
         </p>
       )}

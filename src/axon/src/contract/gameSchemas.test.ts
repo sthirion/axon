@@ -389,8 +389,25 @@ describe('gameEndedSchema', () => {
 
   it('has a fixed message for every reason', () => {
     expect(GAME_END_MESSAGES).toEqual({
-      'server-restart': 'The game ended because the server restarted.',
-      expired: 'The game ended because it reached its 2-hour limit.',
+      'server-restart': 'The session ended because the server restarted.',
+      expired: 'The session ended because it reached its 2-hour limit.',
     });
+  });
+});
+
+describe('user-visible wording', () => {
+  it('never says "game" in an error or end message: a planning poker is a session', () => {
+    const texts = [...Object.values(ERROR_MESSAGES), ...Object.values(GAME_END_MESSAGES)];
+
+    expect(texts.filter((text) => /\bgames?\b/i.test(text))).toEqual([]);
+  });
+
+  it('uses the session wording for the messages that name it', () => {
+    expect(ERROR_MESSAGES.GAME_NOT_FOUND).toBe('This session does not exist or has ended.');
+    expect(ERROR_MESSAGES.REMOVED).toBe('You were removed from this session.');
+    expect(ERROR_MESSAGES.NAME_TAKEN).toBe(
+      'That name is already taken in this session. Choose another.',
+    );
+    expect(ERROR_MESSAGES.ALREADY_JOINED).toBe('This connection has already joined a session.');
   });
 });

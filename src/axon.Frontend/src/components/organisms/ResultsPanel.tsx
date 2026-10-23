@@ -29,7 +29,7 @@ export const ResultsPanel = memo(function ResultsPanel({
 
   return (
     <section aria-labelledby={headingId} className="min-w-0 space-y-3">
-      <h2 id={headingId} className="text-lg font-semibold">
+      <h2 id={headingId} className="type-section">
         Results
       </h2>
       <ul className="space-y-1">
@@ -44,7 +44,7 @@ export const ResultsPanel = memo(function ResultsPanel({
                 style={{ width: `${(count / max) * 100}%` }}
               />
             </span>
-            <span className="shrink-0 text-sm">{voteCount(count)}</span>
+            <span className="shrink-0 type-meta">{voteCount(count)}</span>
           </li>
         ))}
       </ul>
