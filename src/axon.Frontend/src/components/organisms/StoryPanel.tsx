@@ -10,6 +10,8 @@ interface StoryPanelProps {
   readonly story: Story | null;
   readonly role: PlayerRole | null;
   readonly disabled: boolean;
+  // The story is frozen once votes are revealed.
+  readonly locked?: boolean;
   readonly onSetStory: (story: Story) => Promise<ActionResult>;
 }
 
@@ -35,6 +37,7 @@ export const StoryPanel = memo(function StoryPanel({
   story,
   role,
   disabled,
+  locked = false,
   onSetStory,
 }: StoryPanelProps) {
   const headingId = useId();
@@ -55,7 +58,7 @@ export const StoryPanel = memo(function StoryPanel({
     if (isFacilitator && story === null) {
       return <StoryForm submitLabel="Start voting" disabled={disabled} onSubmit={onSetStory} />;
     }
-    if (isFacilitator && editing && story) {
+    if (isFacilitator && editing && !locked && story) {
       return (
         <StoryForm
           submitLabel="Save"
@@ -72,7 +75,7 @@ export const StoryPanel = memo(function StoryPanel({
     return (
       <>
         <StoryDetails story={story} />
-        {isFacilitator && (
+        {isFacilitator && !locked && (
           <Button ref={editButtonRef} disabled={disabled} onClick={() => setEditing(true)}>
             Edit story
           </Button>

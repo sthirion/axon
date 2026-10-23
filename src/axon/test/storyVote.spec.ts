@@ -164,7 +164,10 @@ function cardKeysIn(value: unknown): string[] {
 function assertStatesArePublic(client: Client): void {
   client.states.forEach((state) => {
     expect(publicGameStateSchema.safeParse(state).success).toBe(true);
-    expect(cardKeysIn(state)).toEqual([]);
+    // After the reveal cards and results are public by design; before it nothing may be.
+    if (state.phase !== 'revealed') {
+      expect(cardKeysIn(state)).toEqual([]);
+    }
   });
 }
 
@@ -1479,6 +1482,295 @@ describe('story and vote over Socket.IO', () => {
         ).toBe(true);
       });
       secrets.forEach((secret) => expect(logged.join('\n')).not.toContain(secret));
+    });
+  });
+
+  describe('round:reveal (Story #4)', () => {
+    async function reveal(round: Round): Promise<PublicGameState[]> {
+      const marks = round.everyone.map((c) => c.events.length);
+      expect(await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined)).toEqual({
+        ok: true,
+      });
+      return Promise.all(round.everyone.map((c, i) => c.nextState(marks[i] as number)));
+    }
+
+    async function aRevealedRound(cards: Array<[keyof Pick<Round, 'anna' | 'bob'>, Card]>) {
+      const round = await aRound();
+      for (const [who, card] of cards) {
+        await castAndSync(round, round[who], card);
+      }
+      const states = await reveal(round);
+      return { round, states };
+    }
+
+    it('delivers cards and results to every socket within 1s of the ack', async () => {
+      // Given
+      const round = await aRound();
+      await castAndSync(round, round.anna, 3);
+      await castAndSync(round, round.bob, 8);
+      const marks = round.everyone.map((c) => c.events.length);
+
+      // When
+      const started = Date.now();
+      const ack = await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined);
+      const states = await Promise.all(
+        round.everyone.map((c, i) => c.nextState(marks[i] as number)),
+      );
+
+      // Then
+      expect(ack).toEqual({ ok: true });
+      expect(Date.now() - started).toBeLessThan(BROADCAST_BUDGET_MS);
+      states.forEach((state) => {
+        expect(publicGameStateSchema.safeParse(state).success).toBe(true);
+        expect(state.phase).toBe('revealed');
+        expect(voterOf(state, 'Anna')).toMatchObject({ hasVoted: true, card: 3 });
+        expect(voterOf(state, 'Bob')).toMatchObject({ hasVoted: true, card: 8 });
+        expect(state.results).toEqual({
+          distribution: [
+            { card: 3, count: 1 },
+            { card: 8, count: 1 },
+          ],
+          average: 5.5,
+          consensus: false,
+          outlierIds: [round.anna.playerId, round.bob.playerId],
+          suggestedEstimate: 5,
+        });
+      });
+    });
+
+    it('acks before the broadcast and sends nothing else to the room, no vote:mine', async () => {
+      // Given
+      const round = await aRound();
+      await castAndSync(round, round.anna, 5);
+      const marks = round.everyone.map((c) => c.events.length);
+
+      // When
+      await reveal(round);
+
+      // Then
+      const [fac, anna, bob] = round.everyone;
+      expect(fac?.kindsSince(marks[0] as number)).toEqual([ACK, GAME_EVENTS.state]);
+      expect(anna?.kindsSince(marks[1] as number)).toEqual([GAME_EVENTS.state]);
+      expect(bob?.kindsSince(marks[2] as number)).toEqual([GAME_EVENTS.state]);
+    });
+
+    it('reports consensus, no outliers and the shared card', async () => {
+      const { states } = await aRevealedRound([
+        ['anna', 5],
+        ['bob', 5],
+      ]);
+
+      expect(states[0]?.results).toMatchObject({
+        average: 5,
+        consensus: true,
+        outlierIds: [],
+        suggestedEstimate: 5,
+      });
+    });
+
+    it('shows ? and coffee votes but leaves them out of the average', async () => {
+      const { states } = await aRevealedRound([
+        ['anna', '?'],
+        ['bob', 'coffee'],
+      ]);
+
+      expect(states[0]?.results).toEqual({
+        distribution: [
+          { card: '?', count: 1 },
+          { card: 'coffee', count: 1 },
+        ],
+        average: null,
+        consensus: false,
+        outlierIds: [],
+        suggestedEstimate: null,
+      });
+      expect(voterOf(states[0] as PublicGameState, 'Anna').card).toBe('?');
+      expect(voterOf(states[0] as PublicGameState, 'Bob').card).toBe('coffee');
+    });
+
+    it('lets a reveal go ahead with one vote and shows the other voter without a card', async () => {
+      const { states } = await aRevealedRound([['anna', 13]]);
+
+      const bob = voterOf(states[0] as PublicGameState, 'Bob');
+      expect(bob.hasVoted).toBe(false);
+      expect(bob).not.toHaveProperty('card');
+      expect(states[0]?.results?.distribution).toEqual([{ card: 13, count: 1 }]);
+    });
+
+    it('rejects a reveal with no vote with WRONG_PHASE and sends nothing', async () => {
+      const round = await aRound();
+
+      const { result } = await expectSilent(round.table, [round.anna.client], () =>
+        round.facilitator.emit(GAME_EVENTS.roundReveal, undefined),
+      );
+
+      expect(result).toEqual(failedAck('WRONG_PHASE'));
+    });
+
+    it('rejects a reveal after the only vote was withdrawn', async () => {
+      const round = await aRound();
+      await castAndSync(round, round.anna, 5);
+      await castAndSync(round, round.anna, null);
+
+      expect(await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined)).toEqual(
+        failedAck('WRONG_PHASE'),
+      );
+    });
+
+    it('rejects a reveal while waiting', async () => {
+      const round = await aRound({ voting: false });
+
+      expect(await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined)).toEqual(
+        failedAck('WRONG_PHASE'),
+      );
+    });
+
+    it('rejects a voter with FORBIDDEN and keeps the phase', async () => {
+      const round = await aRound();
+      await castAndSync(round, round.anna, 5);
+
+      const { result, state } = await expectSilent(round.table, [round.bob.client], () =>
+        round.anna.client.emit(GAME_EVENTS.roundReveal, undefined),
+      );
+
+      expect(result).toEqual(failedAck('FORBIDDEN'));
+      expect(state.phase).toBe('voting');
+    });
+
+    it('rejects a socket that never joined with FORBIDDEN', async () => {
+      const round = await aRound();
+      await castAndSync(round, round.anna, 5);
+      const stranger = await connect();
+
+      expect(await stranger.emit(GAME_EVENTS.roundReveal, undefined)).toEqual(
+        failedAck('FORBIDDEN'),
+      );
+    });
+
+    it('ignores a payload and ignores a spoofed phase', async () => {
+      const round = await aRound();
+      await castAndSync(round, round.anna, 5);
+      const marks = round.everyone.map((c) => c.events.length);
+
+      const ack = await round.facilitator.emit(GAME_EVENTS.roundReveal, {
+        phase: 'waiting',
+        role: 'voter',
+      });
+      const states = await Promise.all(
+        round.everyone.map((c, i) => c.nextState(marks[i] as number)),
+      );
+
+      expect(ack).toEqual({ ok: true });
+      expect(states.every((s) => s.phase === 'revealed')).toBe(true);
+    });
+
+    it('processes a reveal sent without an ack callback', async () => {
+      const round = await aRound();
+      await castAndSync(round, round.anna, 5);
+      const marks = round.everyone.map((c) => c.events.length);
+
+      round.facilitator.socket.emit(GAME_EVENTS.roundReveal);
+
+      const states = await Promise.all(
+        round.everyone.map((c, i) => c.nextState(marks[i] as number)),
+      );
+      expect(states.every((s) => s.phase === 'revealed')).toBe(true);
+    });
+
+    it('rejects a second reveal, vote:cast and story:set after the reveal and changes nothing', async () => {
+      const { round } = await aRevealedRound([
+        ['anna', 3],
+        ['bob', 8],
+      ]);
+
+      const { result, state } = await expectSilent(
+        round.table,
+        [round.anna.client, round.bob.client],
+        async () => [
+          await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined),
+          await round.anna.client.emit(GAME_EVENTS.voteCast, { card: 13 }),
+          await round.anna.client.emit(GAME_EVENTS.voteCast, { card: null }),
+          await round.facilitator.emit(GAME_EVENTS.storySet, { title: 'Sneaky edit' }),
+          await round.facilitator.emit(GAME_EVENTS.storySet, { title: '' }),
+        ],
+      );
+
+      expect(result).toEqual(Array(5).fill(failedAck('WRONG_PHASE')));
+      expect(state.phase).toBe('revealed');
+      expect(state.story).toEqual({ title: 'Login page' });
+      expect(voterOf(state, 'Anna').card).toBe(3);
+      expect(round.anna.client.mineSince(0).at(-1)).toBe(3);
+    });
+
+    it('keeps FORBIDDEN ahead of WRONG_PHASE after the reveal', async () => {
+      const { round } = await aRevealedRound([['anna', 3]]);
+
+      expect(await round.facilitator.emit(GAME_EVENTS.voteCast, { card: 5 })).toEqual(
+        failedAck('FORBIDDEN'),
+      );
+      expect(await round.anna.client.emit(GAME_EVENTS.storySet, { title: 'X' })).toEqual(
+        failedAck('FORBIDDEN'),
+      );
+    });
+
+    it('sends cards to a voter who rejoins and to a new voter who joins after the reveal', async () => {
+      const { round } = await aRevealedRound([
+        ['anna', 3],
+        ['bob', 8],
+      ]);
+
+      const tab = await aTabOf(round.table, round.anna);
+      const cy = await aVoter(round.table, 'Cy');
+
+      const rejoined = await tab.stateWhere((s) => s.phase === 'revealed');
+      expect(voterOf(rejoined, 'Anna').card).toBe(3);
+      expect(rejoined.results?.average).toBe(5.5);
+      expect(tab.mine).toEqual([3]);
+      const late = await cy.client.stateWhere((s) => s.phase === 'revealed');
+      expect(voterOf(late, 'Cy')).toEqual(
+        expect.objectContaining({ hasVoted: false, connected: true }),
+      );
+      expect(voterOf(late, 'Cy')).not.toHaveProperty('card');
+      expect(cy.client.mine).toEqual([null]);
+      expect(late.results?.distribution).toEqual([
+        { card: 3, count: 1 },
+        { card: 8, count: 1 },
+      ]);
+    });
+
+    it('never puts a card or results in a game:state before the reveal for any client', async () => {
+      const round = await aRound();
+      await castAndSync(round, round.anna, 3);
+      await castAndSync(round, round.bob, 21);
+      await settle(round.table, round.everyone);
+
+      for (const client of round.everyone) {
+        const before = client.states.filter((s) => s.phase !== 'revealed');
+        expect(before.length).toBeGreaterThan(0);
+        before.forEach((state) => {
+          expect(state).not.toHaveProperty('results');
+          expect(cardKeysIn(state)).toEqual([]);
+        });
+      }
+    });
+
+    it('logs only the event name, gameId and code for a rejected reveal', async () => {
+      const round = await aRound();
+      await castAndSync(round, round.anna, 13);
+
+      await round.anna.client.emit(GAME_EVENTS.roundReveal, undefined);
+      await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined);
+      await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined);
+
+      const rejected = logged
+        .filter((line) => line.startsWith('{'))
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .filter((e) => e.event === 'round.rejected');
+      expect(rejected.map((e) => e.code)).toEqual(['FORBIDDEN', 'WRONG_PHASE']);
+      rejected.forEach((e) =>
+        expect(Object.keys(e).sort()).toEqual(['code', 'event', 'gameId', 'level']),
+      );
+      expect(logged.join('\n')).not.toMatch(/Anna|Login page/);
     });
   });
 });

@@ -8,6 +8,7 @@ export const GAME_EVENTS = {
   storySet: 'story:set',
   voteCast: 'vote:cast',
   voteMine: 'vote:mine',
+  roundReveal: 'round:reveal',
 } as const;
 
 export const GAME_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
@@ -79,25 +80,44 @@ export const gameJoinedSchema = z.object({
 
 export type GameJoined = z.infer<typeof gameJoinedSchema>;
 
-export const gamePhaseSchema = z.enum(['waiting', 'voting']);
+export const gamePhaseSchema = z.enum(['waiting', 'voting', 'revealed']);
 
 export type GamePhase = z.infer<typeof gamePhaseSchema>;
 
-// Strict on purpose: an unexpected key (for example a vote value) must fail validation, not be stripped.
-export const publicGameStateSchema = z.strictObject({
-  gameId: gameIdSchema,
-  phase: gamePhaseSchema,
-  story: z.strictObject({ title: z.string(), url: z.string().optional() }).nullable(),
-  facilitator: z.strictObject({ name: z.string(), connected: z.boolean() }),
-  voters: z.array(
-    z.strictObject({
-      id: z.string(),
-      name: z.string(),
-      connected: z.boolean(),
-      hasVoted: z.boolean(),
-    }),
-  ),
+export const roundStatsSchema = z.strictObject({
+  distribution: z.array(z.strictObject({ card: cardSchema, count: z.number().int().min(1) })),
+  average: z.number().nullable(),
+  consensus: z.boolean(),
+  outlierIds: z.array(z.string()),
+  suggestedEstimate: z.number().nullable(),
 });
+
+export type RoundStats = z.infer<typeof roundStatsSchema>;
+
+// Strict on purpose: an unexpected key (for example a vote value) must fail validation, not be stripped.
+// `card` and `results` exist only once the round is revealed.
+export const publicGameStateSchema = z
+  .strictObject({
+    gameId: gameIdSchema,
+    phase: gamePhaseSchema,
+    story: z.strictObject({ title: z.string(), url: z.string().optional() }).nullable(),
+    facilitator: z.strictObject({ name: z.string(), connected: z.boolean() }),
+    voters: z.array(
+      z.strictObject({
+        id: z.string(),
+        name: z.string(),
+        connected: z.boolean(),
+        hasVoted: z.boolean(),
+        card: cardSchema.optional(),
+      }),
+    ),
+    results: roundStatsSchema.optional(),
+  })
+  .refine(
+    (state) =>
+      state.phase === 'revealed' ||
+      (state.results === undefined && state.voters.every((voter) => voter.card === undefined)),
+  );
 
 export type PublicGameState = z.infer<typeof publicGameStateSchema>;
 

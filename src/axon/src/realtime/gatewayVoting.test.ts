@@ -601,3 +601,103 @@ describe('logging of story and vote events', () => {
     }
   });
 });
+
+describe('round:reveal', () => {
+  function aVotingRound() {
+    const setup = aSetup();
+    const anna = setup.join('anna', 'Anna');
+    const bob = setup.join('bob', 'Bob');
+    send(setup.facilitator, 'story:set', { title: 'Login page' });
+    return { ...setup, anna, bob };
+  }
+
+  it('acks ok, then broadcasts one game:state with cards and results, and sends no vote:mine', () => {
+    const { io, facilitator, anna, bob } = aVotingRound();
+    send(anna.socket, 'vote:cast', { card: 3 });
+    send(bob.socket, 'vote:cast', { card: 8 });
+    io.timeline.length = 0;
+    const before = mark(io);
+    const minesBefore = voteMines(anna.socket).length;
+
+    const ack = send(facilitator, 'round:reveal', undefined);
+
+    expect(ack).toEqual({ ok: true });
+    expect(io.timeline).toEqual(['ack', 'broadcast:game:state']);
+    const sent = since(io, before);
+    expect(sent).toHaveLength(1);
+    const state = sent[0]?.payload as PublicGameState;
+    expect(state?.phase).toBe('revealed');
+    expect(state?.voters.map((v) => v.card)).toEqual([3, 8]);
+    expect(state?.results).toMatchObject({
+      average: 5.5,
+      outlierIds: [anna.playerId, bob.playerId],
+    });
+    expect(voteMines(anna.socket)).toHaveLength(minesBefore);
+  });
+
+  it('ignores any payload', () => {
+    const { facilitator, anna } = aVotingRound();
+    send(anna.socket, 'vote:cast', { card: 3 });
+
+    expect(send(facilitator, 'round:reveal', { phase: 'waiting', junk: [1] })).toEqual({
+      ok: true,
+    });
+  });
+
+  it('is processed without an ack callback', () => {
+    const { io, facilitator, anna } = aVotingRound();
+    send(anna.socket, 'vote:cast', { card: 3 });
+
+    facilitator.trigger('round:reveal');
+
+    expect(states(io).at(-1)?.phase).toBe('revealed');
+  });
+
+  it('rejects a reveal with no vote with WRONG_PHASE and no broadcast', () => {
+    const { io, facilitator } = aVotingRound();
+    const before = mark(io);
+
+    expect(send(facilitator, 'round:reveal', undefined)).toEqual(failure('WRONG_PHASE'));
+    expect(since(io, before)).toEqual([]);
+  });
+
+  it('rejects a voter with FORBIDDEN and no broadcast', () => {
+    const { io, anna } = aVotingRound();
+    send(anna.socket, 'vote:cast', { card: 3 });
+    const before = mark(io);
+
+    expect(send(anna.socket, 'round:reveal', undefined)).toEqual(failure('FORBIDDEN'));
+    expect(since(io, before)).toEqual([]);
+  });
+
+  it('rejects a socket that never joined with FORBIDDEN', () => {
+    const { io } = aVotingRound();
+
+    expect(send(io.connect('stranger'), 'round:reveal', undefined)).toEqual(failure('FORBIDDEN'));
+  });
+
+  it('rejects a second reveal, vote:cast and story:set after the reveal with WRONG_PHASE', () => {
+    const { io, facilitator, anna } = aVotingRound();
+    send(anna.socket, 'vote:cast', { card: 3 });
+    send(facilitator, 'round:reveal', undefined);
+    const before = mark(io);
+
+    expect(send(facilitator, 'round:reveal', undefined)).toEqual(failure('WRONG_PHASE'));
+    expect(send(anna.socket, 'vote:cast', { card: 5 })).toEqual(failure('WRONG_PHASE'));
+    expect(send(anna.socket, 'vote:cast', { card: null })).toEqual(failure('WRONG_PHASE'));
+    expect(send(facilitator, 'story:set', { title: 'Other' })).toEqual(failure('WRONG_PHASE'));
+    expect(since(io, before)).toEqual([]);
+  });
+
+  it('does not log cards, names or tokens', () => {
+    const { facilitator, anna } = aVotingRound();
+    send(anna.socket, 'vote:cast', { card: 13 });
+    const log = vi.spyOn(console, 'warn');
+
+    send(anna.socket, 'round:reveal', undefined);
+
+    expect(JSON.stringify(log.mock.calls)).toContain('FORBIDDEN');
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/13|Anna|Login/);
+    expect(facilitator).toBeDefined();
+  });
+});

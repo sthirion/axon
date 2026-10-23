@@ -97,6 +97,7 @@ export function connectGameSocket(
     },
     setStory: (payload) => request(GAME_EVENTS.storySet, payload),
     castVote: (card) => request(GAME_EVENTS.voteCast, { card }),
+    revealRound: () => request(GAME_EVENTS.roundReveal, undefined),
     close() {
       socket.removeAllListeners();
       socket.disconnect();

@@ -152,7 +152,7 @@ Document your project's authorization rules so agents apply them consistently.
 - There are no user accounts. Identity is a player token scoped to one game.
 - Every socket event resolves the sender's player from the socket, then checks the role in the domain layer: facilitator-only events (`story:set`, `round:*`, `player:remove`) and voter-only events (`vote:cast`).
 - Failed checks return the ack `{ ok: false, code: 'FORBIDDEN' }`; REST returns `403`.
-- Vote values are never sent to any client before the reveal, other than the voter who owns the vote (via `vote:mine` to their own `player:<id>` room). `game:state` never contains vote values.
+- Vote values are never sent to any client before the reveal, other than the voter who owns the vote (via `vote:mine` to their own `player:<id>` room). Before the reveal `game:state` never contains vote values or results. In phase `revealed`, `game:state` carries every voter's `card` and `results` for everyone.
 - Tokens are never put in URLs or logs.
 
 ## Local Development

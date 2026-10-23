@@ -28,6 +28,7 @@ export {
   playerRoleSchema,
   playerTokenSchema,
   publicGameStateSchema,
+  roundStatsSchema,
   voteCastEnvelopeSchema,
   voteCastPayloadSchema,
   voteMineSchema,
@@ -39,6 +40,7 @@ export {
   type GamePhase,
   type PlayerRole,
   type PublicGameState,
+  type RoundStats,
   type VoteCastPayload,
   type VoteMine,
 } from './game.js';

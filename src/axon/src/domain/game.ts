@@ -9,6 +9,7 @@ import {
   type PublicGameState,
   type Story,
 } from '@axon/shared';
+import { calculateStats } from './results.js';
 
 export interface Player {
   readonly id: string;
@@ -109,12 +110,27 @@ export function setStory(game: Game, playerId: string, input: unknown): ActionRe
   if (game.players.get(playerId)?.role !== 'facilitator') {
     return { ok: false, code: 'FORBIDDEN' };
   }
+  if (game.phase === 'revealed') {
+    return { ok: false, code: 'WRONG_PHASE' };
+  }
   const story = storySchema.safeParse(input);
   if (!story.success) {
     return { ok: false, code: 'INVALID_STORY' };
   }
   game.story = story.data;
   game.phase = 'voting';
+  return { ok: true };
+}
+
+// Needs at least one vote; a second reveal is rejected because the phase is no longer `voting`.
+export function revealRound(game: Game, playerId: string): ActionResult {
+  if (game.players.get(playerId)?.role !== 'facilitator') {
+    return { ok: false, code: 'FORBIDDEN' };
+  }
+  if (game.phase !== 'voting' || game.votes.size === 0) {
+    return { ok: false, code: 'WRONG_PHASE' };
+  }
+  game.phase = 'revealed';
   return { ok: true };
 }
 
@@ -148,6 +164,7 @@ export function toPublicState(game: Game): PublicGameState {
   if (!facilitator) {
     throw new Error('Game has no facilitator');
   }
+  const revealed = game.phase === 'revealed';
   return {
     gameId: game.id,
     phase: game.phase,
@@ -155,11 +172,16 @@ export function toPublicState(game: Game): PublicGameState {
     facilitator: { name: facilitator.name, connected: isConnected(facilitator) },
     voters: [...game.players.values()]
       .filter((player) => player.role === 'voter')
-      .map((player) => ({
-        id: player.id,
-        name: player.name,
-        connected: isConnected(player),
-        hasVoted: game.votes.has(player.id),
-      })),
+      .map((player) => {
+        const card = game.votes.get(player.id);
+        return {
+          id: player.id,
+          name: player.name,
+          connected: isConnected(player),
+          hasVoted: card !== undefined,
+          ...(revealed && card !== undefined ? { card } : {}),
+        };
+      }),
+    ...(revealed ? { results: calculateStats(game.votes) } : {}),
   };
 }

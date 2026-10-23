@@ -18,6 +18,7 @@ import {
   connectSocket,
   disconnectSocket,
   getVote,
+  revealRound,
   setStory,
   toPublicState,
   type ActionResult,
@@ -112,6 +113,9 @@ function decideCommand<T>(
     : { ok: false, code: result.code, gameId: game.id };
 }
 
+// `round:reveal` carries no payload, so whatever is sent is ignored.
+const ANY_PAYLOAD: Envelope<unknown> = { safeParse: (data) => ({ success: true, data }) };
+
 // A missing or non-function ack is tolerated: the event is still processed.
 function replyTo(ack: unknown): (result: Ack) => void {
   return (result) => {
@@ -191,6 +195,21 @@ export function registerGateway(io: Server, store: GameStore): void {
       reply({ ok: true });
       io.to(playerRoom(playerId)).emit(GAME_EVENTS.voteMine, mine);
       io.to(gameRoom(game.id)).emit(GAME_EVENTS.state, toPublicState(game));
+    });
+
+    socket.on(GAME_EVENTS.roundReveal, (payload: unknown, ack?: unknown) => {
+      const reply = replyTo(ack);
+      const decision = decideCommand(store, session, payload, ANY_PAYLOAD, (game, playerId) =>
+        revealRound(game, playerId),
+      );
+      if (!decision.ok) {
+        logEvent('round.rejected', { gameId: decision.gameId, code: decision.code }, 'warn');
+        reply(failedAck(decision.code));
+        return;
+      }
+
+      reply({ ok: true });
+      io.to(gameRoom(decision.game.id)).emit(GAME_EVENTS.state, toPublicState(decision.game));
     });
 
     socket.on('disconnect', () => {

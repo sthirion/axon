@@ -28,5 +28,6 @@ export interface GameSocketClient {
   readonly join: (payload: GameJoinPayload) => Promise<JoinResult>;
   readonly setStory: (payload: StorySetPayload) => Promise<ActionResult>;
   readonly castVote: (card: Card | null) => Promise<ActionResult>;
+  readonly revealRound: () => Promise<ActionResult>;
   readonly close: () => void;
 }

@@ -54,6 +54,45 @@ describe('describeVoteChanges', () => {
   });
 });
 
+describe('describeVoteChanges on reveal', () => {
+  const stats = (overrides: object) => ({
+    distribution: [{ card: 5, count: 2 }],
+    average: 5,
+    consensus: true,
+    outlierIds: [],
+    suggestedEstimate: 5,
+    ...overrides,
+  });
+  const revealed = (results: object) =>
+    gameState({ phase: 'revealed', story: STORY, voters: [ANNA], results });
+
+  it.each([
+    ['consensus', stats({}), 'Votes revealed. Consensus: 5'],
+    [
+      'no consensus',
+      stats({ consensus: false, average: 5.3 }),
+      'Votes revealed. No consensus, average 5.3',
+    ],
+    [
+      'no numeric votes',
+      stats({ average: null, consensus: false, distribution: [{ card: '?', count: 1 }] }),
+      'Votes revealed. No numeric votes',
+    ],
+  ])('announces the reveal with %s', (_label, results, expected) => {
+    expect(describeVoteChanges(voting([ANNA]), revealed(results), null)).toBe(expected);
+  });
+
+  it('never includes a card value other than the average', () => {
+    const message = describeVoteChanges(voting([ANNA]), revealed(stats({ average: 8 })), null);
+
+    expect(message).not.toMatch(/Anna/);
+  });
+
+  it('says nothing when the state stays revealed', () => {
+    expect(describeVoteChanges(revealed(stats({})), revealed(stats({})), null)).toBe('');
+  });
+});
+
 describe('useVoteAnnouncement', () => {
   const apply = (state: ReturnType<typeof gameState>) =>
     act(() => useGameStore.getState().applyState(state));
@@ -120,5 +159,24 @@ describe('useVoteAnnouncement', () => {
 
     apply(voting([ANNA, BOB]));
     expect(result.current).toBe('Bob withdrew their vote');
+  });
+
+  it('announces the reveal once and is silent when joining an already revealed game', () => {
+    const results = {
+      distribution: [{ card: 5, count: 2 }],
+      average: 5,
+      consensus: true,
+      outlierIds: [],
+      suggestedEstimate: 5,
+    };
+    const { result } = renderHook(() => useVoteAnnouncement());
+    apply(voting([ANNA]));
+
+    apply(gameState({ phase: 'revealed', story: STORY, voters: [ANNA], results }));
+    expect(result.current).toBe('Votes revealed. Consensus: 5');
+
+    act(() => useGameStore.getState().reset());
+    apply(gameState({ phase: 'revealed', story: STORY, voters: [ANNA], results }));
+    expect(result.current).toBe('');
   });
 });
