@@ -167,7 +167,11 @@ connection or an unwanted guest does not disrupt the session.
    reveal, reset or change the story.
 1. WHEN the facilitator reconnects from the same browser with the same link THE SYSTEM SHALL
    restore their facilitator role.
-1. THE SYSTEM SHALL NOT pass the facilitator role to another player.
+1. THE SYSTEM SHALL move the facilitator role only when the current facilitator explicitly
+   hands it over to a voter who is online. THE SYSTEM SHALL NOT take it from the facilitator
+   or pass it on in any other way (not on disconnect, not by name, not by a spoofed
+   payload). The previous facilitator becomes a voter with no vote; the new facilitator's own
+   vote is discarded.
 1. THE SYSTEM SHALL let the facilitator remove a voter. The removed voter's vote is
    discarded and they see "you were removed from this game".
 1. IF a removed voter tries to rejoin with the same player token THEN THE SYSTEM SHALL

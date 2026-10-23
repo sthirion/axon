@@ -22,12 +22,17 @@ export function describeVoteChanges(
   ownPlayerId: string | null,
 ): string {
   const messages: string[] = [];
-  if (previous.facilitator.connected !== next.facilitator.connected) {
+  const handedOver = previous.facilitator.name !== next.facilitator.name;
+  if (handedOver) {
+    messages.push(`${next.facilitator.name} is now the facilitator`);
+  } else if (previous.facilitator.connected !== next.facilitator.connected) {
     messages.push(
       next.facilitator.connected ? 'The facilitator is back' : 'The facilitator is offline',
     );
   }
   for (const voter of previous.voters) {
+    // The new facilitator left the voters because of the handover, not because of a removal.
+    if (handedOver && voter.name === next.facilitator.name) continue;
     if (!next.voters.some((candidate) => candidate.id === voter.id)) {
       messages.push(`${voter.name} was removed`);
     }

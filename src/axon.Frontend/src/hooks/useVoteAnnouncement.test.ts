@@ -72,6 +72,18 @@ describe('describeVoteChanges for the facilitator and removals', () => {
     );
   });
 
+  it('announces a handover, not a removal, when the new facilitator leaves the voters', () => {
+    const before = gameState({ phase: 'voting', story: STORY, voters: [ANNA, BOB] });
+    const after = gameState({
+      phase: 'voting',
+      story: STORY,
+      facilitator: { name: 'Anna', connected: true },
+      voters: [{ id: 'p0', name: 'Sven', connected: true, hasVoted: false }, BOB],
+    });
+
+    expect(describeVoteChanges(before, after, null)).toBe('Anna is now the facilitator');
+  });
+
   it('announces a removed voter by name, without a card', () => {
     expect(describeVoteChanges(voting([ANNA, BOB]), voting([BOB]), null)).toBe('Anna was removed');
   });

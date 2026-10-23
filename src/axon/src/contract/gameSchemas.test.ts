@@ -12,6 +12,8 @@ import {
   ERROR_MESSAGES,
   errorBody,
   failedAck,
+  facilitatorTransferEnvelopeSchema,
+  facilitatorTransferPayloadSchema,
   GAME_EVENTS,
   gameExistsResponseSchema,
   gameIdSchema,
@@ -299,8 +301,21 @@ describe('GAME_EVENTS', () => {
       roundFinish: 'round:finish',
       playerRemove: 'player:remove',
       playerRemoved: 'player:removed',
+      facilitatorTransfer: 'facilitator:transfer',
       ended: 'game:ended',
     });
+  });
+});
+
+describe('facilitator transfer schemas', () => {
+  it('accepts any object as the envelope and only a string player id as the payload', () => {
+    expect(facilitatorTransferEnvelopeSchema.safeParse({}).success).toBe(true);
+    expect(facilitatorTransferEnvelopeSchema.safeParse({ playerId: 7 }).success).toBe(true);
+    expect(facilitatorTransferEnvelopeSchema.safeParse(undefined).success).toBe(false);
+    expect(facilitatorTransferEnvelopeSchema.safeParse('anna').success).toBe(false);
+    expect(facilitatorTransferPayloadSchema.safeParse({ playerId: 'anna' }).success).toBe(true);
+    expect(facilitatorTransferPayloadSchema.safeParse({ playerId: 7 }).success).toBe(false);
+    expect(facilitatorTransferPayloadSchema.safeParse({}).success).toBe(false);
   });
 });
 

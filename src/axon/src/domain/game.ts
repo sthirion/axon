@@ -18,14 +18,15 @@ import { calculateStats } from './results.js';
 export interface Player {
   readonly id: string;
   readonly name: string;
-  readonly role: PlayerRole;
+  // Changes only through transferFacilitator.
+  role: PlayerRole;
   readonly tokenHash: Buffer;
   readonly socketIds: Set<string>;
 }
 
 export interface Game {
   readonly id: string;
-  readonly facilitatorId: string;
+  facilitatorId: string;
   // Store clock time at creation; the age cap counts from here.
   readonly createdAt: number;
   // Chosen when the session is created and never changed.
@@ -189,6 +190,33 @@ export function removePlayer(game: Game, playerId: string, targetId: unknown): R
   game.votes.delete(target.id);
   game.players.delete(target.id);
   return { ok: true, removedId: target.id };
+}
+
+export type TransferFacilitatorResult =
+  | { readonly ok: true; readonly previousId: string; readonly newId: string }
+  | Exclude<ActionResult, { readonly ok: true }>;
+
+// Order: role, then target. The only way the role ever moves: the facilitator hands it to another
+// player who is a voter and online. The new facilitator's vote is discarded (facilitators do not
+// vote); the old one starts as a voter with no vote. `targetId` is untrusted.
+export function transferFacilitator(
+  game: Game,
+  playerId: string,
+  targetId: unknown,
+): TransferFacilitatorResult {
+  const current = game.players.get(playerId);
+  if (current?.role !== 'facilitator') {
+    return { ok: false, code: 'FORBIDDEN' };
+  }
+  const target = typeof targetId === 'string' ? game.players.get(targetId) : undefined;
+  if (target?.role !== 'voter' || target.id === current.id || !isConnected(target)) {
+    return { ok: false, code: 'INVALID_PAYLOAD' };
+  }
+  current.role = 'voter';
+  target.role = 'facilitator';
+  game.facilitatorId = target.id;
+  game.votes.delete(target.id);
+  return { ok: true, previousId: current.id, newId: target.id };
 }
 
 // Back to voting on the same story with every vote cleared.
