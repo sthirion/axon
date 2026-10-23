@@ -1394,7 +1394,9 @@ describe('story and vote over Socket.IO', () => {
       const states = await Promise.all(
         round.everyone.map((c, i) => c.nextState(marks[i] as number)),
       );
+      const mark = round.anna.client.events.length;
       const next = await round.anna.client.emit(GAME_EVENTS.voteCast, { card: 8 });
+      await round.anna.client.nextState(mark);
 
       // Then
       expect(voterOf(states[0] as PublicGameState, 'Anna').hasVoted).toBe(true);
