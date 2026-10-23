@@ -83,7 +83,7 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
 | C→S | `round:reveal` | — (any payload ignored) | facilitator, phase `voting`, ≥1 vote |
 | C→S | `round:revote` | — (any payload ignored) | facilitator, phase `revealed` |
 | C→S | `round:finish` | `{ finalEstimate: 0\|1\|2\|3\|5\|8\|13\|21 }` or `{ skip: true }` | facilitator, phase `revealed` (or `voting` for skip) |
-| C→S | `player:remove` | playerId | facilitator |
+| C→S | `player:remove` | `{ playerId }` | facilitator, any phase |
 | S→C | `player:removed` | — | the removed player, then disconnect |
 | S→C | `game:ended` | reason | everyone (server shutdown) |
 
@@ -101,6 +101,11 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
   A re-vote goes back to `voting` on the same story; a finish appends `{ title, url?, estimate }`
   to `history` (estimate is the number or `'skipped'`), clears all votes and the story, and
   moves to `waiting`.
+- `player:remove` success: ack, then `player:removed` to the removed voter's `player:<id>` room,
+  the server disconnects every socket of that voter, then `game:state` to the game room. The
+  voter's vote is discarded, the voter is deleted (their name is free again) and the SHA-256 of
+  their token is added to `bannedTokenHashes`. Results are recalculated when the round is
+  revealed.
 - A missing ack callback is tolerated: the event is still processed.
 
 ### `PublicGameState`
@@ -316,6 +321,15 @@ Paths follow the source paths in [project-config.md](../../../project-config.md)
     not an object, or not exactly one of `finalEstimate` / `skip: true`), role (`FORBIDDEN`),
     phase (`WRONG_PHASE`: an estimate needs `revealed`, a skip needs `voting` or `revealed`),
     value (`INVALID_CARD`: the estimate is not a numeric deck value; `?` and coffee are rejected).
+- Added by story #6:
+  - `REMOVED` (fixed message "You were removed from this game."): `game:join` with the token of a
+    removed voter. On `game:join` the banned check comes before the token lookup, so the order
+    is: payload shape, `ALREADY_JOINED`, `gameId`, then token (`REMOVED`, else `INVALID_TOKEN`)
+    or name.
+  - `player:remove` check order: not joined (`FORBIDDEN`), game missing (`GAME_NOT_FOUND`),
+    payload is an object (`INVALID_PAYLOAD`), role (`FORBIDDEN`), then the target: it must be
+    the id of a current voter (`INVALID_PAYLOAD` for a missing or non-string id, an unknown or
+    already removed id, or the facilitator).
 - The client shows a friendly message for each code; unknown errors show a generic message.
 - Socket.IO reconnects automatically; on reconnect the client sends `game:join` again with
   its token and gets the full `game:state`, so missed updates don't matter.

@@ -1,5 +1,5 @@
 import type { Card } from '@axon/shared';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { CardFace } from '../atoms/CardFace';
 import { StatusBadge } from '../atoms/StatusBadge';
 import { VoteBadge } from '../atoms/VoteBadge';
@@ -12,6 +12,8 @@ interface PlayerRowProps {
   // Set only after the reveal: the voter's card, or `null` for "No vote". Replaces the badge.
   readonly revealedCard?: Card | null;
   readonly outlier?: boolean;
+  // Extra controls for this row, shown after the status (for example "Remove").
+  readonly action?: ReactNode;
 }
 
 export const PlayerRow = memo(function PlayerRow({
@@ -20,6 +22,7 @@ export const PlayerRow = memo(function PlayerRow({
   hasVoted,
   revealedCard,
   outlier = false,
+  action,
 }: PlayerRowProps) {
   return (
     <span className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3">
@@ -42,6 +45,7 @@ export const PlayerRow = memo(function PlayerRow({
           </span>
         )}
         <StatusBadge connected={connected} />
+        {action}
       </span>
     </span>
   );

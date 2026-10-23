@@ -291,6 +291,8 @@ describe('GAME_EVENTS', () => {
       roundReveal: 'round:reveal',
       roundRevote: 'round:revote',
       roundFinish: 'round:finish',
+      playerRemove: 'player:remove',
+      playerRemoved: 'player:removed',
     });
   });
 });

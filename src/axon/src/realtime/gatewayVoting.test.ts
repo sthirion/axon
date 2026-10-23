@@ -32,6 +32,14 @@ function aSetup(): Setup {
   return { io, store, gameId, facilitatorToken: token, facilitator, join };
 }
 
+// The gameId is random text, so check the log keys instead of searching for strings like "13".
+function expectOnlyEventGameIdAndCode(calls: unknown[][], code: string): void {
+  expect(calls).toHaveLength(1);
+  const entry = JSON.parse(String(calls[0]?.[0])) as Record<string, unknown>;
+  expect(Object.keys(entry).sort()).toEqual(['code', 'event', 'gameId', 'level']);
+  expect(entry.code).toBe(code);
+}
+
 function failure(code: keyof typeof ERROR_MESSAGES) {
   return { ok: false, code, message: ERROR_MESSAGES[code] };
 }
@@ -696,8 +704,7 @@ describe('round:reveal', () => {
 
     send(anna.socket, 'round:reveal', undefined);
 
-    expect(JSON.stringify(log.mock.calls)).toContain('FORBIDDEN');
-    expect(JSON.stringify(log.mock.calls)).not.toMatch(/13|Anna|Login/);
+    expectOnlyEventGameIdAndCode(log.mock.calls, 'FORBIDDEN');
     expect(facilitator).toBeDefined();
   });
 });
@@ -863,7 +870,158 @@ describe('round:revote and round:finish', () => {
 
     send(anna.socket, 'round:finish', { finalEstimate: 13 });
 
-    expect(JSON.stringify(log.mock.calls)).toContain('FORBIDDEN');
-    expect(JSON.stringify(log.mock.calls)).not.toMatch(/13|Anna|Login/);
+    expectOnlyEventGameIdAndCode(log.mock.calls, 'FORBIDDEN');
+  });
+});
+
+describe('player:remove', () => {
+  function aTable() {
+    const setup = aSetup();
+    const anna = setup.join('anna', 'Anna');
+    const bob = setup.join('bob', 'Bob');
+    send(setup.facilitator, 'story:set', { title: 'Login page' });
+    send(anna.socket, 'vote:cast', { card: 3 });
+    send(bob.socket, 'vote:cast', { card: 8 });
+    return { ...setup, anna, bob };
+  }
+
+  it('acks, tells the voter, disconnects their sockets, then broadcasts the new state, in order', () => {
+    const { io, facilitator, anna, bob } = aTable();
+    io.timeline.length = 0;
+    const before = mark(io);
+
+    const ack = send(facilitator, 'player:remove', { playerId: anna.playerId });
+
+    expect(ack).toEqual({ ok: true });
+    expect(io.timeline).toEqual([
+      'ack',
+      'broadcast:player:removed',
+      'disconnect',
+      'broadcast:game:state',
+    ]);
+    const sent = since(io, before);
+    expect(sent[0]).toEqual({
+      room: playerRoom(anna.playerId),
+      event: 'player:removed',
+      payload: undefined,
+    });
+    expect(io.disconnected).toEqual([playerRoom(anna.playerId)]);
+    const state = sent[1]?.payload as PublicGameState;
+    expect(state.voters.map((v) => [v.name, v.hasVoted])).toEqual([['Bob', true]]);
+    expect(JSON.stringify(state)).not.toContain(anna.playerId);
+    expect(bob.playerId).not.toBe(anna.playerId);
+  });
+
+  it('rejects a rejoin with the removed token as REMOVED, ahead of INVALID_TOKEN', () => {
+    const { io, gameId, facilitator, anna } = aTable();
+    send(facilitator, 'player:remove', { playerId: anna.playerId });
+    const before = mark(io);
+
+    const ack = io.connect('again').sendJoin({ gameId, token: anna.token });
+
+    expect(ack).toEqual(failure('REMOVED'));
+    expect(since(io, before)).toEqual([]);
+  });
+
+  it('lets a removed person join again with a new name and the freed name', () => {
+    const { gameId, io, facilitator, anna } = aTable();
+    send(facilitator, 'player:remove', { playerId: anna.playerId });
+
+    const socket = io.connect('new');
+
+    expect(socket.sendJoin({ gameId, name: 'Anna' })).toEqual({ ok: true });
+  });
+
+  it('still rejects a token that never belonged to the game with INVALID_TOKEN', () => {
+    const { io, gameId } = aTable();
+
+    expect(io.connect('x').sendJoin({ gameId, token: 'z'.repeat(43) })).toEqual(
+      failure('INVALID_TOKEN'),
+    );
+  });
+
+  it('makes the removed socket FORBIDDEN for anything it sends before it is disconnected', () => {
+    const { facilitator, anna } = aTable();
+    send(facilitator, 'player:remove', { playerId: anna.playerId });
+
+    expect(send(anna.socket, 'vote:cast', { card: 5 })).toEqual(failure('FORBIDDEN'));
+  });
+
+  it('recalculates results for a revealed round', () => {
+    const { io, facilitator, anna, bob } = aTable();
+    send(facilitator, 'round:reveal', undefined);
+    const before = mark(io);
+
+    send(facilitator, 'player:remove', { playerId: bob.playerId });
+
+    const state = since(io, before).at(-1)?.payload as PublicGameState;
+    expect(state.results).toMatchObject({ average: 3 });
+    expect(state.voters.map((v) => v.id)).toEqual([anna.playerId]);
+  });
+
+  it.each([[{ playerId: 'ghost' }], [{}], [{ playerId: 5 }], [{ playerId: null }]])(
+    'rejects %j from the facilitator with INVALID_PAYLOAD and no broadcast',
+    (payload) => {
+      const { io, facilitator } = aTable();
+      const before = mark(io);
+
+      expect(send(facilitator, 'player:remove', payload)).toEqual(failure('INVALID_PAYLOAD'));
+      expect(since(io, before)).toEqual([]);
+      expect(io.disconnected).toEqual([]);
+    },
+  );
+
+  it('rejects removing the facilitator, even with their real id', () => {
+    const { store, gameId, facilitator } = aTable();
+    const facilitatorId = store.get(gameId)!.facilitatorId;
+
+    expect(send(facilitator, 'player:remove', { playerId: facilitatorId })).toEqual(
+      failure('INVALID_PAYLOAD'),
+    );
+    expect(store.get(gameId)!.players.has(facilitatorId)).toBe(true);
+  });
+
+  it.each([[{ playerId: 'x' }], [{}], [{ playerId: 5 }]])(
+    'rejects %j from a voter with FORBIDDEN and no broadcast',
+    (payload) => {
+      const { io, anna, bob } = aTable();
+      const before = mark(io);
+
+      expect(
+        send(anna.socket, 'player:remove', { ...payload, playerId: bob.playerId, ...payload }),
+      ).toEqual(failure('FORBIDDEN'));
+      expect(since(io, before)).toEqual([]);
+      expect(io.disconnected).toEqual([]);
+    },
+  );
+
+  it('rejects a non-object payload with INVALID_PAYLOAD and a stranger with FORBIDDEN', () => {
+    const { io, facilitator, anna } = aTable();
+
+    expect(send(facilitator, 'player:remove', 'anna')).toEqual(failure('INVALID_PAYLOAD'));
+    expect(send(io.connect('stranger'), 'player:remove', { playerId: anna.playerId })).toEqual(
+      failure('FORBIDDEN'),
+    );
+  });
+
+  it('is processed without an ack callback', () => {
+    const { io, facilitator, anna } = aTable();
+
+    facilitator.trigger('player:remove', { playerId: anna.playerId });
+
+    expect(io.disconnected).toEqual([playerRoom(anna.playerId)]);
+  });
+
+  it('logs the removal with the gameId only, never a name or token', () => {
+    const { facilitator, anna } = aTable();
+    const log = vi.spyOn(console, 'log');
+
+    send(facilitator, 'player:remove', { playerId: anna.playerId });
+
+    const text = JSON.stringify(log.mock.calls);
+    expect(text).toContain('player.removed');
+    expect(text).not.toContain('Anna');
+    expect(text).not.toContain(anna.token);
+    expect(text).not.toContain(anna.playerId);
   });
 });

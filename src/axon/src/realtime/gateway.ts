@@ -5,6 +5,7 @@ import {
   gameIdSchema,
   gameJoinPayloadSchema,
   playerNameSchema,
+  playerRemoveEnvelopeSchema,
   roundFinishEnvelopeSchema,
   playerTokenSchema,
   storySetEnvelopeSchema,
@@ -20,6 +21,7 @@ import {
   disconnectSocket,
   finishRound,
   getVote,
+  removePlayer,
   revealRound,
   revoteRound,
   setStory,
@@ -73,6 +75,9 @@ function decideJoin(store: GameStore, payload: unknown, alreadyJoined: boolean):
 
   if (token !== undefined) {
     const parsedToken = playerTokenSchema.safeParse(token);
+    if (parsedToken.success && store.isBanned(game, parsedToken.data)) {
+      return { ok: false, code: 'REMOVED', gameId };
+    }
     const player = parsedToken.success ? store.authenticate(game, parsedToken.data) : undefined;
     return player ? { ok: true, game, player } : { ok: false, code: 'INVALID_TOKEN', gameId };
   }
@@ -253,6 +258,39 @@ export function registerGateway(io: Server, store: GameStore): void {
         ),
         replyTo(ack),
       );
+    });
+
+    socket.on(GAME_EVENTS.playerRemove, (payload: unknown, ack?: unknown) => {
+      const reply = replyTo(ack);
+      const input = typeof payload === 'object' && payload !== null ? payload : {};
+      let removedId = '';
+      const decision = decideCommand(
+        store,
+        session,
+        payload,
+        playerRemoveEnvelopeSchema,
+        (game, playerId) => {
+          const result = removePlayer(game, playerId, (input as { playerId?: unknown }).playerId);
+          if (result.ok) removedId = result.removedId;
+          return result;
+        },
+      );
+      if (!decision.ok) {
+        logEvent(
+          'player.remove.rejected',
+          { gameId: decision.gameId, code: decision.code },
+          'warn',
+        );
+        reply(failedAck(decision.code));
+        return;
+      }
+
+      const room = playerRoom(removedId);
+      reply({ ok: true });
+      io.to(room).emit(GAME_EVENTS.playerRemoved);
+      io.in(room).disconnectSockets(true);
+      io.to(gameRoom(decision.game.id)).emit(GAME_EVENTS.state, toPublicState(decision.game));
+      logEvent('player.removed', { gameId: decision.game.id });
     });
 
     socket.on('disconnect', () => {

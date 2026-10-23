@@ -3,7 +3,9 @@ import type { ActionResult } from '../../types/game.types';
 import { JoinLink } from '../molecules/JoinLink';
 import { PlayerRow } from '../molecules/PlayerRow';
 import { ReconnectingBanner } from '../molecules/ReconnectingBanner';
+import { FacilitatorOfflineBanner } from '../molecules/FacilitatorOfflineBanner';
 import { FacilitatorControls } from '../molecules/FacilitatorControls';
+import { RemovePlayerButton } from '../molecules/RemovePlayerButton';
 import { RevealButton } from '../molecules/RevealButton';
 import { CardDeck } from './CardDeck';
 import { ResultsPanel } from './ResultsPanel';
@@ -23,6 +25,7 @@ interface GameTableProps {
   readonly onReveal: () => Promise<ActionResult>;
   readonly onRevote: () => Promise<ActionResult>;
   readonly onFinish: (payload: RoundFinishPayload) => Promise<ActionResult>;
+  readonly onRemovePlayer: (playerId: string) => Promise<ActionResult>;
 }
 
 export function GameTable({
@@ -36,6 +39,7 @@ export function GameTable({
   onReveal,
   onRevote,
   onFinish,
+  onRemovePlayer,
 }: GameTableProps) {
   const joinLink = `${window.location.origin}/g/${game.gameId}`;
   const voting = game.phase === 'voting';
@@ -49,6 +53,7 @@ export function GameTable({
     <>
       <h1 className="text-2xl font-semibold sm:text-3xl">Game table</h1>
       <ReconnectingBanner visible={reconnecting} />
+      <FacilitatorOfflineBanner visible={role === 'voter' && !game.facilitator.connected} />
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
       </div>
@@ -101,6 +106,15 @@ export function GameTable({
                   hasVoted={voting ? voter.hasVoted : undefined}
                   revealedCard={revealed ? (voter.card ?? null) : undefined}
                   outlier={outlierIds.has(voter.id)}
+                  action={
+                    role === 'facilitator' ? (
+                      <RemovePlayerButton
+                        name={voter.name}
+                        disabled={reconnecting}
+                        onRemove={() => onRemovePlayer(voter.id)}
+                      />
+                    ) : undefined
+                  }
                 />
               </li>
             ))}

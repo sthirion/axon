@@ -15,6 +15,7 @@ const IDLE = {
   onReveal: () => Promise.resolve({ ok: true as const }),
   onRevote: () => Promise.resolve({ ok: true as const }),
   onFinish: () => Promise.resolve({ ok: true as const }),
+  onRemovePlayer: () => Promise.resolve({ ok: true as const }),
 } as const;
 
 function renderTable(game: Game, reconnecting = false) {
@@ -402,5 +403,109 @@ describe('GameTable round controls and summary', () => {
     expect(items[0]).toHaveTextContent('Loginhttps://e.com/1 (opens in a new tab)5');
     expect(items[1]).toHaveTextContent('Checkoutskipped');
     expect(screen.getByText('Total: 5')).toBeVisible();
+  });
+});
+
+describe('GameTable facilitator offline and removing players', () => {
+  const TABLE = {
+    phase: 'voting',
+    story: { title: 'Login page' },
+    voters: [
+      { id: 'v1', name: 'Anna', connected: true, hasVoted: true },
+      { id: 'v2', name: 'Bob', connected: true, hasVoted: false },
+    ],
+  };
+  const OFFLINE = { facilitator: { name: 'Sven', connected: false } };
+  const OFFLINE_TEXT = /The facilitator is offline\./;
+
+  it('shows voters the offline banner only while the facilitator is offline', () => {
+    const { rerender } = render(
+      <GameTable
+        game={gameState({ ...TABLE, ...OFFLINE }) as Game}
+        reconnecting={false}
+        {...IDLE}
+      />,
+    );
+    expect(screen.getByText(OFFLINE_TEXT)).toBeVisible();
+
+    rerender(<GameTable game={gameState(TABLE) as Game} reconnecting={false} {...IDLE} />);
+    expect(screen.queryByText(OFFLINE_TEXT)).toBeNull();
+  });
+
+  it('never shows the facilitator or a spectator the offline banner', () => {
+    render(
+      <GameTable
+        game={gameState({ ...TABLE, ...OFFLINE }) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+      />,
+    );
+    expect(screen.queryByText(OFFLINE_TEXT)).toBeNull();
+    cleanup();
+    render(
+      <GameTable
+        game={gameState({ ...TABLE, ...OFFLINE }) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role={null}
+      />,
+    );
+    expect(screen.queryByText(OFFLINE_TEXT)).toBeNull();
+  });
+
+  it('keeps the deck usable for voters while the facilitator is offline', () => {
+    render(
+      <GameTable
+        game={gameState({ ...TABLE, ...OFFLINE }) as Game}
+        reconnecting={false}
+        {...IDLE}
+      />,
+    );
+
+    expect(screen.getByRole('radio', { name: '5' })).toBeEnabled();
+  });
+
+  it('gives the facilitator a Remove button for every voter and voters none', () => {
+    render(
+      <GameTable
+        game={gameState(TABLE) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Remove Anna' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Remove Bob' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /Remove Sven/ })).toBeNull();
+    cleanup();
+    render(<GameTable game={gameState(TABLE) as Game} reconnecting={false} {...IDLE} />);
+    expect(screen.queryByRole('button', { name: /^Remove/ })).toBeNull();
+  });
+
+  it('removes the right voter after the confirmation', async () => {
+    const onRemovePlayer = vi.fn(() => Promise.resolve({ ok: true as const }));
+    render(
+      <GameTable
+        game={gameState(TABLE) as Game}
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+        onRemovePlayer={onRemovePlayer}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Bob' }));
+    expect(onRemovePlayer).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm remove' }));
+
+    expect(onRemovePlayer).toHaveBeenCalledWith('v2');
+  });
+
+  it('disables Remove while reconnecting', () => {
+    render(<GameTable game={gameState(TABLE) as Game} reconnecting {...IDLE} role="facilitator" />);
+
+    expect(screen.getByRole('button', { name: 'Remove Anna' })).toBeDisabled();
   });
 });

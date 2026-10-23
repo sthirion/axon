@@ -11,6 +11,8 @@ export const GAME_EVENTS = {
   roundReveal: 'round:reveal',
   roundRevote: 'round:revote',
   roundFinish: 'round:finish',
+  playerRemove: 'player:remove',
+  playerRemoved: 'player:removed',
 } as const;
 
 export const GAME_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
@@ -164,3 +166,11 @@ export const roundFinishPayloadSchema = z.union([
 ]);
 
 export type RoundFinishPayload = z.infer<typeof roundFinishPayloadSchema>;
+
+// Only a plain object passes; `playerId` is checked later so a voter is FORBIDDEN before anything else.
+export const playerRemoveEnvelopeSchema = z.looseObject({});
+
+// What a client sends.
+export const playerRemovePayloadSchema = z.object({ playerId: z.string() });
+
+export type PlayerRemovePayload = z.infer<typeof playerRemovePayloadSchema>;

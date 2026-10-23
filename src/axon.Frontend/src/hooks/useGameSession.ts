@@ -26,7 +26,14 @@ export { GENERIC_ERROR_MESSAGE };
 const NOT_CONNECTED: ActionResult = { ok: false, code: 'NOT_CONNECTED' };
 
 export type GamePhase =
-  'checking' | 'joining' | 'prompt' | 'joined' | 'not-found' | 'load-error' | 'join-error';
+  | 'checking'
+  | 'joining'
+  | 'prompt'
+  | 'joined'
+  | 'removed'
+  | 'not-found'
+  | 'load-error'
+  | 'join-error';
 
 export interface JoinPromptError {
   readonly field?: string;
@@ -49,6 +56,7 @@ export interface GameSession {
   readonly castVote: (card: Card | null) => Promise<ActionResult>;
   readonly revealRound: () => Promise<ActionResult>;
   readonly revoteRound: () => Promise<ActionResult>;
+  readonly removePlayer: (playerId: string) => Promise<ActionResult>;
   readonly finishRound: (payload: RoundFinishPayload) => Promise<ActionResult>;
 }
 
@@ -77,6 +85,11 @@ export function useGameSession(gameId: string): GameSession {
         case 'GAME_NOT_FOUND':
           closeClient();
           setPhase('not-found');
+          return;
+        case 'REMOVED':
+          // The token stays stored on purpose: a reload shows this page again.
+          closeClient();
+          setPhase('removed');
           return;
         case 'INVALID_TOKEN':
           removePlayerToken(gameId);
@@ -110,11 +123,15 @@ export function useGameSession(gameId: string): GameSession {
       },
       onState: (state) => useGameStore.getState().applyState(state),
       onVoteMine: (card) => useGameStore.getState().applyVoteMine(card),
+      onRemoved: () => {
+        closeClient();
+        setPhase('removed');
+      },
       onDisconnect: () => useGameStore.getState().setReconnecting(true),
       onRejoinFailed: (code) => handleFailure(code, false),
     });
     return clientRef.current;
-  }, [gameId, handleFailure]);
+  }, [closeClient, gameId, handleFailure]);
 
   const settle = useCallback(
     (result: JoinResult, byName: boolean) => {
@@ -192,6 +209,12 @@ export function useGameSession(gameId: string): GameSession {
     [],
   );
 
+  const removePlayer = useCallback(
+    (playerId: string) =>
+      clientRef.current?.removePlayer(playerId) ?? Promise.resolve(NOT_CONNECTED),
+    [],
+  );
+
   const revoteRound = useCallback(
     () => clientRef.current?.revoteRound() ?? Promise.resolve(NOT_CONNECTED),
     [],
@@ -219,6 +242,7 @@ export function useGameSession(gameId: string): GameSession {
     castVote,
     revealRound,
     revoteRound,
+    removePlayer,
     finishRound,
   };
 }
