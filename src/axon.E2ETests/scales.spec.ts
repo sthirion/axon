@@ -339,6 +339,7 @@ test.describe('Voting scales @TEST', () => {
         expect(voting.violations).toEqual([]);
         await button(s.fac, 'Reveal votes').click();
         await expect(region(s.anna, 'Results')).toBeVisible();
+        await s.anna.waitForTimeout(900); // the flip is partly transparent while it runs
         for (const page of [s.fac, s.anna]) {
           const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
           expect(results.violations).toEqual([]);
