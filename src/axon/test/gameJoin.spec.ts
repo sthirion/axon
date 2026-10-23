@@ -261,7 +261,15 @@ describe('game join over Socket.IO', () => {
       // Then
       expect(voterNames(state)).toEqual(['Anna', 'Bob']);
       expect(state.facilitator).toEqual({ name: 'Sven', connected: true });
-      expect(Object.keys(state).sort()).toEqual(['facilitator', 'gameId', 'voters']);
+      expect(Object.keys(state).sort()).toEqual([
+        'facilitator',
+        'gameId',
+        'phase',
+        'story',
+        'voters',
+      ]);
+      expect(state.phase).toBe('waiting');
+      expect(state.story).toBeNull();
       expect(state.gameId).toBe(gameId);
     });
 
@@ -597,7 +605,9 @@ describe('game join over Socket.IO', () => {
       expect(joined.playerId).toBe(first.joined.playerId);
       expect(joined.role).toBe('voter');
       expect(joined).not.toHaveProperty('token');
-      expect(state.voters).toEqual([{ id: first.joined.playerId, name: 'Anna', connected: true }]);
+      expect(state.voters).toEqual([
+        { id: first.joined.playerId, name: 'Anna', connected: true, hasVoted: false },
+      ]);
       expect(returning.seen.map((e) => e.kind)).toEqual(['ack', 'joined', 'state']);
     });
 
@@ -878,7 +888,7 @@ describe('game join over Socket.IO', () => {
       expect(secondJoined).not.toHaveProperty('token');
       expect(facilitator.states.slice(mark)).toHaveLength(1);
       expect(probed.last.voters.filter((v) => v.name === 'Anna')).toEqual([
-        { id: first.joined.playerId, name: 'Anna', connected: true },
+        { id: first.joined.playerId, name: 'Anna', connected: true, hasVoted: false },
       ]);
     });
 

@@ -1,16 +1,20 @@
 import { z } from 'zod';
+import { cardSchema } from './deck.js';
 
 export const GAME_EVENTS = {
   join: 'game:join',
   joined: 'game:joined',
   state: 'game:state',
+  storySet: 'story:set',
+  voteCast: 'vote:cast',
+  voteMine: 'vote:mine',
 } as const;
 
 export const GAME_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const PLAYER_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 export const PLAYER_NAME_MAX_LENGTH = 30;
 
-const CONTROL_CHARACTER = /\p{Cc}/u;
+export const CONTROL_CHARACTER = /\p{Cc}/u;
 
 export const gameIdSchema = z.string().regex(GAME_ID_PATTERN);
 
@@ -75,10 +79,38 @@ export const gameJoinedSchema = z.object({
 
 export type GameJoined = z.infer<typeof gameJoinedSchema>;
 
-export const publicGameStateSchema = z.object({
+export const gamePhaseSchema = z.enum(['waiting', 'voting']);
+
+export type GamePhase = z.infer<typeof gamePhaseSchema>;
+
+// Strict on purpose: an unexpected key (for example a vote value) must fail validation, not be stripped.
+export const publicGameStateSchema = z.strictObject({
   gameId: gameIdSchema,
-  facilitator: z.object({ name: z.string(), connected: z.boolean() }),
-  voters: z.array(z.object({ id: z.string(), name: z.string(), connected: z.boolean() })),
+  phase: gamePhaseSchema,
+  story: z.strictObject({ title: z.string(), url: z.string().optional() }).nullable(),
+  facilitator: z.strictObject({ name: z.string(), connected: z.boolean() }),
+  voters: z.array(
+    z.strictObject({
+      id: z.string(),
+      name: z.string(),
+      connected: z.boolean(),
+      hasVoted: z.boolean(),
+    }),
+  ),
 });
 
 export type PublicGameState = z.infer<typeof publicGameStateSchema>;
+
+// Only a plain object passes; the card itself is validated later so the error code can differ.
+export const voteCastEnvelopeSchema = z
+  .looseObject({ card: z.unknown() })
+  .refine((payload) => 'card' in payload);
+
+// What a client sends: `null` withdraws the vote.
+export const voteCastPayloadSchema = z.object({ card: cardSchema.nullable() });
+
+export type VoteCastPayload = z.infer<typeof voteCastPayloadSchema>;
+
+export const voteMineSchema = z.strictObject({ card: cardSchema.nullable() });
+
+export type VoteMine = z.infer<typeof voteMineSchema>;

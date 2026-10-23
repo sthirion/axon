@@ -38,7 +38,17 @@ function GameSession({ gameId }: { readonly gameId: string }) {
   }
 
   if (phase === 'joined' && game) {
-    return <GameTable game={game} reconnecting={session.reconnecting} />;
+    return (
+      <GameTable
+        game={game}
+        reconnecting={session.reconnecting}
+        role={session.role}
+        myCard={session.myCard}
+        announcement={session.announcement}
+        onSetStory={session.setStory}
+        onCastVote={session.castVote}
+      />
+    );
   }
 
   return (

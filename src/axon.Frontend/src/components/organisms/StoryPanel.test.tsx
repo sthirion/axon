@@ -1,0 +1,189 @@
+import type { PlayerRole, Story } from '@axon/shared';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import { StoryPanel, WAITING_MESSAGE } from './StoryPanel';
+import type { ActionResult } from '../../types/game.types';
+
+const STORY: Story = { title: 'Login page', url: 'https://example.com/1' };
+
+function setup(role: PlayerRole | null, story: Story | null, disabled = false) {
+  const onSetStory = vi.fn<(story: Story) => Promise<ActionResult>>(() =>
+    Promise.resolve({ ok: true }),
+  );
+  const user = userEvent.setup();
+  const view = render(
+    <StoryPanel story={story} role={role} disabled={disabled} onSetStory={onSetStory} />,
+  );
+  return { user, onSetStory, ...view };
+}
+
+describe('StoryPanel as facilitator', () => {
+  it('shows the empty "Story" form with a required Title, a Link and "Start voting" while waiting', () => {
+    setup('facilitator', null);
+
+    const form = screen.getByRole('form', { name: 'Story' });
+    expect(within(form).getByLabelText('Title')).toHaveValue('');
+    expect(within(form).getByLabelText('Link')).toHaveValue('');
+    expect(within(form).getByRole('button', { name: 'Start voting' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Edit story' })).not.toBeInTheDocument();
+    expect(screen.queryByText(WAITING_MESSAGE)).not.toBeInTheDocument();
+  });
+
+  it('sends the story from the form', async () => {
+    const { user, onSetStory } = setup('facilitator', null);
+
+    await user.type(screen.getByLabelText('Title'), 'Login page');
+    await user.type(screen.getByLabelText('Link'), 'https://example.com/1');
+    await user.click(screen.getByRole('button', { name: 'Start voting' }));
+
+    expect(onSetStory).toHaveBeenCalledExactlyOnceWith(STORY);
+  });
+
+  it('shows the story read-only with "Edit story" once voting is open', () => {
+    setup('facilitator', STORY);
+
+    expect(screen.getByText('Login page')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /example\.com\/1/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit story' })).toBeEnabled();
+    expect(screen.queryByRole('form', { name: 'Story' })).not.toBeInTheDocument();
+  });
+
+  it('opens a prefilled form with Save and Cancel from "Edit story"', async () => {
+    const { user } = setup('facilitator', STORY);
+
+    await user.click(screen.getByRole('button', { name: 'Edit story' }));
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Login page');
+    expect(screen.getByLabelText('Title')).toHaveFocus();
+    expect(screen.getByLabelText('Link')).toHaveValue('https://example.com/1');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Edit story' })).not.toBeInTheDocument();
+  });
+
+  it('restores the read-only view and the focus on Cancel without sending', async () => {
+    const { user, onSetStory } = setup('facilitator', STORY);
+    await user.click(screen.getByRole('button', { name: 'Edit story' }));
+    await user.clear(screen.getByLabelText('Title'));
+    await user.type(screen.getByLabelText('Title'), 'Changed');
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.getByText('Login page')).toBeInTheDocument();
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Story' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit story' })).toHaveFocus();
+    expect(onSetStory).not.toHaveBeenCalled();
+  });
+
+  it('sends the full edited story on Save and closes the form on success', async () => {
+    const { user, onSetStory } = setup('facilitator', STORY);
+    await user.click(screen.getByRole('button', { name: 'Edit story' }));
+    await user.clear(screen.getByLabelText('Title'));
+    await user.type(screen.getByLabelText('Title'), 'Checkout');
+    await user.clear(screen.getByLabelText('Link'));
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSetStory).toHaveBeenCalledExactlyOnceWith({ title: 'Checkout' });
+    expect(await screen.findByRole('button', { name: 'Edit story' })).toHaveFocus();
+    expect(screen.queryByRole('form', { name: 'Story' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the edit form open and shows the alert when Save fails', async () => {
+    const { user, onSetStory } = setup('facilitator', STORY);
+    onSetStory.mockResolvedValueOnce({ ok: false, code: 'INVALID_STORY' });
+    await user.click(screen.getByRole('button', { name: 'Edit story' }));
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Enter a title of 1 to 200 characters and an optional http or https link.',
+    );
+    expect(screen.getByLabelText('Title')).toHaveValue('Login page');
+  });
+
+  it('disables "Edit story" while reconnecting', () => {
+    setup('facilitator', STORY, true);
+
+    expect(screen.getByRole('button', { name: 'Edit story' })).toBeDisabled();
+  });
+
+  it('disables "Start voting" while reconnecting', () => {
+    setup('facilitator', null, true);
+
+    expect(screen.getByRole('button', { name: 'Start voting' })).toBeDisabled();
+  });
+
+  it('disables Save while reconnecting during an edit', async () => {
+    const { user, rerender, onSetStory } = setup('facilitator', STORY);
+    await user.click(screen.getByRole('button', { name: 'Edit story' }));
+
+    rerender(<StoryPanel story={STORY} role="facilitator" disabled onSetStory={onSetStory} />);
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+});
+
+describe('StoryPanel as voter', () => {
+  it('shows the waiting message and no form while no story is set', () => {
+    setup('voter', null);
+
+    expect(screen.getByText('Waiting for the facilitator to set the story.')).toBeInTheDocument();
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('shows the title read-only with no form and no "Edit story" button', () => {
+    setup('voter', STORY);
+
+    expect(screen.getByText('Login page')).toBeInTheDocument();
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByText(WAITING_MESSAGE)).not.toBeInTheDocument();
+  });
+
+  it('renders the link as a safe new-tab anchor showing the URL', () => {
+    setup('voter', STORY);
+
+    const anchor = screen.getByRole('link', { name: 'https://example.com/1 (opens in a new tab)' });
+    expect(anchor).toHaveAttribute('href', 'https://example.com/1');
+    expect(anchor).toHaveAttribute('target', '_blank');
+    expect(anchor).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(anchor).toHaveTextContent('https://example.com/1');
+  });
+
+  it('renders no anchor when the story has no link', () => {
+    setup('voter', { title: 'Login page' });
+
+    expect(screen.getByText('Login page')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('renders a markup title literally and injects no element', () => {
+    const title = '<img src=x onerror=alert(1)>';
+    const { container } = setup('voter', { title });
+
+    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('lets a 200-character title and a 2048-character link wrap instead of overflowing', () => {
+    const url = `https://example.com/${'a'.repeat(2028)}`;
+    setup('voter', { title: 'T'.repeat(200), url });
+
+    expect(screen.getByText('T'.repeat(200))).toHaveClass('wrap-anywhere');
+    expect(screen.getByRole('link')).toHaveClass('wrap-anywhere');
+    expect(screen.getByRole('link')).toHaveTextContent(url);
+  });
+});
+
+describe('StoryPanel without a known role', () => {
+  it('is read-only', () => {
+    setup(null, STORY);
+
+    expect(screen.getByText('Login page')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+});

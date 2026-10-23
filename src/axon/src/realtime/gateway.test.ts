@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ERROR_MESSAGES, type PublicGameState } from '@axon/shared';
 import { GameStore } from '../store/gameStore.js';
-import { gameRoom, registerGateway } from './gateway.js';
+import { gameRoom, playerRoom, registerGateway } from './gateway.js';
 import { FakeIo, type FakeSocket } from './testing/fakes.js';
 
 const UNKNOWN_GAME_ID = 'Z'.repeat(22);
@@ -56,7 +56,7 @@ describe('game:join by name', () => {
     const ack = socket.sendJoin({ gameId, name: 'Anna' });
 
     expect(ack).toEqual({ ok: true });
-    expect(io.timeline).toEqual(['ack', 'game:joined', 'broadcast:game:state']);
+    expect(io.timeline).toEqual(['ack', 'game:joined', 'vote:mine', 'broadcast:game:state']);
   });
 
   it('joins the player as a voter with a new token', () => {
@@ -75,7 +75,7 @@ describe('game:join by name', () => {
 
     expect(io.broadcasts.at(-1)?.room).toBe(gameRoom(gameId));
     expect(lastState(io).voters).toEqual([
-      { id: expect.any(String), name: 'Anna', connected: true },
+      { id: expect.any(String), name: 'Anna', connected: true, hasVoted: false },
     ]);
   });
 
@@ -85,7 +85,7 @@ describe('game:join by name', () => {
 
     socket.sendJoin({ gameId, name: 'Anna' });
 
-    expect(socket.rooms).toEqual([gameRoom(gameId)]);
+    expect(socket.rooms).toEqual([gameRoom(gameId), playerRoom(joinedPayload(socket)!.playerId)]);
   });
 
   it('trims and normalizes the name', () => {
@@ -182,7 +182,9 @@ describe('game:join by token', () => {
     second.sendJoin({ gameId, token });
 
     expect(joinedPayload(second)).toEqual({ playerId, role: 'voter' });
-    expect(lastState(io).voters).toEqual([{ id: playerId, name: 'Anna', connected: true }]);
+    expect(lastState(io).voters).toEqual([
+      { id: playerId, name: 'Anna', connected: true, hasVoted: false },
+    ]);
   });
 
   it('does not create a duplicate player on rejoin', () => {
@@ -358,7 +360,7 @@ describe('disconnect', () => {
     socket.trigger('disconnect');
 
     expect(lastState(io).voters).toEqual([
-      { id: expect.any(String), name: 'Anna', connected: false },
+      { id: expect.any(String), name: 'Anna', connected: false, hasVoted: false },
     ]);
     expect(io.broadcasts.at(-1)?.room).toBe(gameRoom(gameId));
   });

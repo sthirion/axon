@@ -24,8 +24,8 @@ flowchart LR
   instance easily handles 100 games × 20 players. If we ever need more, use sticky sessions
   and route by `gameId`, not a shared store.
 - **The server owns all state.** Clients send commands; the server checks them and sends
-  back a filtered view of the game. Hidden vote values never leave the server
-  (Requirement 4.4).
+  back a filtered view of the game. Hidden vote values never leave the server, except to the
+  voter who owns the vote (Requirement 4.4).
 - **Domain logic is pure.** `game.ts` holds the state transitions and `results.ts`
   calculates the results. Neither knows about Socket.IO, so both are easy to unit test.
 
@@ -77,8 +77,9 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
 | C→S | `game:join` | gameId, token?, name? | anyone with the link |
 | S→C | `game:joined` | playerId, token (only on first join), role | the joining socket |
 | S→C | `game:state` | `PublicGameState` (see below) | everyone in the room |
-| C→S | `vote:cast` | card or `null` (withdraw) | voters, phase `voting` |
-| C→S | `story:set` | title, url? | facilitator, phase `waiting` or `voting` |
+| C→S | `vote:cast` | `{ card: Card \| null }` (`null` withdraws) | voters, phase `voting` |
+| S→C | `vote:mine` | `{ card: Card \| null }` | only the sockets of the voter who owns the vote (room `player:<id>`) |
+| C→S | `story:set` | `{ title, url? }` | facilitator, phase `waiting` or `voting` |
 | C→S | `round:reveal` | — | facilitator, phase `voting`, ≥1 vote |
 | C→S | `round:revote` | — | facilitator, phase `revealed` |
 | C→S | `round:finish` | finalEstimate (numeric card) or `skip` | facilitator, phase `revealed` (or `voting` for skip) |
@@ -86,10 +87,23 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
 | S→C | `player:removed` | — | the removed player, then disconnect |
 | S→C | `game:ended` | reason | everyone (server shutdown) |
 
+- Every socket that joins also joins the room `player:<playerId>`. `vote:mine` is emitted to
+  that room only, so all tabs of one voter are updated and nobody else receives the card.
+- `story:set` success: ack, then `game:state` to the game room. `vote:cast` success: ack,
+  then `vote:mine` to `player:<id>`, then `game:state` to the game room. Re-casting the same
+  card and withdrawing without a vote are idempotent successes. On failure only the ack is
+  sent.
+- `game:join` by a voter also emits `vote:mine` (the current card or `null`) to the joining
+  socket, after `game:joined` and before the room `game:state`. The facilitator never
+  receives `vote:mine`.
+- A missing ack callback is tolerated: the event is still processed.
+
 ### `PublicGameState`
 
 The server builds this for each game every time the state changes, and sends the same
-object to everyone in the room. Vote values are left out unless the phase is `revealed`.
+object to everyone in the room. Vote values are left out unless the phase is `revealed`;
+`game:state` never carries a vote value before then. `hasVoted` is the only vote
+information in it. The own card of a voter travels separately in `vote:mine`.
 
 ```typescript
 type PublicGameState = {
@@ -157,6 +171,7 @@ sequenceDiagram
   V->>RT: vote:cast(5)
   RT->>RT: role = voter, phase = voting, card in deck
   RT-->>V: ack ok
+  RT-->>V: vote:mine (own card, to player:<id> only)
   RT-->>V: game:state (hasVoted = true, no values)
   RT-->>F: game:state (hasVoted = true, no values)
   F->>RT: round:reveal
@@ -244,6 +259,9 @@ Paths follow the source paths in [project-config.md](../../../project-config.md)
 - **Authorization:** each facilitator event checks that the sender's player has
   `role === 'facilitator'` in that game; each voter event checks `role === 'voter'`. The
   check is in the domain layer, not only in the UI.
+- **Vote privacy:** before the reveal no client other than the voter who owns the vote
+  receives a vote value. `game:state` carries only `hasVoted`; the card goes to the owner's
+  `player:<id>` room as `vote:mine`. The facilitator does not vote and never receives it.
 - **Tokens:** generated on the server, stored as hashes, compared in constant time, sent only
   in the `game:join` payload (never in URLs or logs).
 - **Input:** Zod validation on every event; names and titles are trimmed and length-checked;
@@ -268,6 +286,17 @@ Paths follow the source paths in [project-config.md](../../../project-config.md)
   - Check order on `game:join`: payload shape, `ALREADY_JOINED`, `gameId` format and
     existence (`GAME_NOT_FOUND`), then the token (`INVALID_TOKEN`) or the name
     (`INVALID_NAME`, `NAME_TAKEN`). An unknown game wins over a bad name.
+- Added by story #3 (`story:set` and `vote:cast` acks, fixed messages in `ERROR_MESSAGES`):
+  - `INVALID_STORY` (title not 1–200 code points, control characters, or a link that is not an
+    absolute `http`/`https` URL up to 2048 characters), `INVALID_CARD` (the card is not in the
+    deck and not `null`), `FORBIDDEN` (the socket has not joined a game, or the role is wrong:
+    a voter sets a story or the facilitator votes) and `WRONG_PHASE` (`vote:cast` while
+    `waiting`).
+  - Check order for both events, first failure wins: not joined (`FORBIDDEN`), game missing
+    (`GAME_NOT_FOUND`), payload envelope (`INVALID_PAYLOAD`; for `vote:cast` also a missing
+    `card` key), role (`FORBIDDEN`), phase (`WRONG_PHASE`), value (`INVALID_STORY` /
+    `INVALID_CARD`). Authorization comes before value validation, so a voter never learns the
+    story rules.
 - The client shows a friendly message for each code; unknown errors show a generic message.
 - Socket.IO reconnects automatically; on reconnect the client sends `game:join` again with
   its token and gets the full `game:state`, so missed updates don't matter.

@@ -5,8 +5,16 @@ import { GAME_ID, gameState } from '../../test/fakeSocket';
 
 type Game = Parameters<typeof GameTable>[0]['game'];
 
+const IDLE = {
+  role: 'voter',
+  myCard: null,
+  announcement: '',
+  onSetStory: () => Promise.resolve({ ok: true as const }),
+  onCastVote: () => Promise.resolve({ ok: true as const }),
+} as const;
+
 function renderTable(game: Game, reconnecting = false) {
-  return render(<GameTable game={game} reconnecting={reconnecting} />);
+  return render(<GameTable game={game} reconnecting={reconnecting} {...IDLE} />);
 }
 
 describe('GameTable', () => {
@@ -73,7 +81,7 @@ describe('GameTable', () => {
     expect(screen.getByText('Reconnecting…')).toBeVisible();
     expect(screen.getByText('Reconnecting…').parentElement).toHaveAttribute('aria-live', 'polite');
 
-    rerender(<GameTable game={gameState() as Game} reconnecting={false} />);
+    rerender(<GameTable game={gameState() as Game} reconnecting={false} {...IDLE} />);
 
     expect(screen.queryByText('Reconnecting…')).not.toBeInTheDocument();
     expect(container.querySelector('[aria-live="polite"]')).not.toBeNull();
@@ -93,5 +101,116 @@ describe('GameTable', () => {
     renderTable(gameState() as Game);
 
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  describe('voting', () => {
+    const VOTING = {
+      phase: 'voting',
+      story: { title: 'Login page' },
+      voters: [
+        { id: 'v1', name: 'Anna', connected: true, hasVoted: true },
+        { id: 'v2', name: 'Bob', connected: true, hasVoted: false },
+      ],
+    };
+
+    it('shows "Voted" and "Not voted" text badges while voting', () => {
+      renderTable(gameState(VOTING) as Game);
+
+      const items = within(screen.getByRole('list')).getAllByRole('listitem');
+      expect(screen.getByText('Voted')).toBeInTheDocument();
+      expect(screen.getByText('Not voted')).toBeInTheDocument();
+      expect(items[0]).toHaveTextContent('Anna');
+      expect(items[0]).not.toHaveTextContent('Not voted');
+      expect(items[1]).toHaveTextContent('Bob');
+      expect(items[1]).toHaveTextContent('Not voted');
+    });
+
+    it('shows no badge while waiting', () => {
+      renderTable(
+        gameState({
+          voters: [{ id: 'v1', name: 'Anna', connected: true, hasVoted: false }],
+        }) as Game,
+      );
+
+      expect(screen.queryByText('Voted', { exact: false })).not.toBeInTheDocument();
+      expect(screen.queryByText('Not voted')).not.toBeInTheDocument();
+    });
+
+    it('never shows a card value in the voters list', () => {
+      renderTable(gameState(VOTING) as Game);
+
+      const list = screen.getByRole('list');
+      expect(list.textContent).not.toMatch(/\d|\?|☕|coffee/i);
+    });
+
+    it('shows the story form and no deck to the facilitator', () => {
+      render(
+        <GameTable game={gameState() as Game} reconnecting={false} {...IDLE} role="facilitator" />,
+      );
+
+      expect(screen.getByRole('form', { name: 'Story' })).toBeInTheDocument();
+      expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Withdraw vote' })).not.toBeInTheDocument();
+    });
+
+    it('shows the waiting message and a disabled deck to a voter while waiting', () => {
+      renderTable(gameState() as Game);
+
+      expect(screen.getByText('Waiting for the facilitator to set the story.')).toBeVisible();
+      expect(screen.getByRole('radiogroup', { name: 'Your vote' })).toBeInTheDocument();
+      expect(
+        screen.getAllByRole('radio').every((card) => (card as HTMLInputElement).disabled),
+      ).toBe(true);
+    });
+
+    it('shows the story and an enabled deck with the confirmed card to a voter while voting', () => {
+      render(
+        <GameTable game={gameState(VOTING) as Game} reconnecting={false} {...IDLE} myCard={8} />,
+      );
+
+      expect(screen.getByText('Login page')).toBeVisible();
+      expect(screen.queryByText('Waiting for the facilitator to set the story.')).toBeNull();
+      expect(screen.getByRole('radio', { name: '8' })).toBeChecked();
+      expect(screen.getByRole('radio', { name: '5' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Withdraw vote' })).toBeEnabled();
+    });
+
+    it('disables the deck, Withdraw and Edit story while reconnecting', () => {
+      const { rerender } = render(
+        <GameTable game={gameState(VOTING) as Game} reconnecting {...IDLE} myCard={8} />,
+      );
+
+      expect(
+        screen.getAllByRole('radio').every((card) => (card as HTMLInputElement).disabled),
+      ).toBe(true);
+      expect(screen.getByRole('button', { name: 'Withdraw vote' })).toBeDisabled();
+
+      rerender(
+        <GameTable game={gameState(VOTING) as Game} reconnecting {...IDLE} role="facilitator" />,
+      );
+      expect(screen.getByRole('button', { name: 'Edit story' })).toBeDisabled();
+    });
+
+    it('shows neither the deck nor the story form without a known role', () => {
+      render(<GameTable game={gameState() as Game} reconnecting={false} {...IDLE} role={null} />);
+
+      expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+      expect(screen.queryByRole('form')).not.toBeInTheDocument();
+    });
+
+    it('renders the announcement in a polite, atomic live region', () => {
+      render(
+        <GameTable
+          game={gameState(VOTING) as Game}
+          reconnecting={false}
+          {...IDLE}
+          announcement="Bob has voted"
+        />,
+      );
+
+      const region = screen.getByText('Bob has voted');
+      expect(region).toHaveAttribute('aria-live', 'polite');
+      expect(region).toHaveAttribute('aria-atomic', 'true');
+    });
   });
 });

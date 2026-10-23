@@ -132,21 +132,41 @@ describe('gameJoinedSchema', () => {
 describe('publicGameStateSchema', () => {
   const state = {
     gameId: GAME_ID,
+    phase: 'waiting',
+    story: null,
     facilitator: { name: 'Sven', connected: true },
-    voters: [{ id: 'p2', name: 'Anna', connected: false }],
+    voters: [{ id: 'p2', name: 'Anna', connected: false, hasVoted: false }],
   };
 
-  it('accepts the players-only state', () => {
+  it('accepts a waiting state', () => {
     expect(publicGameStateSchema.safeParse(state).success).toBe(true);
   });
 
-  it('strips fields that must not be public', () => {
-    const parsed = publicGameStateSchema.parse({
-      ...state,
-      voters: [{ id: 'p2', name: 'Anna', connected: true, tokenHash: 'x', socketIds: ['s'] }],
-    });
+  it('accepts a voting state with and without a story link', () => {
+    const voting = { ...state, phase: 'voting' };
 
-    expect(parsed.voters[0]).toEqual({ id: 'p2', name: 'Anna', connected: true });
+    expect(publicGameStateSchema.safeParse({ ...voting, story: { title: 'T' } }).success).toBe(
+      true,
+    );
+    expect(
+      publicGameStateSchema.safeParse({ ...voting, story: { title: 'T', url: 'https://e.com' } })
+        .success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['a top-level vote', { ...state, votes: {} }],
+    ['a voter card', { ...state, voters: [{ ...state.voters[0], card: 5 }] }],
+    ['a voter token hash', { ...state, voters: [{ ...state.voters[0], tokenHash: 'x' }] }],
+    ['an extra facilitator key', { ...state, facilitator: { ...state.facilitator, card: 5 } }],
+    ['an extra story key', { ...state, phase: 'voting', story: { title: 'T', card: 5 } }],
+    ['a null story url', { ...state, phase: 'voting', story: { title: 'T', url: null } }],
+    ['an unknown phase', { ...state, phase: 'revealed' }],
+    ['a missing phase', { ...state, phase: undefined }],
+    ['a missing story', { ...state, story: undefined }],
+    ['a missing hasVoted', { ...state, voters: [{ id: 'p2', name: 'Anna', connected: false }] }],
+  ])('rejects %s', (_label, value) => {
+    expect(publicGameStateSchema.safeParse(value).success).toBe(false);
   });
 
   it('rejects a missing facilitator', () => {
@@ -178,6 +198,10 @@ describe('error codes', () => {
     'INVALID_TOKEN',
     'INVALID_PAYLOAD',
     'ALREADY_JOINED',
+    'INVALID_STORY',
+    'INVALID_CARD',
+    'FORBIDDEN',
+    'WRONG_PHASE',
     'INVALID_REQUEST',
     'PAYLOAD_TOO_LARGE',
   ])('includes %s', (code) => {
@@ -210,6 +234,9 @@ describe('GAME_EVENTS', () => {
       join: 'game:join',
       joined: 'game:joined',
       state: 'game:state',
+      storySet: 'story:set',
+      voteCast: 'vote:cast',
+      voteMine: 'vote:mine',
     });
   });
 });
