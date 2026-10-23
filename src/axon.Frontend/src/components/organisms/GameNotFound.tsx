@@ -1,9 +1,10 @@
 import { ERROR_MESSAGES } from '@axon/shared';
 import { Link } from 'react-router';
+import { Panel } from '../atoms/Panel';
 
 export function GameNotFound() {
   return (
-    <>
+    <Panel as="div">
       <h1 className="type-title">Session not found</h1>
       <p>{ERROR_MESSAGES.GAME_NOT_FOUND}</p>
       <Link
@@ -12,6 +13,6 @@ export function GameNotFound() {
       >
         Create a new session
       </Link>
-    </>
+    </Panel>
   );
 }

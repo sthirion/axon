@@ -1,6 +1,7 @@
 import { ERROR_MESSAGES } from '@axon/shared';
 import { useParams } from 'react-router';
 import { Button } from '../components/atoms/Button';
+import { Panel } from '../components/atoms/Panel';
 import { NameForm } from '../components/molecules/NameForm';
 import { GameEnded } from '../components/organisms/GameEnded';
 import { GameNotFound } from '../components/organisms/GameNotFound';
@@ -18,26 +19,26 @@ function SessionView({ session }: { readonly session: GameSession }) {
 
   if (phase === 'removed') {
     return (
-      <>
+      <Panel as="div">
         <h1 className="type-title">Removed</h1>
         <p role="status">{ERROR_MESSAGES.REMOVED}</p>
-      </>
+      </Panel>
     );
   }
 
   if (phase === 'load-error' || phase === 'join-error') {
     return (
-      <>
+      <Panel as="div">
         <h1 className="type-title">{PRODUCT_NAME}</h1>
         <p role="alert">{session.errorMessage}</p>
         <Button onClick={session.retry}>Retry</Button>
-      </>
+      </Panel>
     );
   }
 
   if (phase === 'prompt') {
     return (
-      <>
+      <Panel as="div">
         <h1 className="type-title">Join session</h1>
         <NameForm
           submitLabel="Join"
@@ -46,7 +47,7 @@ function SessionView({ session }: { readonly session: GameSession }) {
           fieldError={session.promptError?.field}
           formError={session.promptError?.form}
         />
-      </>
+      </Panel>
     );
   }
 
@@ -69,10 +70,10 @@ function SessionView({ session }: { readonly session: GameSession }) {
   }
 
   return (
-    <>
+    <Panel as="div">
       <h1 className="type-title">{PRODUCT_NAME}</h1>
       <p role="status">Loading session…</p>
-    </>
+    </Panel>
   );
 }
 

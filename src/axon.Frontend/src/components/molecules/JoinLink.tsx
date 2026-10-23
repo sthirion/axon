@@ -22,7 +22,7 @@ export const JoinLink = memo(function JoinLink({ link }: JoinLinkProps) {
 
   return (
     <div className="space-y-2">
-      <p className="rounded-md border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-2 font-mono type-meta break-all select-all">
+      <p className="rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-2 font-mono type-meta break-all select-all">
         {link}
       </p>
       <Button onClick={() => void copy()}>Copy link</Button>

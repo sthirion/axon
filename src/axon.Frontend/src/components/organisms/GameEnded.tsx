@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { Panel } from '../atoms/Panel';
 
 interface GameEndedProps {
   readonly message: string;
@@ -6,7 +7,7 @@ interface GameEndedProps {
 
 export function GameEnded({ message }: GameEndedProps) {
   return (
-    <>
+    <Panel as="div">
       <h1 className="type-title">Session ended</h1>
       <p role="status">{message}</p>
       <Link
@@ -15,6 +16,6 @@ export function GameEnded({ message }: GameEndedProps) {
       >
         Create a new session
       </Link>
-    </>
+    </Panel>
   );
 }

@@ -308,6 +308,15 @@ sequenceDiagram
   facilitator sees "Too large: consider splitting this story." next to the Final estimate while
   the select shows such a card, and the reveal announcement adds ", too large to take as one
   story" when the proposal is too large.
+- **Panels:** every section is its own panel (`Panel`: shaded background, thin border, rounded
+  corners, 16 to 20 px padding, 24 px between panels, a very light shadow in light mode only,
+  never `overflow-hidden` so focus rings are not cut off). Work area: Story, Your vote, Round
+  controls (one region around Reveal and the facilitator controls), Results. People area:
+  Facilitator, Voters, Summary, Join link. The create form, the join prompt and the not-found,
+  ended and removed views are one panel each; the header, page heading, banners and footer stay
+  outside. The border is decorative (the heading carries the meaning); text and control colours
+  inside panels are checked against the panel background (slate-50 / slate-800) in
+  `lib/palette.ts`.
 - **Story links:** when a story has a link the title itself is the link (new tab, `noopener
   noreferrer`); the address is not shown.
 - **Accessibility:** cards are a radio group (arrow keys and Space); an `aria-live` region

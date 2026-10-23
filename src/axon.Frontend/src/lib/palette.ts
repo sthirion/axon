@@ -129,6 +129,36 @@ export const PAIRS: readonly ThemedPair[] = [
       [`${hue}-300`, 'slate-900'] as [Shade, Shade],
     ),
   ]),
+  // The same colours on the panel background (slate-50 in light, slate-800 in dark).
+  pair('body text on a panel', 4.5, ['slate-900', 'slate-50'], ['slate-100', 'slate-800']),
+  pair('muted text on a panel', 4.5, ['slate-600', 'slate-50'], ['slate-400', 'slate-800']),
+  pair('hint text on a panel', 4.5, ['slate-700', 'slate-50'], ['slate-300', 'slate-800']),
+  pair('error text on a panel', 4.5, ['red-700', 'slate-50'], ['red-400', 'slate-800']),
+  pair('success text on a panel', 4.5, ['green-800', 'slate-50'], ['green-400', 'slate-800']),
+  pair('link text on a panel', 4.5, ['blue-800', 'slate-50'], ['blue-300', 'slate-800']),
+  pair('outlier marker on a panel', 4.5, ['amber-900', 'slate-50'], ['amber-100', 'slate-800']),
+  pair(
+    'input and card border on a panel',
+    3,
+    ['slate-500', 'slate-50'],
+    ['slate-400', 'slate-800'],
+  ),
+  pair('focus indicator on a panel', 3, ['slate-900', 'slate-50'], ['slate-100', 'slate-800']),
+  ...['emerald', 'lime', 'amber', 'orange', 'red'].flatMap((hue) => [
+    pair(
+      `${hue} size card border on a panel`,
+      3,
+      [`${hue}-700`, 'slate-50'] as [Shade, Shade],
+      [`${hue}-400`, 'slate-800'] as [Shade, Shade],
+    ),
+    pair(
+      `${hue} size bar on a panel`,
+      3,
+      [`${hue}-700`, 'slate-50'] as [Shade, Shade],
+      [`${hue}-300`, 'slate-800'] as [Shade, Shade],
+    ),
+  ]),
+  pair('online dot on a panel', 3, ['green-700', 'slate-50'], ['green-400', 'slate-800']),
   pair('results bar', 3, ['slate-700', 'white'], ['slate-300', 'slate-900']),
   pair('online dot', 3, ['green-700', 'white'], ['green-400', 'slate-900']),
 ];
@@ -137,7 +167,7 @@ export const PAIRS: readonly ThemedPair[] = [
 // information is always also given as text.
 export const DECORATIVE_CLASSES: readonly string[] = [
   'bg-slate-400', // offline dot (aria-hidden; the text says "offline")
-  'border-slate-300', // border of the non-interactive join link box
+  'border-slate-300', // border of panels and of the non-interactive join link box
   'dark:border-slate-600', // same box in dark
   'border-amber-400', // banner outline; the banner text carries the message
   'dark:border-amber-600',

@@ -8,6 +8,7 @@ import {
 } from '@axon/shared';
 import type { ActionResult } from '../../types/game.types';
 import { JoinLink } from '../molecules/JoinLink';
+import { Panel } from '../atoms/Panel';
 import { PlayerRow } from '../molecules/PlayerRow';
 import { ReconnectingBanner } from '../molecules/ReconnectingBanner';
 import { FacilitatorOfflineBanner } from '../molecules/FacilitatorOfflineBanner';
@@ -84,35 +85,37 @@ export function GameTable({
               onCast={onCastVote}
             />
           )}
-          {role === 'facilitator' && voting && (
-            <RevealButton
-              hasVotes={game.voters.some((voter) => voter.hasVoted)}
-              disabled={reconnecting}
-              onReveal={onReveal}
-            />
-          )}
           {role === 'facilitator' && (voting || revealed) && (
-            <FacilitatorControls
-              scale={game.scale}
-              revealed={revealed}
-              suggestedEstimate={game.results?.suggestedEstimate ?? null}
-              disabled={reconnecting}
-              onRevote={onRevote}
-              onFinish={onFinish}
-            />
+            <Panel aria-label="Round controls">
+              {voting && (
+                <RevealButton
+                  hasVotes={game.voters.some((voter) => voter.hasVoted)}
+                  disabled={reconnecting}
+                  onReveal={onReveal}
+                />
+              )}
+              <FacilitatorControls
+                scale={game.scale}
+                revealed={revealed}
+                suggestedEstimate={game.results?.suggestedEstimate ?? null}
+                disabled={reconnecting}
+                onRevote={onRevote}
+                onFinish={onFinish}
+              />
+            </Panel>
           )}
           {game.results && (
             <ResultsPanel scale={game.scale} results={game.results} outlierNames={outlierNames} />
           )}
         </div>
         <div className="min-w-0 space-y-6">
-          <section aria-labelledby="facilitator-heading" className="space-y-2">
+          <Panel aria-labelledby="facilitator-heading">
             <h2 id="facilitator-heading" className="type-section">
               Facilitator
             </h2>
             <PlayerRow name={game.facilitator.name} connected={game.facilitator.connected} />
-          </section>
-          <section aria-labelledby="voters-heading" className="space-y-2">
+          </Panel>
+          <Panel aria-labelledby="voters-heading">
             <h2 id="voters-heading" className="type-section">
               Voters
             </h2>
@@ -143,14 +146,14 @@ export function GameTable({
                 ))}
               </ul>
             )}
-          </section>
+          </Panel>
           <SessionSummary scale={game.scale} history={game.history} total={game.total} />
-          <section aria-labelledby="join-link-heading" className="space-y-2">
+          <Panel aria-labelledby="join-link-heading">
             <h2 id="join-link-heading" className="type-section">
               Join link
             </h2>
             <JoinLink link={joinLink} />
-          </section>
+          </Panel>
         </div>
       </div>
     </>

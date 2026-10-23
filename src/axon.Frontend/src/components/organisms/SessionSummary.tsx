@@ -3,6 +3,7 @@ import { memo, useId, useState } from 'react';
 import { sizeStyle } from '../../lib/sizeStyles';
 import { summaryText } from '../../lib/summaryText';
 import { Button } from '../atoms/Button';
+import { Panel } from '../atoms/Panel';
 import { StoryTitle } from '../atoms/StoryTitle';
 
 export const EMPTY_SUMMARY_MESSAGE = 'No stories estimated yet.';
@@ -38,7 +39,7 @@ export const SessionSummary = memo(function SessionSummary({
   }
 
   return (
-    <section aria-labelledby={headingId} className="min-w-0 space-y-2">
+    <Panel aria-labelledby={headingId}>
       <h2 id={headingId} className="type-section">
         Summary
       </h2>
@@ -81,7 +82,7 @@ export const SessionSummary = memo(function SessionSummary({
           {COPY_ERROR_MESSAGE}
         </p>
       )}
-    </section>
+    </Panel>
   );
 });
 SessionSummary.displayName = 'SessionSummary';
