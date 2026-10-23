@@ -4,9 +4,9 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 const MOBILE = { width: 390, height: 844 };
 const NOTICE =
-  'Games are temporary. They are kept in memory only and end when the server restarts.';
-const NOT_FOUND = 'This game does not exist or has ended.';
-const EXPIRED = 'The game ended because it reached its 2-hour limit.';
+  'Sessions are temporary. They are kept in memory only and end when the server restarts.';
+const NOT_FOUND = 'This session does not exist or has ended.';
+const EXPIRED = 'The session ended because it reached its 2-hour limit.';
 
 // The server for this file runs with GAME_EMPTY_TTL_MS=4000, GAME_MAX_AGE_MS=10000 and a 250 ms
 // sweep (see playwright.config.ts), so these tests stand in for 2 minutes and 2 hours.
@@ -32,8 +32,8 @@ test.describe('Game lifetime @TEST', () => {
   async function createGame(page: Page, name = 'Sven'): Promise<string> {
     await page.goto('/');
     await page.getByLabel('Your name').fill(name);
-    await page.getByRole('button', { name: 'Create game' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await page.getByRole('button', { name: 'Create session' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
     return page.url();
   }
 
@@ -42,7 +42,7 @@ test.describe('Game lifetime @TEST', () => {
     await page.goto(gameUrl);
     await page.getByLabel('Your name').fill(name);
     await page.getByRole('button', { name: 'Join' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
     return page;
   }
 
@@ -58,7 +58,7 @@ test.describe('Game lifetime @TEST', () => {
       await expect(facilitator.getByRole('contentinfo')).toHaveText(NOTICE);
       const guest = await (await newContext(browser)).newPage();
       await guest.goto(gameUrl);
-      await expect(guest.getByRole('heading', { level: 1, name: 'Join game' })).toBeVisible();
+      await expect(guest.getByRole('heading', { level: 1, name: 'Join session' })).toBeVisible();
       await expect(guest.getByRole('contentinfo')).toHaveText(NOTICE);
       await guest.goto('/g/AAAAAAAAAAAAAAAAAAAAAA');
       await expect(guest.getByText(NOT_FOUND)).toBeVisible();
@@ -67,7 +67,7 @@ test.describe('Game lifetime @TEST', () => {
   });
 
   test.describe('Empty games', () => {
-    test('a game everybody left is "Game not found" after the TTL', async ({ browser }) => {
+    test('a game everybody left is "Session not found" after the TTL', async ({ browser }) => {
       const context = await newContext(browser);
       const page = await context.newPage();
       const gameUrl = await createGame(page);
@@ -77,7 +77,7 @@ test.describe('Game lifetime @TEST', () => {
       await expect(async () => {
         await visitor.goto(gameUrl);
         await expect(
-          visitor.getByRole('heading', { level: 1, name: 'Game not found' }),
+          visitor.getByRole('heading', { level: 1, name: 'Session not found' }),
         ).toBeVisible({
           timeout: 1000,
         });
@@ -98,7 +98,9 @@ test.describe('Game lifetime @TEST', () => {
       const reopened = await context.newPage();
       await reopened.goto(gameUrl);
 
-      await expect(reopened.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await expect(
+        reopened.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+      ).toBeVisible();
       await expect(reopened.getByRole('region', { name: 'Story' })).toContainText('Login page');
       await expect(reopened.getByRole('button', { name: 'Skip story' })).toBeVisible();
     });
@@ -113,11 +115,11 @@ test.describe('Game lifetime @TEST', () => {
       const voter = await joinGame(browser, gameUrl, 'Anna');
 
       for (const page of [facilitator, voter]) {
-        await expect(page.getByRole('heading', { level: 1, name: 'Game ended' })).toBeVisible({
+        await expect(page.getByRole('heading', { level: 1, name: 'Session ended' })).toBeVisible({
           timeout: 20_000,
         });
         await expect(page.getByText(EXPIRED)).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Create a new game' })).toHaveAttribute(
+        await expect(page.getByRole('link', { name: 'Create a new session' })).toHaveAttribute(
           'href',
           '/',
         );
@@ -126,14 +128,16 @@ test.describe('Game lifetime @TEST', () => {
       }
       const late = await (await newContext(browser)).newPage();
       await late.goto(gameUrl);
-      await expect(late.getByRole('heading', { level: 1, name: 'Game not found' })).toBeVisible();
+      await expect(
+        late.getByRole('heading', { level: 1, name: 'Session not found' }),
+      ).toBeVisible();
     });
 
     test('the ended page has no accessibility violations and fits a phone', async ({ browser }) => {
       const context = await newContext(browser, MOBILE);
       const page = await context.newPage();
       await createGame(page);
-      await expect(page.getByRole('heading', { level: 1, name: 'Game ended' })).toBeVisible({
+      await expect(page.getByRole('heading', { level: 1, name: 'Session ended' })).toBeVisible({
         timeout: 20_000,
       });
 

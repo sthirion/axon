@@ -14,9 +14,12 @@ describe('GameEnded', () => {
         </MemoryRouter>,
       );
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Game ended' })).toBeVisible();
+      expect(screen.getByRole('heading', { level: 1, name: 'Session ended' })).toBeVisible();
       expect(screen.getByRole('status')).toHaveTextContent(message);
-      expect(screen.getByRole('link', { name: 'Create a new game' })).toHaveAttribute('href', '/');
+      expect(screen.getByRole('link', { name: 'Create a new session' })).toHaveAttribute(
+        'href',
+        '/',
+      );
     },
   );
 });

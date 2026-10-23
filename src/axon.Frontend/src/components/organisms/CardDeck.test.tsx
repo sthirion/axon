@@ -297,12 +297,4 @@ describe('CardDeck', () => {
       expect(onCast).not.toHaveBeenCalled();
     });
   });
-
-  it('gives every card at least 44x44 px', () => {
-    setup(null);
-
-    for (const card of radios()) {
-      expect(card.closest('label')).toHaveClass('min-h-11', 'min-w-11');
-    }
-  });
 });

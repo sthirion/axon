@@ -86,7 +86,9 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
         expectColour(await bodyColour(page), scheme === 'dark' ? DARK_BODY : LIGHT_BODY);
         await expect(toggle(page)).toHaveAttribute('aria-pressed', String(scheme === 'dark'));
         await page.goto('/g/AAAAAAAAAAAAAAAAAAAAAA');
-        await expect(page.getByRole('heading', { level: 1, name: 'Game not found' })).toBeVisible();
+        await expect(
+          page.getByRole('heading', { level: 1, name: 'Session not found' }),
+        ).toBeVisible();
         expect(await isDark(page)).toBe(scheme === 'dark');
         await page.goto('/nowhere');
         expect(await isDark(page)).toBe(scheme === 'dark');
@@ -188,8 +190,8 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
       await page.goto('/');
       await toggle(page).click();
       await page.getByLabel('Your name').fill('Sven');
-      await button(page, 'Create game').click();
-      await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await button(page, 'Create session').click();
+      await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
 
       expect(await isDark(page)).toBe(true);
       expectColour(await bodyColour(page), DARK_BODY);
@@ -302,8 +304,10 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
     await fac.page.goto('/');
     await check('create page', [fac.page]);
     await fac.page.getByLabel('Your name').fill('Sven');
-    await button(fac.page, 'Create game').click();
-    await expect(fac.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await button(fac.page, 'Create session').click();
+    await expect(
+      fac.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+    ).toBeVisible();
     const gameUrl = fac.page.url();
 
     const joinPage = async () => {
@@ -312,7 +316,7 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
       return p;
     };
     const guest = await joinPage();
-    await expect(guest.page.getByRole('heading', { level: 1, name: 'Join game' })).toBeVisible();
+    await expect(guest.page.getByRole('heading', { level: 1, name: 'Join session' })).toBeVisible();
     await check('join prompt', [guest.page]);
     await button(guest.page, 'Join').click();
     await expect(guest.page.getByText('Enter a name of 1 to 30 characters.')).toBeVisible();
@@ -356,17 +360,19 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
 
     const facAgain = await fac.context.newPage();
     await facAgain.goto(gameUrl);
-    await expect(facAgain.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await expect(
+      facAgain.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+    ).toBeVisible();
     await button(facAgain, 'Remove Anna').click();
     await check('remove confirmation', [facAgain]);
     await button(facAgain, 'Confirm remove').click();
-    await expect(views.anna.getByText('You were removed from this game.')).toBeVisible();
+    await expect(views.anna.getByText('You were removed from this session.')).toBeVisible();
     await check('removed page', [views.anna]);
 
     const gone = await newPage(browser, theme);
     await gone.page.goto('/g/AAAAAAAAAAAAAAAAAAAAAA');
     await expect(
-      gone.page.getByRole('heading', { level: 1, name: 'Game not found' }),
+      gone.page.getByRole('heading', { level: 1, name: 'Session not found' }),
     ).toBeVisible();
     await check('game not found', [gone.page]);
   }
@@ -464,7 +470,9 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
         const current = visited[i]!;
         const sameRow = Math.abs(current.top - prev.top) < 4;
         const lower = current.top >= prev.top - 4;
-        if (!(sameRow ? current.left >= prev.left - 2 : lower))
+        // Reading order of columns: after the last stop of one column, the next column starts at its top.
+        const nextColumn = current.left - prev.left > 200;
+        if (!(sameRow ? current.left >= prev.left - 2 : lower || nextColumn))
           failures.push(
             `${label}: tab order jumps back at ${expected[current.index]?.description}`,
           );
@@ -492,8 +500,10 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
       const fac = await newPage(browser, 'dark');
       await fac.page.goto('/');
       await fac.page.getByLabel('Your name').fill('Sven');
-      await button(fac.page, 'Create game').click();
-      await expect(fac.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await button(fac.page, 'Create session').click();
+      await expect(
+        fac.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+      ).toBeVisible();
       const voter = await newPage(browser, 'dark');
       await voter.page.goto(fac.page.url());
       await voter.page.getByLabel('Your name').fill('Anna');
@@ -522,8 +532,10 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
       const fac = await newPage(browser, 'dark');
       await fac.page.goto('/');
       await fac.page.getByLabel('Your name').fill('Sven');
-      await button(fac.page, 'Create game').click();
-      await expect(fac.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await button(fac.page, 'Create session').click();
+      await expect(
+        fac.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+      ).toBeVisible();
       const voter = await newPage(browser, 'dark');
       await voter.page.goto(fac.page.url());
       await voter.page.getByLabel('Your name').fill('Anna');
@@ -559,8 +571,10 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
         const fac = await newPage(browser, theme);
         await fac.page.goto('/');
         await fac.page.getByLabel('Your name').fill('Sven');
-        await button(fac.page, 'Create game').click();
-        await expect(fac.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+        await button(fac.page, 'Create session').click();
+        await expect(
+          fac.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+        ).toBeVisible();
         const anna = await newPage(browser, theme);
         await anna.page.goto(fac.page.url());
         await anna.page.getByLabel('Your name').fill('Anna');

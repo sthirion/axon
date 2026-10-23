@@ -19,7 +19,7 @@ describe('RemovePlayerButton', () => {
 
     expect(onRemove).not.toHaveBeenCalled();
     expect(screen.getByRole('group', { name: 'Remove Anna' })).toBeVisible();
-    expect(screen.getByText('Remove Anna from the game?')).toBeVisible();
+    expect(screen.getByText('Remove Anna from the session?')).toBeVisible();
   });
 
   it('removes only after "Confirm remove"', async () => {
@@ -63,7 +63,7 @@ describe('RemovePlayerButton', () => {
 
   it.each([
     ['FORBIDDEN', 'You are not allowed to do that.'],
-    ['INVALID_PAYLOAD', 'That player is no longer in the game.'],
+    ['INVALID_PAYLOAD', 'That player is no longer in the session.'],
     ['TIMEOUT', 'Something went wrong. Try again.'],
   ])('shows the fixed message for %s and allows another attempt', async (code, text) => {
     renderButton(() => Promise.resolve({ ok: false, code }));

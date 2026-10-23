@@ -212,8 +212,8 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
   async function createGame(page: Page, name: string): Promise<string> {
     await page.goto('/');
     await page.getByLabel('Your name').fill(name);
-    await page.getByRole('button', { name: 'Create game' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await page.getByRole('button', { name: 'Create session' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
     const match = /\/g\/([A-Za-z0-9_-]{22})$/.exec(new URL(page.url()).pathname);
     expect(match).not.toBeNull();
     return match![1];
@@ -221,10 +221,10 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
 
   async function joinGame(page: Page, gameId: string, name: string): Promise<void> {
     await page.goto(`/g/${gameId}`);
-    await expect(page.getByRole('heading', { level: 1, name: 'Join game' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Join session' })).toBeVisible();
     await page.getByLabel('Your name').fill(name);
     await page.getByRole('button', { name: 'Join' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Story Estimation' })).toBeVisible();
   }
 
   async function newTable(browser: Browser, options: BrowserContextOptions = {}): Promise<Table> {
@@ -348,7 +348,8 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
         await expect(link).toHaveAttribute('href', url);
         await expect(link).toHaveAttribute('target', '_blank');
         await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-        await expect(link).toContainText(url);
+        await expect(link).toContainText('Login page');
+        await expect(link).not.toContainText(url);
         await expect(link).toHaveAccessibleName(NEW_TAB_NAME);
       }
 
@@ -530,7 +531,9 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       await anna.page.reload();
 
       // Then
-      await expect(anna.page.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await expect(
+        anna.page.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+      ).toBeVisible();
       await expect(card(anna.page, '8')).toBeChecked();
       await expect(checkedCards(anna.page)).toHaveCount(1);
       await expect(withdrawButton(anna.page)).toBeEnabled();
@@ -542,7 +545,9 @@ test.describe('Set the story and vote with hidden cards @TEST', () => {
       await secondTab.goto(`/g/${gameId}`);
 
       // Then
-      await expect(secondTab.getByRole('heading', { level: 1, name: 'Game table' })).toBeVisible();
+      await expect(
+        secondTab.getByRole('heading', { level: 1, name: 'Story Estimation' }),
+      ).toBeVisible();
       await expect(card(secondTab, '8')).toBeChecked();
 
       // When

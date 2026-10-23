@@ -18,6 +18,8 @@ export const SHADES = {
   'green-700': '#15803d',
   'green-800': '#166534',
   'blue-300': '#93c5fd',
+  'indigo-300': '#a5b4fc',
+  'indigo-600': '#4f46e5',
   'blue-800': '#1e40af',
   'amber-50': '#fffbeb',
   'amber-100': '#fef3c7',
@@ -79,6 +81,8 @@ export const PAIRS: readonly ThemedPair[] = [
   pair('input and card border', 3, ['slate-500', 'white'], ['slate-400', 'slate-900']),
   pair('focus indicator', 3, ['slate-900', 'white'], ['slate-100', 'slate-900']),
   pair('selected card border', 3, ['slate-900', 'white'], ['slate-100', 'slate-900']),
+  pair('logo accent on the card', 3, ['indigo-600', 'white'], ['indigo-300', 'slate-900']),
+  pair('logo outline', 3, ['slate-900', 'white'], ['slate-100', 'slate-900']),
   pair('results bar', 3, ['slate-700', 'white'], ['slate-300', 'slate-900']),
   pair('online dot', 3, ['green-700', 'white'], ['green-400', 'slate-900']),
 ];
@@ -108,5 +112,8 @@ export const DARK_COUNTERPART: Readonly<Record<string, string>> = {
   'bg-slate-700': 'dark:bg-slate-300',
   'bg-slate-600': 'dark:bg-slate-400',
   'border-slate-500': 'dark:border-slate-400',
+  'fill-white': 'dark:fill-slate-900',
+  'stroke-indigo-600': 'dark:stroke-indigo-300',
+  'fill-indigo-600': 'dark:fill-indigo-300',
   'focus-visible:outline-slate-900': 'dark:focus-visible:outline-slate-100',
 };

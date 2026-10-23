@@ -10,7 +10,7 @@ export const StatusBadge = memo(function StatusBadge({ connected }: StatusBadgeP
   return (
     <span
       className={cn(
-        'text-sm',
+        'type-meta',
         connected ? 'text-green-800 dark:text-green-400' : 'text-slate-600 dark:text-slate-400',
       )}
     >

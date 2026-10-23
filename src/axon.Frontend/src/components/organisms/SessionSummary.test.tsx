@@ -44,11 +44,12 @@ describe('SessionSummary', () => {
   it('opens a link safely in a new tab and shows a title as text only', () => {
     const { container } = render(<SessionSummary history={HISTORY} total={5} />);
 
-    const link = screen.getByRole('link', { name: /https:\/\/e\.com\/1 \(opens in a new tab\)/ });
+    const link = screen.getByRole('link', { name: /^Login page.*\(opens in a new tab\)$/ });
     expect(link).toHaveAttribute('href', 'https://e.com/1');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByText(/e\.com/)).toBeNull();
     expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeVisible();
     expect(container.querySelector('img')).toBeNull();
   });
