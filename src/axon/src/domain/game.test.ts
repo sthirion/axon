@@ -201,6 +201,7 @@ describe('toPublicState', () => {
       'gameId',
       'history',
       'phase',
+      'scale',
       'story',
       'total',
       'voters',

@@ -167,8 +167,14 @@ describe('describeVoteChanges on reveal', () => {
     ],
     [
       'no numeric votes',
-      stats({ average: null, consensus: false, distribution: [{ card: '?', count: 1 }] }),
-      'Votes revealed. No numeric votes',
+      stats({
+        average: null,
+        median: null,
+        suggestedEstimate: null,
+        consensus: false,
+        distribution: [{ card: '?', count: 1 }],
+      }),
+      'Votes revealed. No sized votes',
     ],
   ])('announces the reveal with %s', (_label, results, expected) => {
     expect(describeVoteChanges(voting([ANNA]), revealed(results), null)).toBe(expected);
@@ -270,5 +276,60 @@ describe('useVoteAnnouncement', () => {
     act(() => useGameStore.getState().reset());
     apply(gameState({ phase: 'revealed', story: STORY, voters: [ANNA], results }));
     expect(result.current).toBe('');
+  });
+});
+
+describe('describeVoteChanges for t-shirt sizes', () => {
+  const sized = (results: object) =>
+    gameState({
+      scale: 'tshirt',
+      total: null,
+      phase: 'revealed',
+      story: STORY,
+      voters: [ANNA],
+      results,
+    });
+  const tshirtVoting = gameState({
+    scale: 'tshirt',
+    total: null,
+    phase: 'voting',
+    story: STORY,
+    voters: [ANNA],
+  });
+  const base = {
+    distribution: [{ card: 'M', count: 2 }],
+    average: null,
+    median: 'M',
+    consensus: true,
+    outlierIds: [],
+    suggestedEstimate: 'M',
+  };
+
+  it('announces consensus with the size', () => {
+    expect(describeVoteChanges(tshirtVoting, sized(base), null)).toBe(
+      'Votes revealed. Consensus: M',
+    );
+  });
+
+  it('announces the median size, never an average, when there is no consensus', () => {
+    const message = describeVoteChanges(
+      tshirtVoting,
+      sized({ ...base, consensus: false, median: 'L', suggestedEstimate: 'L' }),
+      null,
+    );
+
+    expect(message).toBe('Votes revealed. No consensus, median L');
+    expect(message).not.toMatch(/average/);
+  });
+
+  it('announces a recorded size', () => {
+    const waiting = gameState({
+      scale: 'tshirt',
+      total: null,
+      voters: [ANNA],
+      history: [{ title: 'Login page', estimate: 'XL' }],
+    });
+
+    expect(describeVoteChanges(sized(base), waiting, null)).toBe('Estimate recorded: XL');
   });
 });

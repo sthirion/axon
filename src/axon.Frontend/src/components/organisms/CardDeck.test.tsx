@@ -1,4 +1,4 @@
-import type { Card } from '@axon/shared';
+import type { Card, Scale } from '@axon/shared';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
@@ -13,7 +13,9 @@ function setup(selected: Card | null, disabled = false) {
     Promise.resolve({ ok: true }),
   );
   const user = userEvent.setup();
-  const view = render(<CardDeck selected={selected} disabled={disabled} onCast={onCast} />);
+  const view = render(
+    <CardDeck scale="fibonacci" selected={selected} disabled={disabled} onCast={onCast} />,
+  );
   return { user, onCast, ...view };
 }
 
@@ -152,6 +154,7 @@ describe('CardDeck', () => {
         const [selected, setSelected] = useState<Card | null>('coffee');
         return (
           <CardDeck
+            scale="fibonacci"
             selected={selected}
             disabled={false}
             onCast={(card) => {
@@ -196,7 +199,7 @@ describe('CardDeck', () => {
       const user = userEvent.setup();
       render(
         <form onSubmit={onSubmit}>
-          <CardDeck selected={null} disabled={false} onCast={onCast} />
+          <CardDeck scale="fibonacci" selected={null} disabled={false} onCast={onCast} />
           <button type="submit">Go</button>
         </form>,
       );
@@ -296,5 +299,79 @@ describe('CardDeck', () => {
 
       expect(onCast).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('CardDeck per scale', () => {
+  const renderDeck = (scale: Scale, selected: Card | null = null) => {
+    const onCast = vi.fn<(card: Card | null) => Promise<ActionResult>>(() =>
+      Promise.resolve({ ok: true }),
+    );
+    render(<CardDeck scale={scale} selected={selected} disabled={false} onCast={onCast} />);
+    return { onCast, user: userEvent.setup() };
+  };
+  const labels = () => screen.getAllByRole('radio').map((r) => r.getAttribute('value'));
+
+  it.each<[Scale, string[]]>([
+    ['fibonacci', ['0', '1', '2', '3', '5', '8', '13', '21', '?', 'coffee']],
+    ['incremental', ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '?', 'coffee']],
+    ['tshirt', ['XS', 'S', 'M', 'L', 'XL', '?', 'coffee']],
+  ])('shows exactly the %s deck, in order', (scale, expected) => {
+    renderDeck(scale);
+
+    expect(labels()).toEqual(expected);
+  });
+
+  it.each<[Scale, Array<string | number>]>([
+    ['tshirt', ['5', '0', '13']],
+    ['fibonacci', ['M', 'XS', '4', '10']],
+    ['incremental', ['M', '11', '13', '21']],
+  ])('shows no card of another scale in the %s deck', (scale, foreign) => {
+    renderDeck(scale);
+
+    for (const label of foreign) {
+      expect(screen.queryByRole('radio', { name: String(label) }), String(label)).toBeNull();
+    }
+  });
+
+  it('sends a size as the text it is, and a number as a number', async () => {
+    const sizes = renderDeck('tshirt');
+    await sizes.user.click(screen.getByRole('radio', { name: 'XL' }));
+    expect(sizes.onCast).toHaveBeenCalledWith('XL');
+  });
+
+  it('casts a number in the incremental deck as a number', async () => {
+    const numbers = renderDeck('incremental');
+
+    await numbers.user.click(screen.getByRole('radio', { name: '10' }));
+
+    expect(numbers.onCast).toHaveBeenCalledWith(10);
+  });
+
+  it('keeps the arrow keys moving through the t-shirt sizes in size order and wraps', async () => {
+    const { onCast, user } = renderDeck('tshirt', 'XL');
+    await user.tab();
+
+    await user.keyboard('{ArrowRight}');
+    await user.keyboard('{ArrowRight}');
+
+    expect(onCast.mock.calls.map(([c]) => c)).toEqual(['?', 'coffee']);
+  });
+
+  it('starts the tab stop on the first card of the scale when nothing is selected', async () => {
+    const { user } = renderDeck('tshirt');
+
+    await user.tab();
+
+    expect(screen.getByRole('radio', { name: 'XS' })).toHaveFocus();
+  });
+
+  it('checks the selected size', () => {
+    renderDeck('tshirt', 'M');
+
+    expect(screen.getByRole('radio', { name: 'M' })).toBeChecked();
+    expect(
+      screen.getAllByRole('radio').filter((r) => (r as HTMLInputElement).checked),
+    ).toHaveLength(1);
   });
 });

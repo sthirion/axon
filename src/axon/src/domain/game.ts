@@ -1,7 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import {
-  cardSchema,
-  finalEstimateSchema,
+  DEFAULT_SCALE,
+  isCardOf,
+  isEstimateOf,
   playerNameKey,
   storySchema,
   type Card,
@@ -9,6 +10,7 @@ import {
   type HistoryEntry,
   type PlayerRole,
   type PublicGameState,
+  type Scale,
   type Story,
 } from '@axon/shared';
 import { calculateStats } from './results.js';
@@ -26,6 +28,8 @@ export interface Game {
   readonly facilitatorId: string;
   // Store clock time at creation; the age cap counts from here.
   readonly createdAt: number;
+  // Chosen when the session is created and never changed.
+  readonly scale: Scale;
   // When the last connected player left (or the game was created empty); cleared on a join.
   emptySince?: number;
   // Insertion order is join order.
@@ -62,12 +66,18 @@ function newPlayer(input: NewPlayer, role: PlayerRole): Player {
   return { ...input, role, socketIds: new Set() };
 }
 
-export function createGame(id: string, facilitator: NewPlayer, now: number): Game {
+export function createGame(
+  id: string,
+  facilitator: NewPlayer,
+  now: number,
+  scale: Scale = DEFAULT_SCALE,
+): Game {
   const player = newPlayer(facilitator, 'facilitator');
   return {
     id,
     facilitatorId: player.id,
     createdAt: now,
+    scale,
     emptySince: now,
     players: new Map([[player.id, player]]),
     phase: 'waiting',
@@ -210,13 +220,11 @@ export function finishRound(game: Game, playerId: string, input: object): Action
   }
   let estimate: HistoryEntry['estimate'] = 'skipped';
   if (!skipping) {
-    const parsed = finalEstimateSchema.safeParse(
-      (input as { finalEstimate?: unknown }).finalEstimate,
-    );
-    if (!parsed.success) {
+    const chosen = (input as { finalEstimate?: unknown }).finalEstimate;
+    if (!isEstimateOf(game.scale, chosen)) {
       return { ok: false, code: 'INVALID_CARD' };
     }
-    estimate = parsed.data;
+    estimate = chosen;
   }
   game.history.push({ ...game.story, estimate });
   game.votes.clear();
@@ -237,11 +245,10 @@ export function castVote(game: Game, playerId: string, input: unknown): ActionRe
     game.votes.delete(playerId);
     return { ok: true };
   }
-  const card = cardSchema.safeParse(input);
-  if (!card.success) {
+  if (!isCardOf(game.scale, input)) {
     return { ok: false, code: 'INVALID_CARD' };
   }
-  game.votes.set(playerId, card.data);
+  game.votes.set(playerId, input);
   return { ok: true };
 }
 
@@ -258,6 +265,7 @@ export function toPublicState(game: Game): PublicGameState {
   const revealed = game.phase === 'revealed';
   return {
     gameId: game.id,
+    scale: game.scale,
     phase: game.phase,
     story: game.story ? { ...game.story } : null,
     facilitator: { name: facilitator.name, connected: isConnected(facilitator) },
@@ -273,11 +281,15 @@ export function toPublicState(game: Game): PublicGameState {
           ...(revealed && card !== undefined ? { card } : {}),
         };
       }),
-    ...(revealed ? { results: calculateStats(game.votes) } : {}),
+    ...(revealed ? { results: calculateStats(game.votes, game.scale) } : {}),
     history: game.history.map((entry) => ({ ...entry })),
-    total: game.history.reduce(
-      (sum, entry) => (typeof entry.estimate === 'number' ? sum + entry.estimate : sum),
-      0,
-    ),
+    // Sizes cannot be added up: a t-shirt session has no total.
+    total:
+      game.scale === 'tshirt'
+        ? null
+        : game.history.reduce(
+            (sum, entry) => (typeof entry.estimate === 'number' ? sum + entry.estimate : sum),
+            0,
+          ),
   };
 }

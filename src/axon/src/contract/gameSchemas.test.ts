@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   GAME_END_MESSAGES,
   gameEndedSchema,
-  finalEstimateSchema,
+  estimateSchemaFor,
   roundFinishEnvelopeSchema,
   roundFinishPayloadSchema,
   ackSchema,
@@ -137,6 +137,7 @@ describe('gameJoinedSchema', () => {
 const STATS = {
   distribution: [{ card: 5, count: 1 }],
   average: 5,
+  median: 5,
   consensus: false,
   outlierIds: [],
   suggestedEstimate: 5,
@@ -145,6 +146,7 @@ const STATS = {
 describe('publicGameStateSchema', () => {
   const REVEALED = {
     gameId: GAME_ID,
+    scale: 'fibonacci',
     phase: 'revealed',
     story: { title: 'T' },
     facilitator: { name: 'Sven', connected: true },
@@ -165,6 +167,7 @@ describe('publicGameStateSchema', () => {
     const results = {
       distribution: [{ card: '?', count: 1 }],
       average: null,
+      median: null,
       consensus: false,
       outlierIds: [],
       suggestedEstimate: null,
@@ -175,6 +178,7 @@ describe('publicGameStateSchema', () => {
 
   const state = {
     gameId: GAME_ID,
+    scale: 'fibonacci',
     phase: 'waiting',
     story: null,
     facilitator: { name: 'Sven', connected: true },
@@ -303,6 +307,7 @@ describe('GAME_EVENTS', () => {
 describe('publicGameStateSchema history', () => {
   const state = {
     gameId: GAME_ID,
+    scale: 'fibonacci',
     phase: 'waiting',
     story: null,
     facilitator: { name: 'Sven', connected: true },
@@ -330,7 +335,9 @@ describe('publicGameStateSchema history', () => {
   });
 });
 
-describe('finalEstimateSchema', () => {
+const finalEstimateSchema = estimateSchemaFor('fibonacci');
+
+describe('estimateSchemaFor (fibonacci)', () => {
   it.each([0, 1, 2, 3, 5, 8, 13, 21])('accepts %d', (value) => {
     expect(finalEstimateSchema.safeParse(value).success).toBe(true);
   });

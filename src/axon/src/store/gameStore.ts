@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { DEFAULT_SCALE, type Scale } from '@axon/shared';
 import { DEFAULT_LIFETIME, type LifetimeConfig } from '../config.js';
 import {
   addVoter,
@@ -49,7 +50,10 @@ export class GameStore {
     this.randomUUID = options.randomUUID ?? randomUUID;
   }
 
-  createGame(facilitatorName: string): { gameId: string; token: string } {
+  createGame(
+    facilitatorName: string,
+    scale: Scale = DEFAULT_SCALE,
+  ): { gameId: string; token: string } {
     let gameId: string;
     do {
       gameId = this.randomBytes(GAME_ID_BYTES).toString('base64url');
@@ -59,6 +63,7 @@ export class GameStore {
       gameId,
       { id: this.randomUUID(), name: facilitatorName, tokenHash: hashToken(token) },
       this.now(),
+      scale,
     );
     this.games.set(gameId, game);
     return { gameId, token };

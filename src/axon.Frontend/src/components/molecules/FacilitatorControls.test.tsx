@@ -9,6 +9,7 @@ const OK = () => Promise.resolve({ ok: true } as ActionResult);
 function renderControls(props: Partial<Parameters<typeof FacilitatorControls>[0]> = {}) {
   return render(
     <FacilitatorControls
+      scale="fibonacci"
       revealed
       suggestedEstimate={5}
       disabled={false}
@@ -43,6 +44,7 @@ describe('FacilitatorControls', () => {
 
     rerender(
       <FacilitatorControls
+        scale="fibonacci"
         revealed
         suggestedEstimate={5}
         disabled={false}
@@ -139,5 +141,45 @@ describe('FacilitatorControls', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(text);
     expect(screen.getByRole('button', { name: 'Skip story' })).toBeEnabled();
+  });
+});
+
+describe('FacilitatorControls per scale', () => {
+  it.each([
+    ['incremental', ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']],
+    ['tshirt', ['XS', 'S', 'M', 'L', 'XL']],
+    ['fibonacci', ['0', '1', '2', '3', '5', '8', '13', '21']],
+  ] as const)('offers only the sized cards of %s, never ? or coffee', (scale, cards) => {
+    renderControls({ scale, suggestedEstimate: null });
+
+    const options = [...(screen.getByLabelText('Final estimate') as HTMLSelectElement).options];
+    expect(options.map((o) => o.text)).toEqual(['Choose an estimate', ...cards]);
+  });
+
+  it('starts on the suggested size and records the size itself', async () => {
+    const onFinish = vi.fn(OK);
+    renderControls({ scale: 'tshirt', suggestedEstimate: 'M', onFinish });
+
+    expect(screen.getByLabelText('Final estimate')).toHaveValue('M');
+    await userEvent.selectOptions(screen.getByLabelText('Final estimate'), 'XL');
+    await userEvent.click(screen.getByRole('button', { name: 'Record estimate' }));
+
+    expect(onFinish).toHaveBeenCalledWith({ finalEstimate: 'XL' });
+  });
+
+  it('records an incremental number as a number', async () => {
+    const onFinish = vi.fn(OK);
+    renderControls({ scale: 'incremental', suggestedEstimate: 7, onFinish });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Record estimate' }));
+
+    expect(onFinish).toHaveBeenCalledWith({ finalEstimate: 7 });
+  });
+
+  it('starts empty for a t-shirt session with no proposal', () => {
+    renderControls({ scale: 'tshirt', suggestedEstimate: null });
+
+    expect(screen.getByLabelText('Final estimate')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Record estimate' })).toBeDisabled();
   });
 });

@@ -39,7 +39,11 @@ flowchart LR
 | Vote | playerId → card |
 | RoundResult | story, finalEstimate (number) or `skipped`, recordedAt |
 
-- `Card` = `0 | 1 | 2 | 3 | 5 | 8 | 13 | 21 | '?' | 'coffee'`, defined once in `shared/deck.ts`.
+- `Scale` = `'fibonacci' | 'incremental' | 'tshirt'`, chosen when the session is created and
+  fixed for its whole life (`Game.scale`). Decks, defined once in `shared/deck.ts`: Fibonacci
+  `0, 1, 2, 3, 5, 8, 13, 21`, incremental `0` to `10`, t-shirt `XS, S, M, L, XL`; every deck also
+  has `?` and `coffee`. `Card` is the union of every card of every scale; a scale accepts only
+  its own deck. The sized cards (everything but `?` and `coffee`) are the possible estimates.
 - `gameId`: 22-character base64url from `crypto.randomBytes(16)` (128 bits, Requirement 1.1).
 - Player token: 32 random bytes. Only a SHA-256 hash is stored on the server; the token itself
   lives in the browser's `localStorage`, under a key for each game.
@@ -118,21 +122,23 @@ information in it. The own card of a voter travels separately in `vote:mine`.
 ```typescript
 type PublicGameState = {
   gameId: string;
+  scale: 'fibonacci' | 'incremental' | 'tshirt';
   phase: 'waiting' | 'voting' | 'revealed';
   story: { title: string; url?: string } | null;
   facilitator: { name: string; connected: boolean };
   voters: Array<{ id: string; name: string; connected: boolean; hasVoted: boolean; card?: Card }>;
   results?: RoundStats; // only when revealed
-  history: Array<{ title: string; url?: string; estimate: number | 'skipped' }>;
-  total: number;
+  history: Array<{ title: string; url?: string; estimate: Card | 'skipped' }>; // sized cards only
+  total: number | null; // null for t-shirt sizes, which cannot be added up
 };
 
 type RoundStats = {
   distribution: Array<{ card: Card; count: number }>;
-  average: number | null; // null when there are no numeric votes
+  average: number | null; // numeric scales only; null for t-shirt or with no sized votes
+  median: Card | null;    // the middle sized vote (the higher middle on an even count)
   consensus: boolean;
-  outlierIds: string[];   // empty when consensus or fewer than 2 distinct numeric values
-  suggestedEstimate: number | null;
+  outlierIds: string[];   // empty when consensus or fewer than 2 distinct sized values
+  suggestedEstimate: Card | null; // a sized card of the scale
 };
 ```
 
@@ -193,23 +199,37 @@ sequenceDiagram
 
 ## Results Calculation
 
-`results.ts` is a pure function `calculateStats(votes: Map<string, Card>): RoundStats`.
+`results.ts` is a pure function
+`calculateStats(votes: Map<string, Card>, scale: Scale): RoundStats`.
 
-- **Numeric votes:** votes on 0–21. `?` and coffee are counted in `distribution` only.
-- **Average:** mean of the numeric votes rounded half up to one decimal (computed with integers: `floor((20 * sum + n) / (2 * n)) / 10`); `null` if there are none.
-- **Consensus:** at least two numeric votes and all of them equal.
-- **Outliers:** if there are at least two distinct numeric values, every voter whose vote
-  equals the minimum or the maximum.
-- **Suggested estimate:** the consensus value; otherwise the deck value closest to the
-  average (when two are equally close, take the higher one); `null` if there is no average.
+- **Sized votes:** votes on the sized cards of the scale (numbers, or sizes for t-shirt). `?`
+  and coffee are counted in `distribution` only. Cards are ordered by their place in the deck:
+  value order for numbers, `XS < S < M < L < XL` for sizes.
+- **Average (numeric scales):** mean of the sized votes rounded half up to one decimal
+  (computed with integers: `floor((20 * sum + n) / (2 * n)) / 10`); `null` if there are none,
+  and always `null` for t-shirt.
+- **Median:** the middle sized vote in deck order; with an even count the higher of the two
+  middle cards; `null` if there are none. Shown for t-shirt (instead of an average).
+- **Consensus:** at least two sized votes and all of them equal.
+- **Outliers:** if there are at least two distinct sized values, every voter whose vote equals
+  the lowest or the highest.
+- **Suggested estimate:** the consensus card; otherwise, for the numeric scales, the sized card
+  closest to the average (when two are equally close, take the higher one), and for t-shirt the
+  median; `null` if there are no sized votes.
 
-| Votes | Average | Consensus | Outliers | Suggested |
-| --- | --- | --- | --- | --- |
-| 5, 5, 5 | 5.0 | yes | — | 5 |
-| 3, 5, 8 | 5.3 | no | 3, 8 | 5 |
-| 5, ?, coffee | 5.0 | no (one numeric vote) | — | 5 |
-| ?, coffee | — | no | — | — |
-| 2, 3 | 2.5 | no | 2, 3 | 3 |
+| Scale | Votes | Average | Median | Consensus | Outliers | Suggested |
+| --- | --- | --- | --- | --- | --- | --- |
+| fibonacci | 5, 5, 5 | 5.0 | 5 | yes | — | 5 |
+| fibonacci | 3, 5, 8 | 5.3 | 5 | no | 3, 8 | 5 |
+| fibonacci | 5, ?, coffee | 5.0 | 5 | no (one sized vote) | — | 5 |
+| fibonacci | ?, coffee | — | — | no | — | — |
+| fibonacci | 2, 3 | 2.5 | 3 | no | 2, 3 | 3 |
+| incremental | 4, 6 | 5 | 6 | no | 4, 6 | 5 |
+| incremental | 0, 10 | 5 | 10 | no | 0, 10 | 5 |
+| tshirt | M, M, M | — | M | yes | — | M |
+| tshirt | S, M, XL | — | M | no | S, XL | M |
+| tshirt | S, L | — | L | no | S, L | L |
+| tshirt | XS, S, M, L | — | M | no | XS, L | M |
 
 ## Game Lifetime
 
@@ -356,6 +376,10 @@ Paths follow the source paths in [project-config.md](../../../project-config.md)
     not an object, or not exactly one of `finalEstimate` / `skip: true`), role (`FORBIDDEN`),
     phase (`WRONG_PHASE`: an estimate needs `revealed`, a skip needs `voting` or `revealed`),
     value (`INVALID_CARD`: the estimate is not a numeric deck value; `?` and coffee are rejected).
+- Added by story #22: `INVALID_SCALE` (`POST /api/games` with a `scale` that is not one of the
+  three exact strings; the name is checked first, a missing scale means Fibonacci). `vote:cast`
+  and `round:finish` check the card against the session's own scale and answer `INVALID_CARD`
+  for a card of another scale; `round:finish` also rejects `?` and coffee.
 - Added by story #6:
   - `REMOVED` (fixed message "You were removed from this game."): `game:join` with the token of a
     removed voter. On `game:join` the banned check comes before the token lookup, so the order

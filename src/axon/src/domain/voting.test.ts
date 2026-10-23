@@ -293,6 +293,7 @@ describe('toPublicState with story and votes', () => {
       'gameId',
       'history',
       'phase',
+      'scale',
       'story',
       'total',
       'voters',
@@ -430,6 +431,7 @@ describe('toPublicState around the reveal', () => {
     expect(state.results).toEqual({
       distribution: [{ card: 3, count: 1 }],
       average: 3,
+      median: 3,
       consensus: false,
       outlierIds: [],
       suggestedEstimate: 3,

@@ -75,7 +75,10 @@ describe('CreateGamePage', () => {
     submit('  Sven  ');
 
     expect(await screen.findByText('Game route')).toBeInTheDocument();
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body as string)).toEqual({ name: 'Sven' });
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body as string)).toEqual({
+      name: 'Sven',
+      scale: 'fibonacci',
+    });
     expect(window.localStorage.getItem(`axon.playerToken.${GAME_ID}`)).toBe(TOKEN);
   });
 
@@ -138,5 +141,45 @@ describe('CreateGamePage', () => {
 
     expect(await screen.findByText('Game route')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('offers the voting scale with Fibonacci selected, and sends the chosen scale', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(created());
+    vi.stubGlobal('fetch', fetchMock);
+    renderCreate();
+
+    expect(screen.getByRole('radio', { name: /Fibonacci/ })).toBeChecked();
+    fireEvent.click(screen.getByRole('radio', { name: /T-shirt sizes/ }));
+    submit('Sven');
+
+    expect(await screen.findByText('Game route')).toBeInTheDocument();
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body as string)).toEqual({
+      name: 'Sven',
+      scale: 'tshirt',
+    });
+  });
+
+  it.each([
+    ['incremental', /Incremental/],
+    ['fibonacci', /Fibonacci/],
+  ])('sends %s when that scale is chosen', async (scale, label) => {
+    const fetchMock = vi.fn().mockResolvedValue(created());
+    vi.stubGlobal('fetch', fetchMock);
+    renderCreate();
+
+    fireEvent.click(screen.getByRole('radio', { name: label }));
+    submit('Sven');
+
+    await screen.findByText('Game route');
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body as string).scale).toBe(scale);
+  });
+
+  it('locks the scale choice while the request is in flight', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})));
+    renderCreate();
+
+    submit('Sven');
+
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Incremental/ })).toBeDisabled());
   });
 });

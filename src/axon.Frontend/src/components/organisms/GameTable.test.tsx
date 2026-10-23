@@ -509,3 +509,84 @@ describe('GameTable facilitator offline and removing players', () => {
     expect(screen.getByRole('button', { name: 'Remove Anna' })).toBeDisabled();
   });
 });
+
+describe('GameTable and the scale', () => {
+  const VOTING = { phase: 'voting', story: { title: 'Login page' } };
+
+  it.each([
+    ['fibonacci', 'Voting scale: Fibonacci'],
+    ['incremental', 'Voting scale: Incremental'],
+    ['tshirt', 'Voting scale: T-shirt sizes'],
+  ])('tells every role the %s scale', (scale, text) => {
+    for (const role of ['facilitator', 'voter', null] as const) {
+      const { unmount } = render(
+        <GameTable
+          game={gameState({ ...VOTING, scale, total: scale === 'tshirt' ? null : 0 }) as Game}
+          reconnecting={false}
+          {...IDLE}
+          role={role}
+        />,
+      );
+      expect(screen.getByText(text)).toBeVisible();
+      unmount();
+    }
+  });
+
+  it('gives a voter the deck of a t-shirt session', () => {
+    render(
+      <GameTable
+        game={gameState({ ...VOTING, scale: 'tshirt', total: null }) as Game}
+        reconnecting={false}
+        {...IDLE}
+      />,
+    );
+
+    expect(screen.getAllByRole('radio').map((r) => r.getAttribute('value'))).toEqual([
+      'XS',
+      'S',
+      'M',
+      'L',
+      'XL',
+      '?',
+      'coffee',
+    ]);
+  });
+
+  it('shows the median, the size and no total for a revealed t-shirt session', () => {
+    render(
+      <GameTable
+        game={
+          gameState({
+            phase: 'revealed',
+            scale: 'tshirt',
+            total: null,
+            story: { title: 'Login page' },
+            voters: [
+              { id: 'v1', name: 'Anna', connected: true, hasVoted: true, card: 'S' },
+              { id: 'v2', name: 'Bob', connected: true, hasVoted: true, card: 'XL' },
+            ],
+            results: {
+              distribution: [
+                { card: 'S', count: 1 },
+                { card: 'XL', count: 1 },
+              ],
+              average: null,
+              median: 'XL',
+              consensus: false,
+              outlierIds: ['v1', 'v2'],
+              suggestedEstimate: 'XL',
+            },
+          }) as Game
+        }
+        reconnecting={false}
+        {...IDLE}
+        role="facilitator"
+      />,
+    );
+
+    expect(screen.getByText('Median: XL')).toBeVisible();
+    expect(screen.queryByText(/Average/)).toBeNull();
+    expect(screen.queryByText(/Total/)).toBeNull();
+    expect(screen.getByLabelText('Final estimate')).toHaveValue('XL');
+  });
+});

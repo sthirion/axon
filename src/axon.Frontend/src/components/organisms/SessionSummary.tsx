@@ -10,7 +10,8 @@ export const COPY_ERROR_MESSAGE = 'Could not copy. Select the text instead.';
 
 interface SessionSummaryProps {
   readonly history: readonly HistoryEntry[];
-  readonly total: number;
+  // `null` for t-shirt sizes, which cannot be added up.
+  readonly total: number | null;
 }
 
 export const SessionSummary = memo(function SessionSummary({
@@ -52,7 +53,7 @@ export const SessionSummary = memo(function SessionSummary({
           ))}
         </ol>
       )}
-      <p className="font-medium">Total: {total}</p>
+      {total !== null && <p className="font-medium">Total: {total}</p>}
       <Button disabled={history.length === 0} onClick={() => void copy()}>
         Copy summary
       </Button>

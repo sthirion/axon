@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 
 function describeResults(results: RoundStats): string {
-  if (results.average === null) return 'No numeric votes';
-  return results.consensus
-    ? `Consensus: ${results.average}`
+  if (results.median === null) return 'No sized votes';
+  if (results.consensus) return `Consensus: ${results.suggestedEstimate}`;
+  // Numbers have an average; t-shirt sizes only a middle size.
+  return results.average === null
+    ? `No consensus, median ${results.median}`
     : `No consensus, average ${results.average}`;
 }
 
