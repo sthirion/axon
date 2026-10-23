@@ -302,4 +302,48 @@ test.describe('Header join link, recommended mark, controls beside the estimate 
     expect(await check.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
     await expect(check).toHaveCount(0, { timeout: 7000 });
   });
+
+  test('everything in a voter row shares one vertical centre: name, card, status and buttons', async ({
+    browser,
+  }) => {
+    const s = await aRevealedSession(browser);
+    await vote(s.anna, '3');
+    await expect(region(s.fac, 'Voters').getByRole('listitem').first()).toContainText('Voted');
+    await s.fac.waitForTimeout(400); // the card back has dealt in
+
+    const centres = async (page: Page, row: Locator) => {
+      const parts = [
+        row.locator('.type-name'),
+        row.locator('span[class*="h-[45px]"]'),
+        row.getByText(/Voted|Not voted|Vote: /).first(),
+        row.getByText('online'),
+        row.getByRole('button', { name: /^Remove/ }),
+      ];
+      const found: number[] = [];
+      for (const part of parts) {
+        if ((await part.count()) === 0) continue;
+        const box = (await part.first().boundingBox())!;
+        found.push(box.y + box.height / 2);
+      }
+      return found;
+    };
+    for (const viewport of [VIEWPORTS[2]!]) {
+      expect(viewport.width).toBeGreaterThan(0);
+      const rows = region(s.fac, 'Voters').getByRole('listitem');
+      for (let i = 0; i < (await rows.count()); i++) {
+        const values = await centres(s.fac, rows.nth(i));
+        expect(values.length).toBeGreaterThanOrEqual(4);
+        expect(Math.max(...values) - Math.min(...values)).toBeLessThan(1);
+      }
+    }
+    await vote(s.bob, '5');
+    await button(s.fac, 'Reveal votes').click();
+    await expect(region(s.fac, 'Results')).toBeVisible();
+    await s.fac.waitForTimeout(900);
+    const rows = region(s.fac, 'Voters').getByRole('listitem');
+    for (let i = 0; i < (await rows.count()); i++) {
+      const values = await centres(s.fac, rows.nth(i));
+      expect(Math.max(...values) - Math.min(...values)).toBeLessThan(1);
+    }
+  });
 });

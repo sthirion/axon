@@ -49,9 +49,9 @@ export const PlayerRow = memo(function PlayerRow({
       <MiniCard key="back" variant="back" animate={animate} />
     ) : null;
   return (
-    <span className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3">
+    <span className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
       <span className="type-name break-all">{name}</span>
-      <span className="flex flex-wrap items-baseline gap-x-3">
+      <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {miniCard}
         {revealedCard === undefined && hasVoted !== undefined && <VoteBadge voted={hasVoted} />}
         {revealedCard === null && (
