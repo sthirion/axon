@@ -1,3 +1,4 @@
+import { ERROR_MESSAGES } from '@axon/shared';
 import { useParams } from 'react-router';
 import { Button } from '../components/atoms/Button';
 import { NameForm } from '../components/molecules/NameForm';
@@ -11,6 +12,15 @@ function GameSession({ gameId }: { readonly gameId: string }) {
   const { phase, game } = session;
 
   if (phase === 'not-found') return <GameNotFound />;
+
+  if (phase === 'removed') {
+    return (
+      <>
+        <h1 className="text-2xl font-semibold sm:text-3xl">Removed</h1>
+        <p role="status">{ERROR_MESSAGES.REMOVED}</p>
+      </>
+    );
+  }
 
   if (phase === 'load-error' || phase === 'join-error') {
     return (
@@ -50,6 +60,7 @@ function GameSession({ gameId }: { readonly gameId: string }) {
         onReveal={session.revealRound}
         onRevote={session.revoteRound}
         onFinish={session.finishRound}
+        onRemovePlayer={session.removePlayer}
       />
     );
   }

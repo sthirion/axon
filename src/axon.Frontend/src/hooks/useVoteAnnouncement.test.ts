@@ -54,6 +54,58 @@ describe('describeVoteChanges', () => {
   });
 });
 
+describe('describeVoteChanges for the facilitator and removals', () => {
+  const offline = (voters: object[]) =>
+    gameState({
+      phase: 'voting',
+      story: STORY,
+      voters,
+      facilitator: { name: 'Sven', connected: false },
+    });
+
+  it('announces the facilitator going offline and coming back', () => {
+    expect(describeVoteChanges(voting([ANNA]), offline([ANNA]), null)).toBe(
+      'The facilitator is offline',
+    );
+    expect(describeVoteChanges(offline([ANNA]), voting([ANNA]), null)).toBe(
+      'The facilitator is back',
+    );
+  });
+
+  it('announces a removed voter by name, without a card', () => {
+    expect(describeVoteChanges(voting([ANNA, BOB]), voting([BOB]), null)).toBe('Anna was removed');
+  });
+
+  it('says nothing for a voter going offline, but keeps both messages when two things change', () => {
+    expect(describeVoteChanges(voting([ANNA]), voting([{ ...ANNA, connected: false }]), null)).toBe(
+      '',
+    );
+    expect(
+      describeVoteChanges(voting([ANNA, BOB]), offline([{ ...BOB, hasVoted: true }]), null),
+    ).toBe('The facilitator is offline. Anna was removed. Bob has voted');
+  });
+
+  it('keeps the facilitator message next to a reveal or a finished story', () => {
+    const revealed = gameState({
+      phase: 'revealed',
+      story: STORY,
+      voters: [ANNA],
+      facilitator: { name: 'Sven', connected: false },
+      results: {
+        distribution: [{ card: 5, count: 1 }],
+        average: 5,
+        consensus: false,
+        outlierIds: [],
+        suggestedEstimate: 5,
+      },
+    });
+
+    expect(describeVoteChanges(voting([ANNA]), revealed, null)).toBe(
+      'The facilitator is offline. Votes revealed. No consensus, average 5',
+    );
+  });
+});
+
 describe('describeVoteChanges after reveal', () => {
   const revealed = gameState({
     phase: 'revealed',

@@ -2077,4 +2077,345 @@ describe('story and vote over Socket.IO', () => {
       });
     });
   });
+
+  describe('facilitator offline and removing players (Story #6)', () => {
+    const REMOVED_EVENT = 'player:removed';
+
+    async function goOffline(round: Round): Promise<PublicGameState[]> {
+      round.facilitator.socket.disconnect();
+      return Promise.all(
+        [round.anna.client, round.bob.client].map((c) =>
+          c.stateWhere((s) => !s.facilitator.connected),
+        ),
+      );
+    }
+
+    const sawRemoved = (client: Client) =>
+      client.when(() => client.events.find((e) => e.event === REMOVED_EVENT));
+    // A disconnect is not a recorded event, so poll the socket.
+    const isClosed = async (client: Client): Promise<void> => {
+      for (let i = 0; i < 60 && client.socket.connected; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      expect(client.socket.connected).toBe(false);
+    };
+
+    async function remove(round: Round, voter: Voter): Promise<PublicGameState> {
+      const marks = [round.facilitator, round.bob.client].map((c) => c.events.length);
+      expect(
+        await round.facilitator.emit(GAME_EVENTS.playerRemove, { playerId: voter.playerId }),
+      ).toEqual({ ok: true });
+      return round.facilitator.nextState(marks[0] as number);
+    }
+
+    describe('facilitator offline and back (Req 8.1 to 8.4)', () => {
+      it('keeps the game and its state when the facilitator disconnects and tells the voters', async () => {
+        // Given
+        const round = await aRound();
+        await castAndSync(round, round.anna, 5);
+
+        // When
+        const states = await goOffline(round);
+
+        // Then
+        states.forEach((state) => {
+          expect(state.facilitator).toEqual({ name: 'Fran', connected: false });
+          expect(state.phase).toBe('voting');
+          expect(state.story).toEqual({ title: 'Login page' });
+          expect(voterOf(state, 'Anna').hasVoted).toBe(true);
+        });
+        expect(server.store.get(round.table.gameId)).toBeDefined();
+      });
+
+      it('lets voters pick, change and withdraw while the facilitator is offline', async () => {
+        const round = await aRound();
+        await goOffline(round);
+        const marks = [round.anna.client, round.bob.client].map((c) => c.events.length);
+
+        await cast(round.anna.client, 5);
+        await cast(round.anna.client, 8);
+        await cast(round.anna.client, null);
+        await cast(round.anna.client, 13);
+
+        const seen = await round.bob.client.stateWhere((s) => voterOf(s, 'Anna').hasVoted);
+        expect(seen.phase).toBe('voting');
+        await round.anna.client.when(() =>
+          round.anna.client.mineSince(marks[0] as number).length >= 4 ? true : undefined,
+        );
+        expect(round.anna.client.mineSince(marks[0] as number)).toEqual([5, 8, null, 13]);
+      });
+
+      it('rejects every facilitator-only event from a voter while the facilitator is offline', async () => {
+        const round = await aRevealedHelper();
+        await goOffline(round);
+        const bob = round.bob.client;
+        const marks = bob.events.length;
+
+        const results = [
+          await round.anna.client.emit(GAME_EVENTS.storySet, { title: 'Mine' }),
+          await round.anna.client.emit(GAME_EVENTS.roundReveal, undefined),
+          await round.anna.client.emit(GAME_EVENTS.roundRevote, undefined),
+          await round.anna.client.emit(GAME_EVENTS.roundFinish, { skip: true }),
+          await round.anna.client.emit(GAME_EVENTS.roundFinish, { finalEstimate: 5 }),
+          await round.anna.client.emit(GAME_EVENTS.playerRemove, { playerId: round.bob.playerId }),
+        ];
+
+        expect(results).toEqual(Array(6).fill(failedAck('FORBIDDEN')));
+        expect(bob.kindsSince(marks)).toEqual([]);
+        expect(server.store.get(round.table.gameId)?.phase).toBe('revealed');
+      });
+
+      it('gives the facilitator the role back with the token, keeping the round, and tells everyone', async () => {
+        // Given
+        const round = await aRevealedHelper();
+        await goOffline(round);
+
+        // When
+        const back = await connect();
+        const ack = await back.join({
+          gameId: round.table.gameId,
+          token: round.table.facilitatorToken,
+        });
+        const joined = await back.when(
+          () => back.events.find((e) => e.event === GAME_EVENTS.joined)?.payload as GameJoined,
+        );
+        const states = await Promise.all(
+          [back, round.anna.client, round.bob.client].map((c) =>
+            c.stateWhere((s) => s.facilitator.connected && s.phase === 'revealed'),
+          ),
+        );
+
+        // Then
+        expect(ack).toEqual({ ok: true });
+        expect(joined.role).toBe('facilitator');
+        expect(joined.token).toBeUndefined();
+        states.forEach((state) => {
+          expect(state.phase).toBe('revealed');
+          expect(voterOf(state, 'Anna').card).toBe(3);
+          expect(state.results?.average).toBe(5.5);
+        });
+        expect(back.mine).toEqual([]);
+        expect(await back.emit(GAME_EVENTS.roundRevote, undefined)).toEqual({ ok: true });
+      });
+
+      it('never gives the role to someone who joins by name, even with a spoofed role', async () => {
+        const round = await aRound();
+        await goOffline(round);
+
+        const stranger = await connect();
+        const ack = await stranger.join({
+          gameId: round.table.gameId,
+          name: 'Mallory',
+          role: 'facilitator',
+          playerId: round.table.facilitator ? 'x' : 'y',
+        });
+        const joined = await stranger.when(
+          () => stranger.events.find((e) => e.event === GAME_EVENTS.joined)?.payload as GameJoined,
+        );
+        const sameName = await (await connect()).join({ gameId: round.table.gameId, name: 'fran' });
+
+        expect(ack).toEqual({ ok: true });
+        expect(joined.role).toBe('voter');
+        expect(sameName).toEqual(failedAck('NAME_TAKEN'));
+        expect(await stranger.emit(GAME_EVENTS.roundReveal, undefined)).toEqual(
+          failedAck('FORBIDDEN'),
+        );
+      });
+    });
+
+    describe('player:remove (Req 8.5, 8.6)', () => {
+      it('removes the voter: ack, player:removed, disconnect, then a state without them', async () => {
+        // Given
+        const round = await aRound();
+        await castAndSync(round, round.anna, 5);
+        await castAndSync(round, round.bob, 8);
+        const bobMark = round.bob.client.events.length;
+
+        // When
+        const started = Date.now();
+        const state = await remove(round, round.anna);
+
+        // Then
+        expect(Date.now() - started).toBeLessThan(BROADCAST_BUDGET_MS);
+        await sawRemoved(round.anna.client);
+        await isClosed(round.anna.client);
+        expect(publicGameStateSchema.safeParse(state).success).toBe(true);
+        expect(state.voters.map((v) => v.name)).toEqual(['Bob']);
+        expect(JSON.stringify(state)).not.toContain(round.anna.playerId);
+        const bobState = await round.bob.client.nextState(bobMark);
+        expect(bobState.voters.map((v) => v.name)).toEqual(['Bob']);
+        expect(voterOf(bobState, 'Bob').hasVoted).toBe(true);
+        expect(server.store.get(round.table.gameId)?.votes.has(round.anna.playerId)).toBe(false);
+      });
+
+      it('sends player:removed to the removed voter only, in every tab, and nothing to others', async () => {
+        const round = await aRound();
+        const tab = await aTabOf(round.table, round.anna);
+        const marks = [round.facilitator, round.bob.client].map((c) => c.events.length);
+
+        await remove(round, round.anna);
+
+        await sawRemoved(round.anna.client);
+        await sawRemoved(tab);
+        await Promise.all([isClosed(round.anna.client), isClosed(tab)]);
+        await settle(round.table, [round.bob.client]);
+        for (const [i, c] of [round.facilitator, round.bob.client].entries()) {
+          expect(c.kindsSince(marks[i] as number)).not.toContain(REMOVED_EVENT);
+          expect(c.socket.connected).toBe(true);
+        }
+      });
+
+      it('rejects the removed token with REMOVED, but lets a new name and the freed name join', async () => {
+        // Given
+        const round = await aRound();
+        await remove(round, round.anna);
+        await isClosed(round.anna.client);
+
+        // When
+        const withToken = await (
+          await connect()
+        ).join({
+          gameId: round.table.gameId,
+          token: round.anna.token,
+        });
+        const newcomer = await aVoter(round.table, 'Anna');
+
+        // Then
+        expect(withToken).toEqual(failedAck('REMOVED'));
+        expect(newcomer.token).not.toBe(round.anna.token);
+        expect(newcomer.playerId).not.toBe(round.anna.playerId);
+        expect(
+          await (await connect()).join({ gameId: round.table.gameId, token: round.anna.token }),
+        ).toEqual(failedAck('REMOVED'));
+      });
+
+      it('keeps the other voters votes while voting and recalculates the results when revealed', async () => {
+        const voting = await aRound();
+        await castAndSync(voting, voting.anna, 3);
+        await castAndSync(voting, voting.bob, 8);
+        const afterVoting = await remove(voting, voting.anna);
+        const revealed = await aRevealedHelper();
+
+        const afterReveal = await remove(revealed, revealed.bob);
+
+        expect(voterOf(afterVoting, 'Bob').hasVoted).toBe(true);
+        expect(afterVoting.phase).toBe('voting');
+        expect(afterReveal.phase).toBe('revealed');
+        expect(afterReveal.results).toMatchObject({
+          average: 3,
+          distribution: [{ card: 3, count: 1 }],
+        });
+        expect(afterReveal.voters.map((v) => v.name)).toEqual(['Anna']);
+      });
+
+      it('removes a voter while waiting and allows removing an offline voter', async () => {
+        const round = await aRound({ voting: false });
+        round.bob.client.socket.disconnect();
+        await round.facilitator.stateWhere(hasVoter('Bob', false));
+
+        const state = await remove(round, round.bob);
+
+        expect(state.phase).toBe('waiting');
+        expect(state.voters.map((v) => v.name)).toEqual(['Anna']);
+      });
+
+      it('rejects a voter with FORBIDDEN for any object payload, and changes nothing', async () => {
+        const round = await aRound();
+
+        const { result, state } = await expectSilent(round.table, [round.bob.client], async () => [
+          await round.anna.client.emit(GAME_EVENTS.playerRemove, { playerId: round.bob.playerId }),
+          await round.anna.client.emit(GAME_EVENTS.playerRemove, {}),
+          await round.anna.client.emit(GAME_EVENTS.playerRemove, { playerId: 5 }),
+          await (await connect()).emit(GAME_EVENTS.playerRemove, { playerId: round.bob.playerId }),
+        ]);
+
+        expect(result).toEqual(Array(4).fill(failedAck('FORBIDDEN')));
+        expect(state.voters.map((v) => v.name)).toEqual(['Anna', 'Bob', 'Probe1']);
+        expect(round.bob.client.socket.connected).toBe(true);
+      });
+
+      it.each([
+        [{ playerId: 'nobody' }],
+        [{}],
+        [{ playerId: 5 }],
+        [{ playerId: null }],
+        [{ playerId: ['x'] }],
+        ['anna'],
+        [null],
+        [[]],
+      ] as Array<[unknown]>)(
+        'rejects %j from the facilitator with INVALID_PAYLOAD and changes nothing',
+        async (payload) => {
+          const round = await aRound();
+
+          const { result, state } = await expectSilent(round.table, [round.anna.client], () =>
+            round.facilitator.emit(GAME_EVENTS.playerRemove, payload),
+          );
+
+          expect(result).toEqual(failedAck('INVALID_PAYLOAD'));
+          expect(state.voters.map((v) => v.name)).toEqual(['Anna', 'Bob', 'Probe1']);
+          expect(round.anna.client.socket.connected).toBe(true);
+        },
+      );
+
+      it('rejects removing the facilitator and removing the same voter twice', async () => {
+        const round = await aRound();
+        const facilitatorId = server.store.get(round.table.gameId)!.facilitatorId;
+        await remove(round, round.anna);
+
+        expect(
+          await round.facilitator.emit(GAME_EVENTS.playerRemove, { playerId: facilitatorId }),
+        ).toEqual(failedAck('INVALID_PAYLOAD'));
+        expect(
+          await round.facilitator.emit(GAME_EVENTS.playerRemove, { playerId: round.anna.playerId }),
+        ).toEqual(failedAck('INVALID_PAYLOAD'));
+        expect(server.store.get(round.table.gameId)?.players.has(facilitatorId)).toBe(true);
+      });
+
+      it('is processed without an ack callback', async () => {
+        const round = await aRound();
+
+        round.facilitator.socket.emit(GAME_EVENTS.playerRemove, { playerId: round.anna.playerId });
+
+        await sawRemoved(round.anna.client);
+      });
+
+      it('logs only event names, gameId and codes, never names, tokens or ids', async () => {
+        const round = await aRound();
+
+        await round.anna.client.emit(GAME_EVENTS.playerRemove, { playerId: round.bob.playerId });
+        await remove(round, round.bob);
+
+        const entries = logged
+          .filter((line) => line.startsWith('{'))
+          .map((line) => JSON.parse(line) as Record<string, unknown>)
+          .filter((e) => String(e.event).startsWith('player.remove'));
+        expect(entries.map((e) => [e.event, e.code])).toEqual([
+          ['player.remove.rejected', 'FORBIDDEN'],
+          ['player.removed', undefined],
+        ]);
+        entries.forEach((e) => {
+          expect(
+            Object.keys(e).every((k) => ['level', 'event', 'gameId', 'code'].includes(k)),
+          ).toBe(true);
+        });
+        [round.bob.token, round.bob.playerId, round.bob.name].forEach((secret) =>
+          expect(logged.join('\n')).not.toContain(secret),
+        );
+      });
+    });
+
+    // A revealed round with Anna on 3 and Bob on 8.
+    async function aRevealedHelper(): Promise<Round> {
+      const round = await aRound();
+      await castAndSync(round, round.anna, 3);
+      await castAndSync(round, round.bob, 8);
+      const marks = round.everyone.map((c) => c.events.length);
+      expect(await round.facilitator.emit(GAME_EVENTS.roundReveal, undefined)).toEqual({
+        ok: true,
+      });
+      await Promise.all(round.everyone.map((c, i) => c.nextState(marks[i] as number)));
+      return round;
+    }
+  });
 });

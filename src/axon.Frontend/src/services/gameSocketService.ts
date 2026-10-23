@@ -74,6 +74,11 @@ export function connectGameSocket(
     if (parsed.success) handlers.onVoteMine(parsed.data.card);
   });
 
+  socket.on(GAME_EVENTS.playerRemoved, () => {
+    seat = null;
+    handlers.onRemoved();
+  });
+
   socket.on('disconnect', () => {
     if (seat) handlers.onDisconnect();
   });
@@ -98,6 +103,7 @@ export function connectGameSocket(
     setStory: (payload) => request(GAME_EVENTS.storySet, payload),
     castVote: (card) => request(GAME_EVENTS.voteCast, { card }),
     revealRound: () => request(GAME_EVENTS.roundReveal, undefined),
+    removePlayer: (playerId) => request(GAME_EVENTS.playerRemove, { playerId }),
     revoteRound: () => request(GAME_EVENTS.roundRevote, undefined),
     finishRound: (payload) => request(GAME_EVENTS.roundFinish, payload),
     close() {

@@ -16,26 +16,40 @@ export function describeVoteChanges(
   ownPlayerId: string | null,
 ): string {
   const messages: string[] = [];
-  if (previous.phase === 'waiting' && next.phase === 'voting' && next.story) {
-    messages.push(`Voting is open: ${next.story.title}`);
+  if (previous.facilitator.connected !== next.facilitator.connected) {
+    messages.push(
+      next.facilitator.connected ? 'The facilitator is back' : 'The facilitator is offline',
+    );
+  }
+  for (const voter of previous.voters) {
+    if (!next.voters.some((candidate) => candidate.id === voter.id)) {
+      messages.push(`${voter.name} was removed`);
+    }
   }
   if (next.history.length > previous.history.length) {
     const finished = next.history[next.history.length - 1];
-    return finished?.estimate === 'skipped'
-      ? 'Story skipped'
-      : `Estimate recorded: ${finished?.estimate}`;
-  }
-  if (previous.phase === 'revealed' && next.phase === 'voting') return 'Re-vote started';
-  if (previous.phase !== 'revealed' && next.phase === 'revealed') {
+    messages.push(
+      finished?.estimate === 'skipped'
+        ? 'Story skipped'
+        : `Estimate recorded: ${finished?.estimate}`,
+    );
+  } else if (previous.phase === 'revealed' && next.phase === 'voting') {
+    messages.push('Re-vote started');
+  } else if (previous.phase !== 'revealed' && next.phase === 'revealed') {
     messages.push('Votes revealed');
     if (next.results) messages.push(describeResults(next.results));
-    return messages.join('. ');
-  }
-  for (const voter of next.voters) {
-    if (voter.id === ownPlayerId) continue;
-    const before = previous.voters.find((candidate) => candidate.id === voter.id);
-    if (!before || before.hasVoted === voter.hasVoted) continue;
-    messages.push(voter.hasVoted ? `${voter.name} has voted` : `${voter.name} withdrew their vote`);
+  } else {
+    if (previous.phase === 'waiting' && next.phase === 'voting' && next.story) {
+      messages.push(`Voting is open: ${next.story.title}`);
+    }
+    for (const voter of next.voters) {
+      if (voter.id === ownPlayerId) continue;
+      const before = previous.voters.find((candidate) => candidate.id === voter.id);
+      if (!before || before.hasVoted === voter.hasVoted) continue;
+      messages.push(
+        voter.hasVoted ? `${voter.name} has voted` : `${voter.name} withdrew their vote`,
+      );
+    }
   }
   return messages.join('. ');
 }

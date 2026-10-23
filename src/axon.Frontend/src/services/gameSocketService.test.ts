@@ -16,6 +16,7 @@ describe('connectGameSocket', () => {
       onJoined: vi.fn(),
       onState: vi.fn(),
       onVoteMine: vi.fn(),
+      onRemoved: vi.fn(),
       onDisconnect: vi.fn(),
       onRejoinFailed: vi.fn(),
     };
@@ -95,6 +96,21 @@ describe('connectGameSocket', () => {
     expect(socket.joins()).toHaveLength(2);
     expect(socket.joins()[1]?.payload).toEqual({ gameId: GAME_ID, token: TOKEN });
     expect(handlers.onDisconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports player:removed once and never rejoins afterwards', async () => {
+    const client = connect();
+    const joining = client.join({ gameId: GAME_ID, token: TOKEN });
+    socket.ackJoin(OK_ACK);
+    await joining;
+
+    socket.serverEmit('player:removed');
+    socket.serverEmit('disconnect', 'io server disconnect');
+    socket.serverEmit('connect');
+
+    expect(handlers.onRemoved).toHaveBeenCalledTimes(1);
+    expect(handlers.onDisconnect).not.toHaveBeenCalled();
+    expect(socket.joins()).toHaveLength(1);
   });
 
   it('reconnects with the token received in game:joined after a name join', async () => {
@@ -251,6 +267,16 @@ describe('connectGameSocket', () => {
 
       expect(emitted('round:reveal')[0]?.payload).toBeUndefined();
       expect(await result).toEqual({ ok: true });
+    });
+
+    it('emits player:remove with the player id', async () => {
+      const client = connect();
+
+      const result = client.removePlayer('p7');
+      emitted('player:remove')[0]?.ack?.(failAck('INVALID_PAYLOAD'));
+
+      expect(emitted('player:remove')[0]?.payload).toEqual({ playerId: 'p7' });
+      expect(await result).toEqual({ ok: false, code: 'INVALID_PAYLOAD' });
     });
 
     it('emits round:revote with no payload', async () => {

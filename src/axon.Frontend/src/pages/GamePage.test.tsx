@@ -871,4 +871,56 @@ describe('GamePage', () => {
       expect(document.querySelector('[aria-atomic="true"]')).toHaveTextContent('');
     });
   });
+
+  describe('removed from the game', () => {
+    const joinAsVoter = async () => {
+      window.localStorage.setItem(TOKEN_KEY, TOKEN);
+      exists(true);
+      renderGame();
+      await waitForJoin();
+      await serverAck(OK_ACK);
+      await serverEmit('game:joined', { playerId: 'p1', role: 'voter' });
+      await serverEmit(
+        'game:state',
+        gameState({ voters: [{ id: 'p1', name: 'Anna', connected: true }] }),
+      );
+      await screen.findByRole('region', { name: 'Voters' });
+    };
+
+    it('shows the removed page without a deck or a join form when the server sends player:removed', async () => {
+      await joinAsVoter();
+
+      await serverEmit('player:removed');
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Removed' })).toBeVisible();
+      expect(screen.getByText('You were removed from this game.')).toBeVisible();
+      expect(screen.queryByRole('radiogroup')).toBeNull();
+      expect(screen.queryByLabelText('Your name')).toBeNull();
+      expect(screen.queryByRole('region', { name: 'Voters' })).toBeNull();
+    });
+
+    it('closes the socket and keeps the stored token so a reload shows the page again', async () => {
+      await joinAsVoter();
+
+      await serverEmit('player:removed');
+
+      expect(socket.closed).toBe(true);
+      expect(window.localStorage.getItem(TOKEN_KEY)).toBe(TOKEN);
+      expect(useGameStore.getState().game).toBeNull();
+    });
+
+    it('shows the removed page when joining with a removed token is rejected with REMOVED', async () => {
+      window.localStorage.setItem(TOKEN_KEY, TOKEN);
+      exists(true);
+      renderGame();
+      await waitForJoin();
+
+      await serverAck(failAck('REMOVED'));
+
+      expect(await screen.findByText('You were removed from this game.')).toBeVisible();
+      expect(screen.queryByLabelText('Your name')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+      expect(window.localStorage.getItem(TOKEN_KEY)).toBe(TOKEN);
+    });
+  });
 });

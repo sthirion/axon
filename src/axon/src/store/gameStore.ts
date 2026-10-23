@@ -3,6 +3,7 @@ import {
   addVoter,
   createGame,
   findPlayerByTokenHash,
+  isBanned,
   type Game,
   type Player,
 } from '../domain/game.js';
@@ -69,6 +70,11 @@ export class GameStore {
   // Only players of `game` are considered, so a token never works across games.
   authenticate(game: Game, token: string): Player | undefined {
     return findPlayerByTokenHash(game, hashToken(token));
+  }
+
+  // True for the token of a voter the facilitator removed from `game`.
+  isBanned(game: Game, token: string): boolean {
+    return isBanned(game, hashToken(token));
   }
 
   private newToken(): string {

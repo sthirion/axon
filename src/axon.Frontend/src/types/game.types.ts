@@ -21,6 +21,7 @@ export interface GameSocketHandlers {
   readonly onJoined: (joined: GameJoined) => void;
   readonly onState: (state: PublicGameState) => void;
   readonly onVoteMine: (card: Card | null) => void;
+  readonly onRemoved: () => void;
   readonly onDisconnect: () => void;
   readonly onRejoinFailed: (code: string) => void;
 }
@@ -31,6 +32,7 @@ export interface GameSocketClient {
   readonly castVote: (card: Card | null) => Promise<ActionResult>;
   readonly revealRound: () => Promise<ActionResult>;
   readonly revoteRound: () => Promise<ActionResult>;
+  readonly removePlayer: (playerId: string) => Promise<ActionResult>;
   readonly finishRound: (payload: RoundFinishPayload) => Promise<ActionResult>;
   readonly close: () => void;
 }

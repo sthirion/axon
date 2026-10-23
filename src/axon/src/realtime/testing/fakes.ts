@@ -53,6 +53,8 @@ export class FakeSocket {
 export class FakeIo {
   readonly broadcasts: Broadcast[] = [];
   readonly timeline: string[] = [];
+  // Rooms whose sockets the server disconnected, in order.
+  readonly disconnected: string[] = [];
   private onConnection: ((socket: FakeSocket) => void) | undefined;
 
   on(event: string, handler: (socket: FakeSocket) => void): this {
@@ -68,6 +70,15 @@ export class FakeIo {
         this.broadcasts.push({ room, event, payload });
         this.timeline.push(`broadcast:${event}`);
         return true;
+      },
+    };
+  }
+
+  in(room: string) {
+    return {
+      disconnectSockets: (): void => {
+        this.disconnected.push(room);
+        this.timeline.push('disconnect');
       },
     };
   }

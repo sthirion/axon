@@ -32,6 +32,8 @@ export interface Game {
   readonly votes: Map<string, Card>;
   // Finished stories, oldest first; skipped stories carry the estimate 'skipped'.
   readonly history: HistoryEntry[];
+  // SHA-256 hex of the tokens of removed voters; they can never rejoin with them.
+  readonly bannedTokenHashes: Set<string>;
 }
 
 export interface NewPlayer {
@@ -48,7 +50,8 @@ export type ActionResult =
   | { readonly ok: true }
   | {
       readonly ok: false;
-      readonly code: 'FORBIDDEN' | 'WRONG_PHASE' | 'INVALID_STORY' | 'INVALID_CARD';
+      readonly code:
+        'FORBIDDEN' | 'WRONG_PHASE' | 'INVALID_STORY' | 'INVALID_CARD' | 'INVALID_PAYLOAD';
     };
 
 function newPlayer(input: NewPlayer, role: PlayerRole): Player {
@@ -64,6 +67,7 @@ export function createGame(id: string, facilitator: NewPlayer): Game {
     phase: 'waiting',
     votes: new Map(),
     history: [],
+    bannedTokenHashes: new Set(),
   };
 }
 
@@ -137,6 +141,33 @@ export function revealRound(game: Game, playerId: string): ActionResult {
   }
   game.phase = 'revealed';
   return { ok: true };
+}
+
+export function tokenHashKey(tokenHash: Buffer): string {
+  return tokenHash.toString('hex');
+}
+
+export function isBanned(game: Game, tokenHash: Buffer): boolean {
+  return game.bannedTokenHashes.has(tokenHashKey(tokenHash));
+}
+
+export type RemovePlayerResult =
+  { readonly ok: true; readonly removedId: string } | Exclude<ActionResult, { readonly ok: true }>;
+
+// Order: role, then target. Only a current voter can be removed; their vote goes, their name is
+// freed, and that token can never be used to rejoin (a new name still can). `targetId` is untrusted.
+export function removePlayer(game: Game, playerId: string, targetId: unknown): RemovePlayerResult {
+  if (game.players.get(playerId)?.role !== 'facilitator') {
+    return { ok: false, code: 'FORBIDDEN' };
+  }
+  const target = typeof targetId === 'string' ? game.players.get(targetId) : undefined;
+  if (target?.role !== 'voter') {
+    return { ok: false, code: 'INVALID_PAYLOAD' };
+  }
+  game.bannedTokenHashes.add(tokenHashKey(target.tokenHash));
+  game.votes.delete(target.id);
+  game.players.delete(target.id);
+  return { ok: true, removedId: target.id };
 }
 
 // Back to voting on the same story with every vote cleared.
