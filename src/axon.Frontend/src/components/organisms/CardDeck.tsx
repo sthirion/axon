@@ -5,6 +5,7 @@ import { SIZE_STYLES } from '../../lib/sizeStyles';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
 import { Panel } from '../atoms/Panel';
+import { CardArt } from '../art/CardArt';
 import { CardFace } from '../atoms/CardFace';
 import { SizeBar } from '../atoms/SizeBar';
 
@@ -50,21 +51,18 @@ export const CardDeck = memo(function CardDeck({
     <Panel as="div">
       <fieldset role="radiogroup" className="min-w-0 space-y-2">
         <legend className="type-section">Your vote</legend>
-        <div className="grid grid-cols-5 gap-2 md:flex md:flex-wrap">
+        <div className="grid grid-cols-5 gap-2 pt-3 md:flex md:flex-wrap">
           {deck.map((card, index) => {
             const level = sizeLevel(scale, card);
             const tooLarge = isTooLarge(scale, card);
             const neutral =
-              'border-slate-500 dark:border-slate-400 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white dark:peer-checked:border-slate-100 dark:peer-checked:bg-slate-100 dark:peer-checked:text-slate-900';
+              'border-slate-500 bg-white text-slate-900 dark:border-slate-400 dark:bg-slate-900 dark:text-slate-100 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white dark:peer-checked:border-slate-100 dark:peer-checked:bg-slate-100 dark:peer-checked:text-slate-900';
             const look =
               level === null
                 ? neutral
                 : `${SIZE_STYLES[level].chip} ${SIZE_STYLES[level].selected}`;
             return (
-              <label
-                key={card}
-                className="relative inline-flex min-h-14 min-w-11 md:min-h-11 md:w-14"
-              >
+              <label key={card} className="relative inline-flex w-full md:w-16">
                 <input
                   ref={index === 0 ? firstCardRef : undefined}
                   type="radio"
@@ -76,16 +74,25 @@ export const CardDeck = memo(function CardDeck({
                   aria-describedby={tooLarge ? tooLargeId : undefined}
                   onChange={() => void cast(card)}
                   onKeyDown={preventEnter}
-                  className="peer absolute inset-0 m-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                  className="peer absolute inset-0 z-10 m-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
                 />
                 <span
-                  className={`flex min-h-14 w-full min-w-11 items-center justify-center rounded-md border px-3 pb-2 text-lg font-semibold md:min-h-11 ${look} peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-slate-900 dark:peer-focus-visible:outline-slate-100 peer-disabled:opacity-60`}
+                  className={`relative flex aspect-[5/7] w-full min-w-11 items-center justify-center rounded-lg border shadow-sm transition-transform duration-150 ease-out md:aspect-auto md:h-[90px] ${look} peer-checked:-translate-y-2.5 peer-checked:scale-[1.08] peer-checked:shadow-lg peer-checked:will-change-transform motion-reduce:transition-none peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-slate-900 dark:peer-focus-visible:outline-slate-100 peer-disabled:opacity-60`}
                 >
-                  <CardFace card={card} />
+                  <span className="absolute top-1 left-1.5 type-meta leading-none font-semibold">
+                    <CardFace card={card} />
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-1.5 bottom-2 rotate-180 type-meta leading-none font-semibold"
+                  >
+                    <CardFace card={card} />
+                  </span>
+                  <CardArt scale={scale} card={card} className="size-8 md:size-9" />
                   {tooLarge && (
                     <span
                       aria-hidden="true"
-                      className="absolute top-0 right-1 type-meta leading-none"
+                      className="absolute top-1 right-1.5 type-meta leading-none"
                     >
                       ⚠
                     </span>

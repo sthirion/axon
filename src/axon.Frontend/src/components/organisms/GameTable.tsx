@@ -126,10 +126,11 @@ export function GameTable({
               <p>{NO_VOTERS_MESSAGE}</p>
             ) : (
               <ul className="space-y-2">
-                {game.voters.map((voter) => (
+                {game.voters.map((voter, index) => (
                   <li key={voter.id}>
                     <PlayerRow
                       scale={game.scale}
+                      order={index}
                       name={voter.name}
                       connected={voter.connected}
                       hasVoted={voting ? voter.hasVoted : undefined}

@@ -1,11 +1,12 @@
 import type { Card } from '@axon/shared';
+import { MugArt } from '../art/CardArt';
 
-// Digits as text; coffee is a glyph with an accessible name.
+// Digits and sizes as text; coffee is a drawn mug with an accessible name.
 export function CardFace({ card }: { readonly card: Card }) {
   if (card === 'coffee') {
     return (
       <>
-        <span aria-hidden="true">☕</span>
+        <MugArt className="inline-block size-5 align-middle" />
         <span className="sr-only">Coffee break</span>
       </>
     );

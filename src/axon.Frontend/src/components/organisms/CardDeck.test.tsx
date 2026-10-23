@@ -32,12 +32,13 @@ describe('CardDeck', () => {
     expect(radios()).toHaveLength(9);
   });
 
-  it('shows the coffee card as a hidden glyph with the accessible name "Coffee break"', () => {
+  it('shows the coffee card as a drawn mug, hidden from assistive tech, named "Coffee break"', () => {
     setup(null);
 
-    expect(
-      radio('Coffee break').closest('label')?.querySelector('[aria-hidden="true"]'),
-    ).toHaveTextContent('☕');
+    const label = radio('Coffee break').closest('label')!;
+    expect(label.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(label).not.toHaveTextContent('☕');
+    expect(radio('Coffee break')).toHaveAccessibleName('Coffee break');
   });
 
   it('checks only the card given as selected', () => {
@@ -477,5 +478,87 @@ describe('CardDeck size colours and the too-large flag', () => {
       'Too large: consider splitting this story',
     );
     expect(screen.getByRole('radio', { name: '8' })).not.toHaveAccessibleDescription();
+  });
+});
+
+describe('CardDeck playing-card faces', () => {
+  const renderDeck = (scale: Scale, selected: Card | null = null) => {
+    const onCast = vi.fn<(card: Card | null) => Promise<ActionResult>>(() =>
+      Promise.resolve({ ok: true }),
+    );
+    render(<CardDeck scale={scale} selected={selected} disabled={false} onCast={onCast} />);
+  };
+  const faceOf = (value: string) =>
+    document.querySelector<HTMLInputElement>(`input[value="${value}"]`)!
+      .nextElementSibling as HTMLElement;
+
+  it.each<[Scale, string[]]>([
+    ['fibonacci', ['1', '2', '3', '5', '8', '13', '21', '?', 'coffee']],
+    ['incremental', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '?', 'coffee']],
+    ['tshirt', ['XS', 'S', 'M', 'L', 'XL', '?', 'coffee']],
+  ])('gives every %s card two corners and one hidden illustration', (scale, values) => {
+    renderDeck(scale);
+
+    for (const value of values) {
+      const face = faceOf(value);
+      const corners = [...face.children].filter(
+        (child) =>
+          child.className.toString().includes('absolute') &&
+          child.className.toString().includes('font-semibold'),
+      );
+      expect(corners, `${scale} ${value}`).toHaveLength(2);
+      expect(
+        face.querySelectorAll('svg[aria-hidden="true"]').length,
+        `${scale} ${value}`,
+      ).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('keeps one accessible name per card: the second corner is hidden from assistive tech', () => {
+    renderDeck('fibonacci');
+
+    for (const value of ['1', '13', '21']) {
+      expect(screen.getByRole('radio', { name: value })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('radio', { name: '13 13' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: '1 1' })).toBeNull();
+  });
+
+  it('draws the illustration by size level: five different pictures for five levels', () => {
+    renderDeck('fibonacci');
+
+    const picture = (value: string) =>
+      faceOf(value).querySelector('svg:not([class*="size-5"])')?.innerHTML;
+    const level0 = picture('1');
+    const pictures = ['1', '3', '5', '8', '13'].map(picture);
+    expect(new Set(pictures).size).toBe(5);
+    expect(picture('2')).toBe(level0);
+    expect(picture('21')).toBe(picture('13'));
+  });
+
+  it('gives ? and coffee their own pictures, different from every size picture', () => {
+    renderDeck('fibonacci');
+
+    const picture = (value: string) => faceOf(value).querySelector('svg:last-of-type')?.innerHTML;
+    const sizePictures = ['1', '3', '5', '8', '13'].map(picture);
+    expect(sizePictures).not.toContain(picture('?'));
+    expect(sizePictures).not.toContain(picture('coffee'));
+    expect(picture('?')).not.toBe(picture('coffee'));
+  });
+
+  it('uses the same five pictures in every scale', () => {
+    renderDeck('tshirt');
+    const sizes = ['XS', 'S', 'M', 'L', 'XL'].map(
+      (v) => faceOf(v).querySelector('svg:not([class*="size-5"])')?.innerHTML,
+    );
+
+    expect(new Set(sizes).size).toBe(5);
+  });
+
+  it('places the mouse and keyboard target above the card so clicks land on the radio', () => {
+    renderDeck('fibonacci');
+
+    const input = document.querySelector<HTMLInputElement>('input[value="5"]')!;
+    expect(input.className).toContain('z-10');
   });
 });
