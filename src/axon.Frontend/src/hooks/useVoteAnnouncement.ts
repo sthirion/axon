@@ -1,6 +1,13 @@
-import type { PublicGameState } from '@axon/shared';
+import type { PublicGameState, RoundStats } from '@axon/shared';
 import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
+
+function describeResults(results: RoundStats): string {
+  if (results.average === null) return 'No numeric votes';
+  return results.consensus
+    ? `Consensus: ${results.average}`
+    : `No consensus, average ${results.average}`;
+}
 
 // Describes what changed between two consecutive snapshots; never includes a card value.
 export function describeVoteChanges(
@@ -11,6 +18,11 @@ export function describeVoteChanges(
   const messages: string[] = [];
   if (previous.phase === 'waiting' && next.phase === 'voting' && next.story) {
     messages.push(`Voting is open: ${next.story.title}`);
+  }
+  if (previous.phase !== 'revealed' && next.phase === 'revealed') {
+    messages.push('Votes revealed');
+    if (next.results) messages.push(describeResults(next.results));
+    return messages.join('. ');
   }
   for (const voter of next.voters) {
     if (voter.id === ownPlayerId) continue;

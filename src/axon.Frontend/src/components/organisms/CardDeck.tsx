@@ -3,24 +3,13 @@ import { memo, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { actionErrorMessage } from '../../lib/actionErrors';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
+import { CardFace } from '../atoms/CardFace';
 
 interface CardDeckProps {
   // The server-confirmed vote; the deck never updates it optimistically.
   readonly selected: Card | null;
   readonly disabled: boolean;
   readonly onCast: (card: Card | null) => Promise<ActionResult>;
-}
-
-function CardFace({ card }: { readonly card: Card }) {
-  if (card === 'coffee') {
-    return (
-      <>
-        <span aria-hidden="true">☕</span>
-        <span className="sr-only">Coffee break</span>
-      </>
-    );
-  }
-  return <>{card}</>;
 }
 
 // A card is a native radio, so arrows, Space and the group semantics come from the browser.

@@ -129,7 +129,43 @@ describe('gameJoinedSchema', () => {
   });
 });
 
+const STATS = {
+  distribution: [{ card: 5, count: 1 }],
+  average: 5,
+  consensus: false,
+  outlierIds: [],
+  suggestedEstimate: 5,
+};
+
 describe('publicGameStateSchema', () => {
+  const REVEALED = {
+    gameId: GAME_ID,
+    phase: 'revealed',
+    story: { title: 'T' },
+    facilitator: { name: 'Sven', connected: true },
+    voters: [
+      { id: 'p2', name: 'Anna', connected: false, hasVoted: true, card: 5 },
+      { id: 'p3', name: 'Bob', connected: false, hasVoted: false },
+    ],
+    results: STATS,
+  };
+
+  it('accepts a revealed state with cards and results', () => {
+    expect(publicGameStateSchema.safeParse(REVEALED).success).toBe(true);
+  });
+
+  it('accepts a revealed state with null stats fields', () => {
+    const results = {
+      distribution: [{ card: '?', count: 1 }],
+      average: null,
+      consensus: false,
+      outlierIds: [],
+      suggestedEstimate: null,
+    };
+
+    expect(publicGameStateSchema.safeParse({ ...REVEALED, results }).success).toBe(true);
+  });
+
   const state = {
     gameId: GAME_ID,
     phase: 'waiting',
@@ -156,12 +192,20 @@ describe('publicGameStateSchema', () => {
 
   it.each([
     ['a top-level vote', { ...state, votes: {} }],
-    ['a voter card', { ...state, voters: [{ ...state.voters[0], card: 5 }] }],
+    ['a voter card while waiting', { ...state, voters: [{ ...state.voters[0], card: 5 }] }],
     ['a voter token hash', { ...state, voters: [{ ...state.voters[0], tokenHash: 'x' }] }],
     ['an extra facilitator key', { ...state, facilitator: { ...state.facilitator, card: 5 } }],
     ['an extra story key', { ...state, phase: 'voting', story: { title: 'T', card: 5 } }],
     ['a null story url', { ...state, phase: 'voting', story: { title: 'T', url: null } }],
-    ['an unknown phase', { ...state, phase: 'revealed' }],
+    ['an unknown phase', { ...state, phase: 'finished' }],
+    ['a results object while voting', { ...state, phase: 'voting', results: STATS }],
+    ['a results object while waiting', { ...state, results: STATS }],
+    [
+      'a card while voting',
+      { ...state, phase: 'voting', voters: [{ ...state.voters[0], card: 5 }] },
+    ],
+    ['an extra results key', { ...REVEALED, results: { ...STATS, votes: [] } }],
+    ['a card outside the deck', { ...REVEALED, voters: [{ ...REVEALED.voters[0], card: 4 }] }],
     ['a missing phase', { ...state, phase: undefined }],
     ['a missing story', { ...state, story: undefined }],
     ['a missing hasVoted', { ...state, voters: [{ id: 'p2', name: 'Anna', connected: false }] }],
@@ -237,6 +281,7 @@ describe('GAME_EVENTS', () => {
       storySet: 'story:set',
       voteCast: 'vote:cast',
       voteMine: 'vote:mine',
+      roundReveal: 'round:reveal',
     });
   });
 });

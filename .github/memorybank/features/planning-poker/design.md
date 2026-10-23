@@ -80,7 +80,7 @@ All client → server events use Socket.IO acknowledgements: `ack({ ok: true })`
 | C→S | `vote:cast` | `{ card: Card \| null }` (`null` withdraws) | voters, phase `voting` |
 | S→C | `vote:mine` | `{ card: Card \| null }` | only the sockets of the voter who owns the vote (room `player:<id>`) |
 | C→S | `story:set` | `{ title, url? }` | facilitator, phase `waiting` or `voting` |
-| C→S | `round:reveal` | — | facilitator, phase `voting`, ≥1 vote |
+| C→S | `round:reveal` | — (any payload ignored) | facilitator, phase `voting`, ≥1 vote |
 | C→S | `round:revote` | — | facilitator, phase `revealed` |
 | C→S | `round:finish` | finalEstimate (numeric card) or `skip` | facilitator, phase `revealed` (or `voting` for skip) |
 | C→S | `player:remove` | playerId | facilitator |
@@ -186,7 +186,7 @@ sequenceDiagram
 `results.ts` is a pure function `calculateStats(votes: Map<string, Card>): RoundStats`.
 
 - **Numeric votes:** votes on 0–21. `?` and coffee are counted in `distribution` only.
-- **Average:** mean of the numeric votes rounded to one decimal; `null` if there are none.
+- **Average:** mean of the numeric votes rounded half up to one decimal (computed with integers: `floor((20 * sum + n) / (2 * n)) / 10`); `null` if there are none.
 - **Consensus:** at least two numeric votes and all of them equal.
 - **Outliers:** if there are at least two distinct numeric values, every voter whose vote
   equals the minimum or the maximum.
@@ -297,6 +297,13 @@ Paths follow the source paths in [project-config.md](../../../project-config.md)
     `card` key), role (`FORBIDDEN`), phase (`WRONG_PHASE`), value (`INVALID_STORY` /
     `INVALID_CARD`). Authorization comes before value validation, so a voter never learns the
     story rules.
+- Added by story #4 (`round:reveal` acks; no new codes):
+  - `round:reveal` check order: not joined (`FORBIDDEN`), game missing (`GAME_NOT_FOUND`), role
+    (`FORBIDDEN`), phase `voting` and at least one vote (`WRONG_PHASE`). A second reveal is
+    `WRONG_PHASE`.
+  - In phase `revealed`, `vote:cast` and `story:set` return `WRONG_PHASE` (role checks still come
+    first, so a voter setting the story or the facilitator voting is `FORBIDDEN`).
+  - `story:set` is allowed in phase `waiting` or `voting` only.
 - The client shows a friendly message for each code; unknown errors show a generic message.
 - Socket.IO reconnects automatically; on reconnect the client sends `game:join` again with
   its token and gets the full `game:state`, so missed updates don't matter.

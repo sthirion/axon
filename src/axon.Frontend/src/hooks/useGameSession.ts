@@ -46,6 +46,7 @@ export interface GameSession {
   readonly retry: () => void;
   readonly setStory: (story: StorySetPayload) => Promise<ActionResult>;
   readonly castVote: (card: Card | null) => Promise<ActionResult>;
+  readonly revealRound: () => Promise<ActionResult>;
 }
 
 export function useGameSession(gameId: string): GameSession {
@@ -183,6 +184,11 @@ export function useGameSession(gameId: string): GameSession {
     [],
   );
 
+  const revealRound = useCallback(
+    () => clientRef.current?.revealRound() ?? Promise.resolve(NOT_CONNECTED),
+    [],
+  );
+
   return {
     phase,
     game,
@@ -197,5 +203,6 @@ export function useGameSession(gameId: string): GameSession {
     retry,
     setStory,
     castVote,
+    revealRound,
   };
 }

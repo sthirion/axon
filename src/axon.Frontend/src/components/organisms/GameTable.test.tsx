@@ -1,5 +1,6 @@
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import { GameTable, NO_VOTERS_MESSAGE } from './GameTable';
 import { GAME_ID, gameState } from '../../test/fakeSocket';
 
@@ -11,6 +12,7 @@ const IDLE = {
   announcement: '',
   onSetStory: () => Promise.resolve({ ok: true as const }),
   onCastVote: () => Promise.resolve({ ok: true as const }),
+  onReveal: () => Promise.resolve({ ok: true as const }),
 } as const;
 
 function renderTable(game: Game, reconnecting = false) {
@@ -212,5 +214,120 @@ describe('GameTable', () => {
       expect(region).toHaveAttribute('aria-live', 'polite');
       expect(region).toHaveAttribute('aria-atomic', 'true');
     });
+  });
+});
+
+describe('GameTable after voting', () => {
+  const STATS = {
+    distribution: [
+      { card: 3, count: 1 },
+      { card: 8, count: 1 },
+      { card: '?', count: 1 },
+    ],
+    average: 5.5,
+    consensus: false,
+    outlierIds: ['v1', 'v2'],
+    suggestedEstimate: 5,
+  };
+  const REVEALED = {
+    phase: 'revealed',
+    story: { title: 'Login page' },
+    voters: [
+      { id: 'v1', name: 'Anna', connected: true, hasVoted: true, card: 3 },
+      { id: 'v2', name: 'Bob', connected: false, hasVoted: true, card: 8 },
+      { id: 'v3', name: 'Cy', connected: true, hasVoted: true, card: '?' },
+      { id: 'v4', name: 'Di', connected: true, hasVoted: false },
+    ],
+    results: STATS,
+  };
+  const VOTING = {
+    phase: 'voting',
+    story: { title: 'Login page' },
+    voters: [
+      { id: 'v1', name: 'Anna', connected: true, hasVoted: false },
+      { id: 'v2', name: 'Bob', connected: true, hasVoted: false },
+    ],
+  };
+  const facilitator = (game: Game, props: Partial<Parameters<typeof GameTable>[0]> = {}) =>
+    render(<GameTable game={game} reconnecting={false} {...IDLE} role="facilitator" {...props} />);
+
+  it('shows a disabled Reveal button with a hint to the facilitator while nobody has voted', () => {
+    facilitator(gameState(VOTING) as Game);
+
+    const button = screen.getByRole('button', { name: 'Reveal votes' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription('Waiting for at least one vote.');
+  });
+
+  it('enables Reveal once one voter has voted and sends the reveal on click', async () => {
+    const onReveal = vi.fn(() => Promise.resolve({ ok: true as const }));
+    const game = gameState({
+      ...VOTING,
+      voters: [{ ...VOTING.voters[0], hasVoted: true }, VOTING.voters[1]],
+    }) as Game;
+    facilitator(game, { onReveal });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reveal votes' }));
+
+    expect(onReveal).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables Reveal while reconnecting', () => {
+    const game = gameState({
+      ...VOTING,
+      voters: [{ ...VOTING.voters[0], hasVoted: true }],
+    }) as Game;
+    facilitator(game, { reconnecting: true });
+
+    expect(screen.getByRole('button', { name: 'Reveal votes' })).toBeDisabled();
+  });
+
+  it('shows no Reveal button to a voter, while waiting, or after the reveal', () => {
+    renderTable(gameState(VOTING) as Game);
+    expect(screen.queryByRole('button', { name: 'Reveal votes' })).toBeNull();
+    cleanup();
+    facilitator(gameState() as Game);
+    expect(screen.queryByRole('button', { name: 'Reveal votes' })).toBeNull();
+    cleanup();
+    facilitator(gameState(REVEALED) as Game);
+    expect(screen.queryByRole('button', { name: 'Reveal votes' })).toBeNull();
+  });
+
+  it('shows every card, "No vote", outlier markers and the results after the reveal', () => {
+    renderTable(gameState(REVEALED) as Game);
+
+    const rows = within(screen.getByRole('region', { name: 'Voters' })).getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('AnnaVote: 3▲Outlieronline');
+    expect(rows[1]).toHaveTextContent('BobVote: 8▲Outlieroffline');
+    expect(rows[2]).toHaveTextContent('CyVote: ?online');
+    expect(rows[2]).not.toHaveTextContent('Outlier');
+    expect(rows[3]).toHaveTextContent('DiNo voteonline');
+    const results = screen.getByRole('region', { name: 'Results' });
+    expect(within(results).getByText('Average: 5.5')).toBeVisible();
+    expect(within(results).getByText('Outliers: Anna, Bob')).toBeVisible();
+    expect(screen.queryByText('Voted')).toBeNull();
+    expect(screen.queryByText('Not voted')).toBeNull();
+  });
+
+  it('shows no results region before the reveal', () => {
+    renderTable(gameState(VOTING) as Game);
+
+    expect(screen.queryByRole('region', { name: 'Results' })).toBeNull();
+  });
+
+  it('locks the deck and hides Edit story for the facilitator after the reveal', () => {
+    render(
+      <GameTable game={gameState(REVEALED) as Game} reconnecting={false} {...IDLE} myCard={3} />,
+    );
+
+    expect(screen.getByRole('radio', { name: '3' })).toBeChecked();
+    expect(screen.getAllByRole('radio').every((card) => (card as HTMLInputElement).disabled)).toBe(
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Withdraw vote' })).toBeDisabled();
+    cleanup();
+    facilitator(gameState(REVEALED) as Game);
+    expect(screen.queryByRole('button', { name: 'Edit story' })).toBeNull();
+    expect(screen.getByText('Login page')).toBeVisible();
   });
 });

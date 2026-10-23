@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { DECK } from '@axon/shared';
 import { aGame, aNewPlayer } from '../testing/builders.js';
-import { addVoter, castVote, getVote, setStory, toPublicState, type Game } from './game.js';
+import {
+  addVoter,
+  castVote,
+  getVote,
+  revealRound,
+  setStory,
+  toPublicState,
+  type Game,
+} from './game.js';
 
 const FACILITATOR = 'f1';
 
@@ -293,5 +301,150 @@ describe('toPublicState with story and votes', () => {
     ]);
     expect(JSON.stringify(state)).not.toMatch(/"(card|vote|votes|value)"/);
     expect(Object.values(state.voters[0]!)).not.toContain(card);
+  });
+});
+
+describe('revealRound', () => {
+  it('moves a voting game with a vote to revealed and keeps the votes', () => {
+    const game = aVotingGame();
+    castVote(game, 'anna', 5);
+
+    expect(revealRound(game, FACILITATOR)).toEqual({ ok: true });
+    expect(game.phase).toBe('revealed');
+    expect(getVote(game, 'anna')).toBe(5);
+  });
+
+  it('rejects a voter with FORBIDDEN, even with no votes (role before phase)', () => {
+    const game = aVotingGame();
+
+    expect(revealRound(game, 'anna')).toEqual({ ok: false, code: 'FORBIDDEN' });
+    expect(game.phase).toBe('voting');
+  });
+
+  it('rejects an unknown player with FORBIDDEN', () => {
+    expect(revealRound(aVotingGame(), 'ghost')).toEqual({ ok: false, code: 'FORBIDDEN' });
+  });
+
+  it('rejects a reveal with no votes with WRONG_PHASE', () => {
+    const game = aVotingGame();
+
+    expect(revealRound(game, FACILITATOR)).toEqual({ ok: false, code: 'WRONG_PHASE' });
+    expect(game.phase).toBe('voting');
+  });
+
+  it('rejects a reveal after the only vote was withdrawn', () => {
+    const game = aVotingGame();
+    castVote(game, 'anna', 5);
+    castVote(game, 'anna', null);
+
+    expect(revealRound(game, FACILITATOR)).toEqual({ ok: false, code: 'WRONG_PHASE' });
+  });
+
+  it('rejects a reveal while waiting', () => {
+    expect(revealRound(aGameWithVoters(), FACILITATOR)).toEqual({
+      ok: false,
+      code: 'WRONG_PHASE',
+    });
+  });
+
+  it('rejects a second reveal', () => {
+    const game = aVotingGame();
+    castVote(game, 'anna', 5);
+    revealRound(game, FACILITATOR);
+
+    expect(revealRound(game, FACILITATOR)).toEqual({ ok: false, code: 'WRONG_PHASE' });
+  });
+});
+
+describe('after the reveal', () => {
+  function aRevealedGame(): Game {
+    const game = aVotingGame();
+    castVote(game, 'anna', 3);
+    castVote(game, 'bob', 8);
+    revealRound(game, FACILITATOR);
+    return game;
+  }
+
+  it('rejects votes and withdrawals with WRONG_PHASE and keeps the votes', () => {
+    const game = aRevealedGame();
+
+    expect(castVote(game, 'anna', 5)).toEqual({ ok: false, code: 'WRONG_PHASE' });
+    expect(castVote(game, 'anna', null)).toEqual({ ok: false, code: 'WRONG_PHASE' });
+    expect(getVote(game, 'anna')).toBe(3);
+  });
+
+  it('still rejects the facilitator voting with FORBIDDEN', () => {
+    expect(castVote(aRevealedGame(), FACILITATOR, 5)).toEqual({ ok: false, code: 'FORBIDDEN' });
+  });
+
+  it('rejects story:set with WRONG_PHASE, even an invalid story, and keeps phase and story', () => {
+    const game = aRevealedGame();
+
+    expect(setStory(game, FACILITATOR, { title: 'New' })).toEqual({
+      ok: false,
+      code: 'WRONG_PHASE',
+    });
+    expect(setStory(game, FACILITATOR, { title: '' })).toEqual({
+      ok: false,
+      code: 'WRONG_PHASE',
+    });
+    expect(game.phase).toBe('revealed');
+    expect(game.story).toEqual({ title: 'Login page' });
+  });
+
+  it('still rejects a voter setting the story with FORBIDDEN', () => {
+    expect(setStory(aRevealedGame(), 'anna', { title: 'X' })).toEqual({
+      ok: false,
+      code: 'FORBIDDEN',
+    });
+  });
+});
+
+describe('toPublicState around the reveal', () => {
+  it('has no card and no results before the reveal', () => {
+    const game = aVotingGame();
+    castVote(game, 'anna', 5);
+
+    const state = toPublicState(game);
+
+    expect(state.results).toBeUndefined();
+    expect(JSON.stringify(state)).not.toContain('"card"');
+    expect('results' in state).toBe(false);
+  });
+
+  it('adds each voter card, omits it for a voter without a vote, and adds results', () => {
+    const game = aVotingGame();
+    castVote(game, 'anna', 3);
+    revealRound(game, FACILITATOR);
+
+    const state = toPublicState(game);
+
+    expect(state.phase).toBe('revealed');
+    expect(state.voters).toEqual([
+      { id: 'anna', name: 'Anna', connected: false, hasVoted: true, card: 3 },
+      { id: 'bob', name: 'Bob', connected: false, hasVoted: false },
+    ]);
+    expect(state.voters[1]).not.toHaveProperty('card');
+    expect(state.results).toEqual({
+      distribution: [{ card: 3, count: 1 }],
+      average: 3,
+      consensus: false,
+      outlierIds: [],
+      suggestedEstimate: 3,
+    });
+  });
+
+  it('shows a late joiner as having no vote after the reveal', () => {
+    const game = aVotingGame();
+    castVote(game, 'anna', 3);
+    revealRound(game, FACILITATOR);
+    addVoter(game, aNewPlayer({ id: 'cy', name: 'Cy' }));
+
+    expect(toPublicState(game).voters.at(-1)).toEqual({
+      id: 'cy',
+      name: 'Cy',
+      connected: false,
+      hasVoted: false,
+    });
   });
 });

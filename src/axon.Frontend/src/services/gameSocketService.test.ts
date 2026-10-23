@@ -243,6 +243,25 @@ describe('connectGameSocket', () => {
       expect(await result).toEqual({ ok: true });
     });
 
+    it('emits round:reveal with no payload and resolves its ack', async () => {
+      const client = connect();
+
+      const result = client.revealRound();
+      emitted('round:reveal')[0]?.ack?.(OK_ACK);
+
+      expect(emitted('round:reveal')[0]?.payload).toBeUndefined();
+      expect(await result).toEqual({ ok: true });
+    });
+
+    it('resolves the failure code of a rejected reveal', async () => {
+      const client = connect();
+
+      const result = client.revealRound();
+      emitted('round:reveal')[0]?.ack?.(failAck('WRONG_PHASE'));
+
+      expect(await result).toEqual({ ok: false, code: 'WRONG_PHASE' });
+    });
+
     it('resolves the failure code of a rejected request', async () => {
       const client = connect();
 

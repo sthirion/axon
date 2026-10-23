@@ -47,6 +47,7 @@ function GameSession({ gameId }: { readonly gameId: string }) {
         announcement={session.announcement}
         onSetStory={session.setStory}
         onCastVote={session.castVote}
+        onReveal={session.revealRound}
       />
     );
   }
