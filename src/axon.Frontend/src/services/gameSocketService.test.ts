@@ -221,7 +221,7 @@ describe('connectGameSocket', () => {
   });
 
   describe('vote:mine', () => {
-    it.each([5, 0, '?', 'coffee', null])('passes the card %j to the handler', (card) => {
+    it.each([5, 1, '?', 'coffee', null])('passes the card %j to the handler', (card) => {
       connect();
 
       socket.serverEmit('vote:mine', { card });

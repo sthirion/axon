@@ -18,13 +18,13 @@ const LABELS: Record<Scale, string> = {
   tshirt: 'T-shirt sizes',
 };
 const DECKS: Record<Scale, string[]> = {
-  fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21', '?', 'coffee'],
-  incremental: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '?', 'coffee'],
+  fibonacci: ['1', '2', '3', '5', '8', '13', '21', '?', 'coffee'],
+  incremental: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '?', 'coffee'],
   tshirt: ['XS', 'S', 'M', 'L', 'XL', '?', 'coffee'],
 };
 const ESTIMATES: Record<Scale, string[]> = {
-  fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
-  incremental: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+  fibonacci: ['1', '2', '3', '5', '8', '13', '21'],
+  incremental: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
   tshirt: ['XS', 'S', 'M', 'L', 'XL'],
 };
 
@@ -122,8 +122,8 @@ test.describe('Voting scales @TEST', () => {
       await expect(page.getByRole('group', { name: 'Voting scale' })).toBeVisible();
       await expect(scaleRadio(page, 'fibonacci')).toBeChecked();
       await expect(page.getByRole('radio')).toHaveCount(3);
-      await expect(page.getByText('0, 1, 2, 3, 5, 8, 13, 21')).toBeVisible();
-      await expect(page.getByText('0 to 10')).toBeVisible();
+      await expect(page.getByText('1, 2, 3, 5, 8, 13, 21')).toBeVisible();
+      await expect(page.getByText('1 to 10')).toBeVisible();
       await expect(page.getByText('XS, S, M, L, XL')).toBeVisible();
     });
 
@@ -192,7 +192,7 @@ test.describe('Voting scales @TEST', () => {
       }
     });
 
-    test('Incremental offers 0 to 10, proposes the closest number and adds up', async ({
+    test('Incremental offers 1 to 10, proposes the closest number and adds up', async ({
       browser,
     }) => {
       const s = await aSession(browser, 'incremental');

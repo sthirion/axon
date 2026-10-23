@@ -350,11 +350,11 @@ describe('publicGameStateSchema history', () => {
 const finalEstimateSchema = estimateSchemaFor('fibonacci');
 
 describe('estimateSchemaFor (fibonacci)', () => {
-  it.each([0, 1, 2, 3, 5, 8, 13, 21])('accepts %d', (value) => {
+  it.each([1, 2, 3, 5, 8, 13, 21])('accepts %d', (value) => {
     expect(finalEstimateSchema.safeParse(value).success).toBe(true);
   });
 
-  it.each(['?', 'coffee', '5', 4, 5.5, -1, null, true, {}, []])('rejects %j', (value) => {
+  it.each(['?', 'coffee', '5', 0, 4, 5.5, -1, null, true, {}, []])('rejects %j', (value) => {
     expect(finalEstimateSchema.safeParse(value).success).toBe(false);
   });
 });

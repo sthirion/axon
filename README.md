@@ -10,7 +10,7 @@ and disappear when everyone leaves.
 - Create a game and share the join link
 - Join with a name only; reconnect without losing your seat
 - Facilitator sets the story (title and optional link) for each round
-- Hidden voting with the Fibonacci deck: 0, 1, 2, 3, 5, 8, 13, 21, `?`, coffee
+- Hidden voting with the Fibonacci deck (1, 2, 3, 5, 8, 13, 21, `?`, coffee), an incremental deck (1 to 10) or t-shirt sizes (XS to XL)
 - Reveal with individual votes, distribution, average, consensus and outliers
 - Re-vote, record the final estimate, or skip; session summary with total
 - Facilitator can reconnect and remove players

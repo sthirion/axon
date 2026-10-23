@@ -41,7 +41,7 @@ flowchart LR
 
 - `Scale` = `'fibonacci' | 'incremental' | 'tshirt'`, chosen when the session is created and
   fixed for its whole life (`Game.scale`). Decks, defined once in `shared/deck.ts`: Fibonacci
-  `0, 1, 2, 3, 5, 8, 13, 21`, incremental `0` to `10`, t-shirt `XS, S, M, L, XL`; every deck also
+  `1, 2, 3, 5, 8, 13, 21`, incremental `1` to `10` (there is no zero card), t-shirt `XS, S, M, L, XL`; every deck also
   has `?` and `coffee`. `Card` is the union of every card of every scale; a scale accepts only
   its own deck. The sized cards (everything but `?` and `coffee`) are the possible estimates.
 - `gameId`: 22-character base64url from `crypto.randomBytes(16)` (128 bits, Requirement 1.1).

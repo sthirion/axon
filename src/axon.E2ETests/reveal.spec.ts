@@ -290,8 +290,9 @@ test.describe('Reveal votes with distribution, average, consensus and outliers @
       }) => {
         const names = Array.from({ length: 10 }, (_, i) => `${LONG_NAME.slice(0, 29)}${i}`);
         const table = await newTable(browser, names, viewport);
-        const labels = ['0', '1', '2', '3', '5', '8', '13', '21', '?', 'Coffee break'];
-        for (const [i, name] of names.entries()) await vote(table, name, labels[i]!);
+        const labels = ['1', '2', '3', '5', '8', '13', '21', '?', 'Coffee break'];
+        for (const [i, name] of names.entries())
+          await vote(table, name, labels[i % labels.length]!);
 
         await expect(revealButton(table.facilitator.page)).toBeVisible();
         const box = await revealButton(table.facilitator.page).boundingBox();
@@ -301,7 +302,7 @@ test.describe('Reveal votes with distribution, average, consensus and outliers @
 
         for (const { page } of [table.facilitator, table.voters[names[0]!]!]) {
           await expectNoHorizontalScroll(page);
-          await expect(resultsRegion(page).getByRole('listitem')).toHaveCount(10);
+          await expect(resultsRegion(page).getByRole('listitem')).toHaveCount(9);
           const results = await resultsRegion(page).boundingBox();
           expect(results!.x + results!.width).toBeLessThanOrEqual(viewport.width);
         }

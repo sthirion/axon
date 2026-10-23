@@ -27,16 +27,16 @@ describe('the three scales', () => {
   });
 
   it.each<[Scale, unknown[]]>([
-    ['fibonacci', [0, 1, 2, 3, 5, 8, 13, 21, '?', 'coffee']],
-    ['incremental', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, '?', 'coffee']],
+    ['fibonacci', [1, 2, 3, 5, 8, 13, 21, '?', 'coffee']],
+    ['incremental', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, '?', 'coffee']],
     ['tshirt', ['XS', 'S', 'M', 'L', 'XL', '?', 'coffee']],
   ])('%s has the documented deck, in order', (scale, deck) => {
     expect(deckOf(scale)).toEqual(deck);
   });
 
   it.each<[Scale, unknown[]]>([
-    ['fibonacci', [0, 1, 2, 3, 5, 8, 13, 21]],
-    ['incremental', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]],
+    ['fibonacci', [1, 2, 3, 5, 8, 13, 21]],
+    ['incremental', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]],
     ['tshirt', ['XS', 'S', 'M', 'L', 'XL']],
   ])('%s has sized cards without ? and coffee', (scale, sized) => {
     expect(estimateCardsOf(scale)).toEqual(sized);
@@ -49,8 +49,8 @@ describe('the three scales', () => {
       tshirt: 'T-shirt sizes',
     });
     expect(SCALE_DESCRIPTIONS).toEqual({
-      fibonacci: '0, 1, 2, 3, 5, 8, 13, 21',
-      incremental: '0 to 10',
+      fibonacci: '1, 2, 3, 5, 8, 13, 21',
+      incremental: '1 to 10',
       tshirt: 'XS, S, M, L, XL',
     });
   });
@@ -94,8 +94,8 @@ describe('scaleSchema', () => {
 
 describe('cards of one scale', () => {
   it.each<[Scale, unknown[], unknown[]]>([
-    ['fibonacci', [0, 13, 21, '?', 'coffee'], [4, 10, 'M', '5', 5.5, -1, 'xs', '']],
-    ['incremental', [0, 4, 10, '?', 'coffee'], [11, 13, 21, 'M', '5', 5.5, -1]],
+    ['fibonacci', [1, 13, 21, '?', 'coffee'], [0, 4, 10, 'M', '5', 5.5, -1, 'xs', '']],
+    ['incremental', [1, 4, 10, '?', 'coffee'], [0, 11, 13, 21, 'M', '5', 5.5, -1]],
     ['tshirt', ['XS', 'XL', '?', 'coffee'], [0, 5, 'xs', 'XXL', 'm', ' M', 'Medium', '5']],
   ])('%s accepts its cards and rejects the others', (scale, accepted, rejected) => {
     const schema = cardSchemaFor(scale);
@@ -108,8 +108,8 @@ describe('cards of one scale', () => {
   });
 
   it.each<[Scale, unknown[], unknown[]]>([
-    ['fibonacci', [0, 21], ['?', 'coffee', 4, 'M']],
-    ['incremental', [0, 4, 10], ['?', 'coffee', 11, 'M']],
+    ['fibonacci', [1, 21], ['?', 'coffee', 0, 4, 'M']],
+    ['incremental', [1, 4, 10], ['?', 'coffee', 0, 11, 'M']],
     ['tshirt', ['XS', 'M', 'XL'], ['?', 'coffee', 5, 'XXL']],
   ])('%s estimates are only its sized cards', (scale, accepted, rejected) => {
     const schema = estimateSchemaFor(scale);
@@ -118,7 +118,7 @@ describe('cards of one scale', () => {
   });
 
   it('accepts a card of any scale on the wire and rejects what is in no scale', () => {
-    for (const card of [0, 4, 10, 21, 'XS', 'XL', '?', 'coffee']) {
+    for (const card of [1, 4, 10, 21, 'XS', 'XL', '?', 'coffee']) {
       expect(cardSchema.safeParse(card).success).toBe(true);
     }
     for (const card of ['5', 11, 'xl', 'XXL', -1, null, undefined, {}]) {

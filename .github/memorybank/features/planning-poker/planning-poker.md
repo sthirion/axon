@@ -51,7 +51,7 @@ together from any browser. Reference product:
 | --- | --- |
 | Accounts | No accounts. The facilitator creates a session and shares a unique link. Everyone who joins enters a name. |
 | Voting mode | Live voting only. No async voting. |
-| Card deck | Fibonacci only: 0, 1, 2, 3, 5, 8, 13, 21, ?, coffee. |
+| Card deck | Fibonacci 1, 2, 3, 5, 8, 13, 21, ?, coffee (plus incremental and t-shirt scales). |
 | Issues | MVP: the facilitator enters one story per round (title and optional work-item link). Later: Azure DevOps integration. |
 | Facilitator | Sets the story, reveals, resets for a re-vote, records the final estimate, moves to the next story, and can remove players. Does not vote. |
 | Facilitator disconnect | The game waits. The facilitator can rejoin from the same browser with the same link. |
