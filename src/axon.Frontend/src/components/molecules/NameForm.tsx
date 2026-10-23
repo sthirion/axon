@@ -59,16 +59,16 @@ export const NameForm = memo(function NameForm({
           }}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className="block w-full min-w-0 rounded-md border border-slate-500 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+          className="block w-full min-w-0 rounded-md border border-slate-500 dark:border-slate-400 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100"
         />
         {error && (
-          <p id={errorId} className="text-sm text-red-700">
+          <p id={errorId} className="text-sm text-red-700 dark:text-red-400">
             {error}
           </p>
         )}
       </div>
       {formError && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
           {formError}
         </p>
       )}

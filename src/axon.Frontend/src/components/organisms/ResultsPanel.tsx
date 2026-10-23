@@ -40,7 +40,7 @@ export const ResultsPanel = memo(function ResultsPanel({
             </span>
             <span aria-hidden="true" className="h-4 min-w-0 flex-1">
               <span
-                className="block h-full rounded bg-slate-700"
+                className="block h-full rounded bg-slate-700 dark:bg-slate-300"
                 style={{ width: `${(count / max) * 100}%` }}
               />
             </span>

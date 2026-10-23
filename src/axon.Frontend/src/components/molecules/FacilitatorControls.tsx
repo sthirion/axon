@@ -38,7 +38,7 @@ function EstimateForm({ suggestedEstimate, busy, recordLabel, onRecord }: Estima
           id={selectId}
           value={estimate}
           onChange={(event) => setEstimate(event.target.value)}
-          className="block min-h-11 w-full max-w-48 rounded-md border border-slate-500 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+          className="block min-h-11 w-full max-w-48 rounded-md border border-slate-500 dark:border-slate-400 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:focus-visible:outline-slate-100"
         >
           <option value="">{NO_ESTIMATE_OPTION}</option>
           {FINAL_ESTIMATES.map((value) => (
@@ -111,7 +111,7 @@ export const FacilitatorControls = memo(function FacilitatorControls({
           <Button
             disabled={busy}
             onClick={() => void run('revote', onRevote)}
-            className="bg-slate-600"
+            className="bg-slate-600 dark:bg-slate-400"
           >
             {label('revote', 'Re-vote')}
           </Button>
@@ -119,13 +119,13 @@ export const FacilitatorControls = memo(function FacilitatorControls({
         <Button
           disabled={busy}
           onClick={() => void run('skip', () => onFinish({ skip: true }))}
-          className="bg-slate-600"
+          className="bg-slate-600 dark:bg-slate-400"
         >
           {label('skip', 'Skip story')}
         </Button>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
           {error}
         </p>
       )}

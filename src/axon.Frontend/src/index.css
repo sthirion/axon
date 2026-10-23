@@ -1,2 +1,11 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+
+/* Class strategy: <html class="dark"> switches every dark: style (see lib/theme.ts). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+  }
+}

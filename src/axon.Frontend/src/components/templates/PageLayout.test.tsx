@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { PageLayout, TEMPORARY_GAMES_NOTICE } from './PageLayout';
 
@@ -25,5 +26,21 @@ describe('PageLayout', () => {
     );
 
     expect(screen.getByRole('contentinfo').querySelectorAll('a, button, input')).toHaveLength(0);
+  });
+
+  it('puts the theme toggle in a header before the content, as the first tab stop', async () => {
+    render(
+      <PageLayout>
+        <button type="button">First in content</button>
+      </PageLayout>,
+    );
+
+    expect(screen.getByRole('banner')).toContainElement(
+      screen.getByRole('button', { name: 'Dark mode' }),
+    );
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'Dark mode' })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'First in content' })).toHaveFocus();
   });
 });

@@ -11,7 +11,7 @@ export const ReconnectingBanner = memo(function ReconnectingBanner({
   return (
     <div aria-live="polite">
       {visible && (
-        <p className="rounded-md border border-amber-400 bg-amber-50 p-2 text-sm text-amber-900">
+        <p className="rounded-md border border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-950 p-2 text-sm text-amber-900 dark:text-amber-100">
           Reconnecting…
         </p>
       )}

@@ -57,12 +57,12 @@ export const RemovePlayerButton = memo(function RemovePlayerButton({
             setError(null);
             setConfirming(true);
           }}
-          className="bg-slate-600"
+          className="bg-slate-600 dark:bg-slate-400"
         >
           Remove <span className="sr-only">{name}</span>
         </Button>
         {error && (
-          <span role="alert" className="block text-sm text-red-700">
+          <span role="alert" className="block text-sm text-red-700 dark:text-red-400">
             {error}
           </span>
         )}
@@ -82,12 +82,12 @@ export const RemovePlayerButton = memo(function RemovePlayerButton({
           setError(null);
           setConfirming(false);
         }}
-        className="bg-slate-600"
+        className="bg-slate-600 dark:bg-slate-400"
       >
         Cancel
       </Button>
       {error && (
-        <span role="alert" className="block w-full text-sm text-red-700">
+        <span role="alert" className="block w-full text-sm text-red-700 dark:text-red-400">
           {error}
         </span>
       )}
