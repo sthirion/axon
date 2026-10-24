@@ -327,23 +327,31 @@ test.describe('Header join link, recommended mark, controls beside the estimate 
       }
       return found;
     };
-    for (const viewport of [VIEWPORTS[2]!]) {
-      expect(viewport.width).toBeGreaterThan(0);
+    // Fonts differ between machines, so a row may wrap; parts on the same line must agree.
+    const expectCentred = (values: number[]) => {
+      expect(values.length).toBeGreaterThanOrEqual(4);
+      const sorted = [...values].sort((x, y) => x - y);
+      const lines: number[][] = [[sorted[0]!]];
+      for (const value of sorted.slice(1)) {
+        const line = lines[lines.length - 1]!;
+        if (value - line[line.length - 1]! > 20) lines.push([value]);
+        else line.push(value);
+      }
+      for (const line of lines) {
+        expect(Math.max(...line) - Math.min(...line)).toBeLessThan(1);
+      }
+    };
+    const checkRows = async () => {
       const rows = region(s.fac, 'Voters').getByRole('listitem');
       for (let i = 0; i < (await rows.count()); i++) {
-        const values = await centres(s.fac, rows.nth(i));
-        expect(values.length).toBeGreaterThanOrEqual(4);
-        expect(Math.max(...values) - Math.min(...values)).toBeLessThan(1);
+        expectCentred(await centres(s.fac, rows.nth(i)));
       }
-    }
+    };
+    await checkRows();
     await vote(s.bob, '5');
     await button(s.fac, 'Reveal votes').click();
     await expect(region(s.fac, 'Results')).toBeVisible();
     await s.fac.waitForTimeout(900);
-    const rows = region(s.fac, 'Voters').getByRole('listitem');
-    for (let i = 0; i < (await rows.count()); i++) {
-      const values = await centres(s.fac, rows.nth(i));
-      expect(Math.max(...values) - Math.min(...values)).toBeLessThan(1);
-    }
+    await checkRows();
   });
 });
