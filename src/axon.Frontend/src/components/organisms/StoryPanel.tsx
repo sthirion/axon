@@ -1,5 +1,5 @@
 import type { PlayerRole, Story } from '@axon/shared';
-import { memo, useEffect, useId, useRef, useState } from 'react';
+import { memo, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { ActionResult } from '../../types/game.types';
 import { Button } from '../atoms/Button';
 import { Panel } from '../atoms/Panel';
@@ -15,6 +15,8 @@ interface StoryPanelProps {
   // The story is frozen once votes are revealed.
   readonly locked?: boolean;
   readonly onSetStory: (story: Story) => Promise<ActionResult>;
+  // Facilitator buttons shown after "Edit story" while the story can still change.
+  readonly actions?: ReactNode;
 }
 
 function StoryDetails({ story }: { readonly story: Story }) {
@@ -31,6 +33,7 @@ export const StoryPanel = memo(function StoryPanel({
   disabled,
   locked = false,
   onSetStory,
+  actions,
 }: StoryPanelProps) {
   const headingId = useId();
   const editButtonRef = useRef<HTMLButtonElement>(null);
@@ -68,9 +71,12 @@ export const StoryPanel = memo(function StoryPanel({
       <>
         <StoryDetails story={story} />
         {isFacilitator && !locked && (
-          <Button ref={editButtonRef} disabled={disabled} onClick={() => setEditing(true)}>
-            Edit story
-          </Button>
+          <div className="flex flex-wrap items-start gap-2">
+            <Button ref={editButtonRef} disabled={disabled} onClick={() => setEditing(true)}>
+              Edit story
+            </Button>
+            {actions}
+          </div>
         )}
       </>
     );

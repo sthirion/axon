@@ -344,15 +344,22 @@ sequenceDiagram
 - **Join link:** only the facilitator needs it, so it sits in the page header (before the theme
   toggle) and not in a panel: the session ID (the GUID, in monospace, with an "Session ID"
   text for screen readers) and a "Copy link" button that copies the full join link
-  (`<origin>/g/<id>`) and says "Link copied" in a polite status. Voters, the join prompt and
+  (`<origin>/g/<id>`). Feedback is a green check mark next to the button that stays for 5 seconds
+  and fades out over the last 30 % of that time (no fade with reduced motion; it just goes);
+  screen readers hear "Link copied" from the polite status (the text is visually hidden). A
+  failure shows the text "Could not copy. Copy the address from the browser address bar
+  instead." for the same 5 seconds. Voters, the join prompt and
   the other views show none of it. After a handover the header follows the role.
 - **Recommended vote:** in the results the card equal to the suggested estimate gets a check
   mark in its own fixed column (hidden from assistive technology) with the text "Recommended"
   for screen readers, in the success text colour; no other row is marked and nothing is marked
   without a suggestion or when the suggestion was not voted.
-- **Round controls:** the final-estimate select, "Record estimate", "Re-vote" and "Skip story"
-  share one wrapping row (the buttons to the right of the select, below it on narrow screens)
-  so the results above keep the width.
+- **Round controls:** while voting, the facilitator's "Edit story", "Skip story" and "Reveal
+  votes" are one row in the Story panel (same top edge, more room before Reveal), and there is
+  no separate Round controls panel. After the reveal the Round controls panel holds the
+  "Final estimate" label, then one wrapping row with the select, "Record estimate", "Re-vote"
+  and "Skip story" (the buttons to the right of the select, below it on narrow screens, all on
+  the same top edge) so the results above keep the width.
 - **Panels:** every section is its own panel (`Panel`: shaded background, thin border, rounded
   corners, 16 to 20 px padding, 24 px between panels, a very light shadow in light mode only,
   never `overflow-hidden` so focus rings are not cut off). Work area: Story, Your vote, Round

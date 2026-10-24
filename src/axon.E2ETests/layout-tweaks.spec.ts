@@ -176,7 +176,7 @@ test.describe('Header join link, recommended mark, controls beside the estimate 
     let right = select.x + select.width;
     for (const box of boxes) {
       expect(box.x, 'to the right of the previous control').toBeGreaterThanOrEqual(right);
-      expect(Math.abs(box.y + box.height - (select.y + select.height))).toBeLessThan(4);
+      expect(Math.abs(box.y - select.y), 'same top edge as the select').toBeLessThan(2);
       right = box.x + box.width;
     }
     expect(boxes[0]!.x - (select.x + select.width)).toBeGreaterThanOrEqual(8);
@@ -239,4 +239,119 @@ test.describe('Header join link, recommended mark, controls beside the estimate 
       }
     });
   }
+
+  test('Edit story, Skip story and Reveal votes share one row with the same top edge, Reveal set apart', async ({
+    browser,
+  }) => {
+    const { fac } = await aRevealedSession(browser);
+
+    const [edit, skip, reveal] = await Promise.all(
+      ['Edit story', 'Skip story', 'Reveal votes'].map(
+        async (name) => (await button(fac, name).boundingBox())!,
+      ),
+    );
+
+    expect(Math.abs(edit!.y - skip!.y)).toBeLessThan(2);
+    expect(Math.abs(skip!.y - reveal!.y)).toBeLessThan(2);
+    expect(skip!.x).toBeGreaterThan(edit!.x + edit!.width);
+    expect(reveal!.x).toBeGreaterThan(skip!.x + skip!.width);
+    // a bit more room before Reveal than between Edit and Skip
+    expect(reveal!.x - (skip!.x + skip!.width)).toBeGreaterThan(skip!.x - (edit!.x + edit!.width));
+    await expect(region(fac, 'Story').getByRole('button', { name: 'Reveal votes' })).toBeVisible();
+    await expect(region(fac, 'Round controls')).toHaveCount(0);
+  });
+
+  test('Copy link shows a check mark instead of text, which fades and is gone after 5 seconds', async ({
+    browser,
+  }) => {
+    const { fac } = await aRevealedSession(browser);
+    const header = fac.getByRole('banner');
+    const check = header.getByText('✓');
+
+    await button(fac, 'Copy link').click();
+
+    await expect(check).toBeVisible();
+    await expect(header.getByText('Link copied')).toHaveClass(/sr-only/);
+    expect(await check.evaluate((el) => getComputedStyle(el).animationName)).toBe('fade-out');
+    await fac.waitForTimeout(3000);
+    expect(Number(await check.evaluate((el) => getComputedStyle(el).opacity))).toBeGreaterThan(0.5);
+    await fac.waitForTimeout(1500);
+    expect(Number(await check.evaluate((el) => getComputedStyle(el).opacity))).toBeLessThan(0.5);
+    await expect(check).toHaveCount(0, { timeout: 2500 });
+    await expect(header.getByRole('status')).toBeEmpty();
+  });
+
+  test('with reduced motion the check mark does not fade but still goes away', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      baseURL,
+      reducedMotion: 'reduce',
+      permissions: ['clipboard-read', 'clipboard-write'],
+    });
+    contexts.push(context);
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.getByLabel('Your name').fill('Fran');
+    await button(page, 'Create session').click();
+    const check = page.getByRole('banner').getByText('✓');
+
+    await button(page, 'Copy link').click();
+
+    await expect(check).toBeVisible();
+    expect(await check.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+    await expect(check).toHaveCount(0, { timeout: 7000 });
+  });
+
+  test('everything in a voter row shares one vertical centre: name, card, status and buttons', async ({
+    browser,
+  }) => {
+    const s = await aRevealedSession(browser);
+    await vote(s.anna, '3');
+    await expect(region(s.fac, 'Voters').getByRole('listitem').first()).toContainText('Voted');
+    await s.fac.waitForTimeout(400); // the card back has dealt in
+
+    const centres = async (page: Page, row: Locator) => {
+      const parts = [
+        row.locator('.type-name'),
+        row.locator('span[class*="h-[45px]"]'),
+        row.getByText(/Voted|Not voted|Vote: /).first(),
+        row.getByText('online'),
+        row.getByRole('button', { name: /^Remove/ }),
+      ];
+      const found: number[] = [];
+      for (const part of parts) {
+        if ((await part.count()) === 0) continue;
+        const box = (await part.first().boundingBox())!;
+        found.push(box.y + box.height / 2);
+      }
+      return found;
+    };
+    // Fonts differ between machines, so a row may wrap; parts on the same line must agree.
+    const expectCentred = (values: number[]) => {
+      expect(values.length).toBeGreaterThanOrEqual(4);
+      const sorted = [...values].sort((x, y) => x - y);
+      const lines: number[][] = [[sorted[0]!]];
+      for (const value of sorted.slice(1)) {
+        const line = lines[lines.length - 1]!;
+        if (value - line[line.length - 1]! > 20) lines.push([value]);
+        else line.push(value);
+      }
+      for (const line of lines) {
+        expect(Math.max(...line) - Math.min(...line)).toBeLessThan(1);
+      }
+    };
+    const checkRows = async () => {
+      const rows = region(s.fac, 'Voters').getByRole('listitem');
+      for (let i = 0; i < (await rows.count()); i++) {
+        expectCentred(await centres(s.fac, rows.nth(i)));
+      }
+    };
+    await checkRows();
+    await vote(s.bob, '5');
+    await button(s.fac, 'Reveal votes').click();
+    await expect(region(s.fac, 'Results')).toBeVisible();
+    await s.fac.waitForTimeout(900);
+    await checkRows();
+  });
 });
