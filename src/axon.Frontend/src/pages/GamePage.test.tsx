@@ -285,11 +285,11 @@ describe('GamePage', () => {
       await screen.findByRole('region', { name: 'Voters' });
     }
 
-    it('puts the session id and Copy link in the header for the facilitator, not in a panel', async () => {
+    it('puts Copy link in the header for the facilitator, without the session id, not in a panel', async () => {
       await openTable('facilitator');
 
       const header = screen.getByRole('banner');
-      expect(within(header).getByText(GAME_ID)).toBeVisible();
+      expect(within(header).queryByText(GAME_ID)).toBeNull();
       expect(within(header).queryByText(/\/g\//)).toBeNull();
       expect(within(header).getByRole('button', { name: 'Copy link' })).toBeEnabled();
       expect(screen.queryByRole('region', { name: 'Join link' })).toBeNull();

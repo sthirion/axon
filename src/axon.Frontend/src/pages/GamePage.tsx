@@ -88,10 +88,7 @@ function SessionPage({ gameId }: { readonly gameId: string }) {
       wide={wide}
       headerExtra={
         session.phase === 'joined' && session.game && session.role === 'facilitator' ? (
-          <JoinLink
-            gameId={session.game.gameId}
-            link={`${window.location.origin}/g/${session.game.gameId}`}
-          />
+          <JoinLink link={`${window.location.origin}/g/${session.game.gameId}`} />
         ) : undefined
       }
     >

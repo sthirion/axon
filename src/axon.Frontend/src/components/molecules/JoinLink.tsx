@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
+import { cn } from '../../lib/utils';
 import { Button } from '../atoms/Button';
 
 export const LINK_COPIED_MESSAGE = 'Link copied';
@@ -8,14 +9,13 @@ export const LINK_COPY_FAILED_MESSAGE =
 export const COPY_FEEDBACK_MS = 5000;
 
 interface JoinLinkProps {
-  readonly gameId: string;
   // The full join link that "Copy link" puts on the clipboard.
   readonly link: string;
 }
 
-// Lives in the page header: only the session ID is shown, the button copies the whole link.
+// Lives in the page header: the button copies the whole link.
 // Success is a check mark that fades out (screen readers hear "Link copied"); a failure is text.
-export const JoinLink = memo(function JoinLink({ gameId, link }: JoinLinkProps) {
+export const JoinLink = memo(function JoinLink({ link }: JoinLinkProps) {
   const [feedback, setFeedback] = useState<{ ok: boolean; count: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -38,12 +38,15 @@ export const JoinLink = memo(function JoinLink({ gameId, link }: JoinLinkProps) 
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <p className="rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 font-mono type-meta break-all select-all">
-        <span className="sr-only">Session ID: </span>
-        {gameId}
-      </p>
-      <Button onClick={() => void copy()}>Copy link</Button>
-      <p role="status" aria-live="polite" className="type-meta">
+      <Button onClick={() => void copy()} className="w-auto">
+        Copy link
+      </Button>
+      {/* A fixed slot for the check mark, so the buttons next to it do not move. */}
+      <p
+        role="status"
+        aria-live="polite"
+        className={cn('type-meta', feedback?.ok !== false && 'w-5 text-center')}
+      >
         {feedback?.ok === true && (
           <>
             <span
