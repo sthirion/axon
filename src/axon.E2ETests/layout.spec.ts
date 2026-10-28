@@ -263,7 +263,9 @@ test.describe('Look and layout @TEST', () => {
       expect(box.x + box.width, `${path}: logo is at the right edge of the header`).toBeGreaterThan(
         1280 * 0.55,
       );
-      const toggle = (await page.getByRole('button', { name: /^(Dark|Light) mode$/ }).boundingBox())!;
+      const toggle = (await page
+        .getByRole('button', { name: /^(Dark|Light) mode$/ })
+        .boundingBox())!;
       expect(toggle.x + toggle.width, `${path}: toggle left of the logo`).toBeLessThanOrEqual(
         box.x + 1,
       );
