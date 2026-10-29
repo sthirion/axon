@@ -35,7 +35,7 @@ export function PageLayout({ children, brand = true, wide = false, headerExtra }
             </>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {headerExtra}
           <ThemeToggle />
           <Logo />

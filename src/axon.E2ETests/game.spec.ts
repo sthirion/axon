@@ -130,7 +130,7 @@ test.describe('Create and join a game @TEST', () => {
     const header = facilitator.page.getByRole('banner');
     await expect(facilitatorRegion(facilitator.page)).toContainText('Sven');
     await expect(facilitatorRegion(facilitator.page)).toContainText('online');
-    await expect(header.getByText(gameId)).toBeVisible();
+    await expect(header.getByText(gameId)).toHaveCount(0);
     await expect(header.getByRole('button', { name: 'Copy link' })).toBeVisible();
     await expect(facilitator.page.getByRole('region', { name: 'Join link' })).toHaveCount(0);
     await expect(
@@ -618,7 +618,6 @@ test.describe('Create and join a game @TEST', () => {
         const page = facilitator.page;
         await expectNoHorizontalScroll(page);
         await expectWithinWidth(page.getByRole('button', { name: 'Copy link' }), viewport.width);
-        await expectWithinWidth(page.getByRole('banner').getByText(gameId), viewport.width);
         await expectWithinWidth(facilitatorRegion(page), viewport.width);
         await expectWithinWidth(voterRows(page).nth(0), viewport.width);
         await expectWithinWidth(voterRows(page).nth(1), viewport.width);

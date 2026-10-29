@@ -93,13 +93,13 @@ test.describe('Header join link, recommended mark, controls beside the estimate 
     await expect(region(s.fac, 'Results')).toBeVisible();
   }
 
-  test('the facilitator header shows only the session id and Copy link, which copies the full link', async ({
+  test('the facilitator header shows only Copy link, which copies the full link', async ({
     browser,
   }) => {
     const { fac, gameId } = await aRevealedSession(browser);
 
     const header = fac.getByRole('banner');
-    await expect(header.getByText(gameId)).toBeVisible();
+    await expect(header).not.toContainText(gameId);
     await expect(header).not.toContainText('http');
     await expect(fac.getByRole('region', { name: 'Join link' })).toHaveCount(0);
     await expect(fac.getByRole('heading', { name: 'Join link' })).toHaveCount(0);

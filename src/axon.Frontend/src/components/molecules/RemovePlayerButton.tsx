@@ -57,7 +57,7 @@ export const RemovePlayerButton = memo(function RemovePlayerButton({
             setError(null);
             setConfirming(true);
           }}
-          className="bg-slate-600 dark:bg-slate-400"
+          className="w-auto flex-1 bg-slate-600 sm:flex-none dark:bg-slate-400"
         >
           Remove <span className="sr-only">{name}</span>
         </Button>

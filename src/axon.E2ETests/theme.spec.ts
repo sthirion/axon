@@ -18,7 +18,7 @@ const DARK_BODY = [15, 23, 42];
 const LIGHT_BODY = [255, 255, 255];
 const MIN_TARGET = 44;
 
-const toggle = (page: Page): Locator => page.getByRole('button', { name: 'Dark mode' });
+const toggle = (page: Page): Locator => page.getByRole('button', { name: /^(Dark|Light) mode$/ });
 const isDark = (page: Page): Promise<boolean> =>
   page.evaluate(() => document.documentElement.classList.contains('dark'));
 // Chrome reports Tailwind's colours as oklch(); a canvas pixel always comes back as plain RGB.
@@ -84,7 +84,7 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
         await page.goto('/');
         expect(await isDark(page)).toBe(scheme === 'dark');
         expectColour(await bodyColour(page), scheme === 'dark' ? DARK_BODY : LIGHT_BODY);
-        await expect(toggle(page)).toHaveAttribute('aria-pressed', String(scheme === 'dark'));
+        await expect(toggle(page)).toContainText(scheme === 'dark' ? 'Dark mode' : 'Light mode');
         await page.goto('/g/AAAAAAAAAAAAAAAAAAAAAA');
         await expect(
           page.getByRole('heading', { level: 1, name: 'Session not found' }),
@@ -137,11 +137,11 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
 
       expect(await isDark(page)).toBe(true);
       expectColour(await bodyColour(page), DARK_BODY);
-      await expect(toggle(page)).toHaveAttribute('aria-pressed', 'true');
+      await expect(toggle(page)).toContainText('Dark mode');
       expect(await page.evaluate(() => localStorage.getItem('axon.theme'))).toBe('dark');
       await page.reload();
       expect(await isDark(page)).toBe(true);
-      await expect(toggle(page)).toHaveAttribute('aria-pressed', 'true');
+      await expect(toggle(page)).toContainText('Dark mode');
       const other = await context.newPage();
       await other.goto('/g/AAAAAAAAAAAAAAAAAAAAAA');
       expect(await isDark(other)).toBe(true);
@@ -181,7 +181,7 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
       await toggle(page).click();
 
       expect(await isDark(page)).toBe(true);
-      await expect(toggle(page)).toHaveAttribute('aria-pressed', 'true');
+      await expect(toggle(page)).toContainText('Dark mode');
       expect(errors).toEqual([]);
     });
 
@@ -195,7 +195,7 @@ test.describe('Light/dark theme and accessibility pass @TEST', () => {
 
       expect(await isDark(page)).toBe(true);
       expectColour(await bodyColour(page), DARK_BODY);
-      await expect(toggle(page)).toHaveAttribute('aria-pressed', 'true');
+      await expect(toggle(page)).toContainText('Dark mode');
     });
   });
 

@@ -1,19 +1,16 @@
 import { useTheme } from '../../hooks/useTheme';
 import { Button } from './Button';
 
-// A toggle button: the pressed state is the feedback, so nothing is announced on a switch.
+// The label names the current theme; the changed label is the feedback, so nothing is announced.
 export function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  const dark = theme === 'dark';
   return (
-    <Button
-      aria-pressed={theme === 'dark'}
-      onClick={toggle}
-      className="w-auto bg-slate-600 dark:bg-slate-400"
-    >
+    <Button onClick={toggle} className="w-auto min-w-32 bg-slate-600 dark:bg-slate-400">
       <span aria-hidden="true" className="mr-1">
-        {theme === 'dark' ? '☾' : '☀'}
+        {dark ? '☾' : '☀'}
       </span>
-      Dark mode
+      {dark ? 'Dark mode' : 'Light mode'}
     </Button>
   );
 }

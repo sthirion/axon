@@ -63,7 +63,7 @@ describe('PageLayout', () => {
     renderLayout();
 
     const header = screen.getByRole('banner');
-    const controls = within(header).getAllByRole('button', { name: 'Dark mode' });
+    const controls = within(header).getAllByRole('button', { name: /^(Dark|Light) mode$/ });
     const logo = within(header).getByRole('link', { name: 'Planning Poker home' });
     expect(controls).toHaveLength(1);
     expect(logo).toHaveAttribute('href', '/');
@@ -78,7 +78,7 @@ describe('PageLayout', () => {
     renderLayout();
 
     await userEvent.tab();
-    expect(screen.getByRole('button', { name: 'Dark mode' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: /^(Dark|Light) mode$/ })).toHaveFocus();
     await userEvent.tab();
     expect(screen.getByRole('link', { name: 'Planning Poker home' })).toHaveFocus();
     await userEvent.tab();

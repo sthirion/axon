@@ -60,7 +60,7 @@ export const MakeFacilitatorButton = memo(function MakeFacilitatorButton({
             setError(null);
             setConfirming(true);
           }}
-          className="bg-slate-600 dark:bg-slate-400"
+          className="w-auto flex-1 bg-slate-600 sm:flex-none dark:bg-slate-400"
         >
           Make facilitator <span className="sr-only">{name}</span>
         </Button>

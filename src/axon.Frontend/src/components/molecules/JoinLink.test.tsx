@@ -20,12 +20,12 @@ describe('JoinLink', () => {
     Reflect.deleteProperty(navigator, 'clipboard');
   });
 
-  it('shows only the session id as selectable text, not the whole link, and an empty polite status region', () => {
-    render(<JoinLink gameId={GAME_ID} link={LINK} />);
+  it('shows no session id, only Copy link and an empty polite status region', () => {
+    render(<JoinLink link={LINK} />);
 
-    expect(screen.getByText(GAME_ID)).toBeVisible();
+    expect(screen.queryByText(GAME_ID)).toBeNull();
     expect(screen.queryByText(LINK)).toBeNull();
-    expect(screen.getByText(/Session ID/)).toHaveClass('sr-only');
+    expect(screen.queryByText(/Session ID/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Copy link' })).toBeEnabled();
     const status = screen.getByRole('status');
     expect(status).toHaveAttribute('aria-live', 'polite');
@@ -35,7 +35,7 @@ describe('JoinLink', () => {
   it('writes the link to the clipboard, shows a check mark and announces "Link copied" to screen readers only', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     stubClipboard(writeText);
-    render(<JoinLink gameId={GAME_ID} link={LINK} />);
+    render(<JoinLink link={LINK} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
@@ -51,7 +51,7 @@ describe('JoinLink', () => {
     vi.useFakeTimers();
     try {
       stubClipboard(vi.fn().mockResolvedValue(undefined));
-      render(<JoinLink gameId={GAME_ID} link={LINK} />);
+      render(<JoinLink link={LINK} />);
 
       fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
       await act(async () => {
@@ -73,7 +73,7 @@ describe('JoinLink', () => {
     vi.useFakeTimers();
     try {
       stubClipboard(vi.fn().mockResolvedValue(undefined));
-      render(<JoinLink gameId={GAME_ID} link={LINK} />);
+      render(<JoinLink link={LINK} />);
       fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
       await act(async () => {
         await vi.advanceTimersByTimeAsync(3000);
@@ -92,25 +92,25 @@ describe('JoinLink', () => {
 
   it('shows the manual-copy fallback when the clipboard write rejects', async () => {
     stubClipboard(vi.fn().mockRejectedValue(new Error('denied')));
-    render(<JoinLink gameId={GAME_ID} link={LINK} />);
+    render(<JoinLink link={LINK} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
     await waitFor(() =>
       expect(screen.getByRole('status')).toHaveTextContent(LINK_COPY_FAILED_MESSAGE),
     );
-    expect(screen.getByText(GAME_ID)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeVisible();
     expect(screen.queryByText(LINK_COPIED_MESSAGE)).not.toBeInTheDocument();
   });
 
   it('shows the manual-copy fallback when the clipboard is unavailable', async () => {
-    render(<JoinLink gameId={GAME_ID} link={LINK} />);
+    render(<JoinLink link={LINK} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
 
     await waitFor(() =>
       expect(screen.getByRole('status')).toHaveTextContent(LINK_COPY_FAILED_MESSAGE),
     );
-    expect(screen.getByText(GAME_ID)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeVisible();
   });
 });
