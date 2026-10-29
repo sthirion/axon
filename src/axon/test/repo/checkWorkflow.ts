@@ -15,9 +15,8 @@ const EXPECTED_STEPS = [
   'npm run typecheck',
   'npm run build',
   CLEAN_TREE_STEP,
-  'npm run test:unit',
-  'npm run test:integration',
-  'npm run test:frontend',
+  'npm run test:coverage',
+  'actions/github-script',
   'npm run test:dev-smoke',
   'npx playwright install --with-deps chromium',
   'npm run test:e2e',
@@ -28,6 +27,7 @@ const EXACT_USES: Record<string, string> = {
   'actions/checkout': 'actions/checkout@v4',
   'actions/setup-node': 'actions/setup-node@v4',
   'actions/upload-artifact': 'actions/upload-artifact@v4',
+  'actions/github-script': 'actions/github-script@v7',
 };
 
 const PLAYWRIGHT_INSTALL = 'npx playwright install --with-deps chromium';
@@ -49,10 +49,14 @@ function stepId(step: Dict): string {
   return '<unknown step>';
 }
 
-function isReadOnlyPermissions(value: unknown): boolean {
+// The coverage step needs pull-requests: write to comment; nothing else may be writable.
+function isWithinTopLevelPermissions(value: unknown): boolean {
   if (!isRecord(value)) return false;
   return Object.entries(value).every(
-    ([scope, level]) => level === 'none' || (scope === 'contents' && level === 'read'),
+    ([scope, level]) =>
+      level === 'none' ||
+      (scope === 'contents' && level === 'read') ||
+      (scope === 'pull-requests' && level === 'write'),
   );
 }
 
@@ -70,13 +74,20 @@ function checkPermissions(doc: Dict, jobs: Dict, violations: string[]): void {
   const permissions = doc.permissions;
   if (
     !isRecord(permissions) ||
-    Object.keys(permissions).length !== 1 ||
-    permissions.contents !== 'read'
+    Object.keys(permissions).length !== 2 ||
+    permissions.contents !== 'read' ||
+    permissions['pull-requests'] !== 'write'
   ) {
-    violations.push('permissions: top level must be exactly { contents: read }');
+    violations.push(
+      'permissions: top level must be exactly { contents: read, pull-requests: write }',
+    );
   }
   for (const [name, job] of Object.entries(jobs)) {
-    if (isRecord(job) && job.permissions !== undefined && !isReadOnlyPermissions(job.permissions)) {
+    if (
+      isRecord(job) &&
+      job.permissions !== undefined &&
+      !isWithinTopLevelPermissions(job.permissions)
+    ) {
       violations.push(`permissions: job "${name}" widens the top-level permissions`);
     }
   }

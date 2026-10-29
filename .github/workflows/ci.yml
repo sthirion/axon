@@ -8,6 +8,7 @@ on:
 
 permissions:
     contents: read
+    pull-requests: write
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,9 +28,34 @@ jobs:
             - run: npm run typecheck
             - run: npm run build
             - run: test -z "$(git status --porcelain)"
-            - run: npm run test:unit
-            - run: npm run test:integration
-            - run: npm run test:frontend
+            - run: npm run test:coverage
+            - name: Coverage report
+              uses: actions/github-script@v7
+              env:
+                  COVERAGE_FILES: |
+                      Server=src/axon/coverage/coverage-summary.json
+                      Frontend=src/axon.Frontend/coverage/coverage-summary.json
+              with:
+                  script: |
+                      const fs = require('fs');
+                      const marker = '<!-- coverage-report -->';
+                      const rows = process.env.COVERAGE_FILES.trim().split('\n').map((line) => {
+                        const [name, file] = line.trim().split('=');
+                        if (!fs.existsSync(file)) return `| ${name} | n/a | n/a | n/a | n/a |`;
+                        const t = JSON.parse(fs.readFileSync(file, 'utf8')).total;
+                        return `| ${name} | ${t.statements.pct}% | ${t.branches.pct}% | ${t.functions.pct}% | ${t.lines.pct}% |`;
+                      });
+                      const body = [marker, '## Test coverage', '', '| Package | Statements | Branches | Functions | Lines |', '|---|---|---|---|---|', ...rows, '', 'Report only: no minimum is enforced.'].join('\n');
+                      await core.summary.addRaw(body).write();
+                      if (context.eventName !== 'pull_request') return;
+                      try {
+                        const { data: comments } = await github.rest.issues.listComments({ ...context.repo, issue_number: context.issue.number, per_page: 100 });
+                        const existing = comments.find((c) => c.body.includes(marker));
+                        if (existing) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+                        else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+                      } catch (e) {
+                        core.warning(`Could not post the coverage comment: ${e.message}`);
+                      }
             - run: npm run test:dev-smoke
             - run: npx playwright install --with-deps chromium
               working-directory: src/axon.E2ETests

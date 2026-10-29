@@ -22,6 +22,7 @@
     "test:unit": "npm run test:unit -w src/axon",
     "test:integration": "npm run test:integration -w src/axon",
     "test:frontend": "npm run test -w src/axon.Frontend",
+    "test:coverage": "npm run test:coverage -w src/axon && npm run test:coverage -w src/axon.Frontend",
     "test:e2e": "npm run test -w src/axon.E2ETests",
     "test:dev-smoke": "node --test scripts/dev-smoke.test.mjs"
   },
