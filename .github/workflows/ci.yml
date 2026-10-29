@@ -28,13 +28,8 @@ jobs:
             - run: npm run typecheck
             - run: npm run build
             - run: test -z "$(git status --porcelain)"
-            - name: Server tests with coverage (unit and integration)
-              run: npm exec -w src/axon -- vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary
-            - name: Frontend tests with coverage
-              run: npm run test -w src/axon.Frontend -- --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary
+            - run: npm run test:coverage
             - name: Coverage report
-              if: always()
-              continue-on-error: true
               uses: actions/github-script@v7
               env:
                   COVERAGE_FILES: |
@@ -53,10 +48,15 @@ jobs:
                       const body = [marker, '## Test coverage', '', '| Package | Statements | Branches | Functions | Lines |', '|---|---|---|---|---|', ...rows, '', 'Report only: no minimum is enforced.'].join('\n');
                       await core.summary.addRaw(body).write();
                       if (context.eventName !== 'pull_request') return;
-                      const { data: comments } = await github.rest.issues.listComments({ ...context.repo, issue_number: context.issue.number, per_page: 100 });
-                      const existing = comments.find((c) => c.body.includes(marker));
-                      if (existing) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
-                      else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });            - run: npm run test:dev-smoke
+                      try {
+                        const { data: comments } = await github.rest.issues.listComments({ ...context.repo, issue_number: context.issue.number, per_page: 100 });
+                        const existing = comments.find((c) => c.body.includes(marker));
+                        if (existing) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+                        else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+                      } catch (e) {
+                        core.warning(`Could not post the coverage comment: ${e.message}`);
+                      }
+            - run: npm run test:dev-smoke
             - run: npx playwright install --with-deps chromium
               working-directory: src/axon.E2ETests
             - run: npm run test:e2e

@@ -47,22 +47,32 @@ const mutations: [string, (doc: Dict) => void][] = [
     (doc) => (stepRunning(doc, 'npm run lint')['continue-on-error'] = true),
   ],
   [
-    'test:unit moved before build',
+    'test:coverage moved before build',
     (doc) => {
       const list = steps(doc);
-      const [unit] = list.splice(
-        list.findIndex((s) => s.run === 'npm run test:unit'),
+      const [coverage] = list.splice(
+        list.findIndex((s) => s.run === 'npm run test:coverage'),
         1,
       );
       list.splice(
         list.findIndex((s) => s.run === 'npm run build'),
         0,
-        unit,
+        coverage,
       );
     },
   ],
   ['upload step if changed to always()', (doc) => (uploadStep(doc).if = 'always()')],
   ['permissions set to write-all', (doc) => (doc.permissions = 'write-all')],
+  ['contents set to write', (doc) => (doc.permissions.contents = 'write')],
+  ['issues write added', (doc) => (doc.permissions.issues = 'write')],
+  [
+    'continue-on-error on the coverage step',
+    (doc) => (usesStep(doc, 'actions/github-script')['continue-on-error'] = true),
+  ],
+  [
+    'if added to the coverage step',
+    (doc) => (usesStep(doc, 'actions/github-script').if = 'always()'),
+  ],
   ['push trigger removed', (doc) => delete doc.on.push],
   ['cancel-in-progress set to false', (doc) => (doc.concurrency['cancel-in-progress'] = false)],
   [
@@ -132,6 +142,11 @@ describe('.github/workflows/ci.yml', () => {
       'checkout@v3',
       (doc) => (usesStep(doc, 'actions/checkout').uses = 'actions/checkout@v3'),
       'actions/checkout@v4',
+    ],
+    [
+      'github-script@v6',
+      (doc) => (usesStep(doc, 'actions/github-script').uses = 'actions/github-script@v6'),
+      'actions/github-script@v7',
     ],
     [
       'setup-node@v3',
