@@ -48,11 +48,43 @@ npm run build    # production build
 Open the app, create a game, and open the join link in another browser profile to add
 voters.
 
+## Running it
+
+Build once, then start the server. It serves the API, Socket.IO and the built client from a
+single process:
+
+```bash
+npm ci
+npm run build
+npm start -w src/axon
+```
+
+| Variable            | Default                  | Meaning                                |
+| ------------------- | ------------------------ | -------------------------------------- |
+| `PORT`              | `3000`                   | Port to listen on                      |
+| `STATIC_DIR`        | `src/axon.Frontend/dist` | Built client to serve                  |
+| `GAME_EMPTY_TTL_MS` | `120000` (2 minutes)     | How long an empty game is kept         |
+| `GAME_MAX_AGE_MS`   | `7200000` (2 hours)      | Maximum age of any game                |
+| `SWEEP_INTERVAL_MS` | `30000` (30 seconds)     | How often expired games are cleaned up |
+
+`GET /healthz` returns the server status. Games live in memory, so run a single instance and
+expect games to be lost on restart.
+
+Put the server behind a reverse proxy for TLS. The proxy must pass WebSocket upgrades
+(`Upgrade` and `Connection` headers) through to Socket.IO, and should set
+`X-Forwarded-For` and `X-Forwarded-Proto`. Deployment scripts are not part of this repo; fork
+it and use whatever suits your hosting.
+
 ## Documentation
 
 - Specs: [requirements, design and tasks](.github/memorybank/features/planning-poker/)
 - Project conventions: [.github/project-config.md](.github/project-config.md)
 - Development workflow with Copilot agents (ADLC): [.github/ADLC.md](.github/ADLC.md)
+
+## Contributing
+
+Suggestions and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). The hosted
+instance is deployed by the maintainer from tagged releases.
 
 ## Development Workflow
 
